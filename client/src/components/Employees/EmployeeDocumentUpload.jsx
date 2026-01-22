@@ -66,8 +66,6 @@ const EmployeeDocumentUpload = ({
 
   // Загрузка файла (универсальная функция)
   const uploadFile = async (file) => {
-    const { message } = App.useApp();
-    
     // Проверка типа файла
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       message.error(
