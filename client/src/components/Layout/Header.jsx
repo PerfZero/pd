@@ -1,88 +1,106 @@
-import { useState } from 'react'
-import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography, Grid, Button } from 'antd'
-import { BellOutlined, UserOutlined, DownOutlined, MenuOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons'
-import { useAuthStore } from '@/store/authStore'
-import { usePageTitleStore } from '@/store/pageTitleStore'
-import { useNavigate } from 'react-router-dom'
-import MobileDrawerMenu from './MobileDrawerMenu'
+import { useState } from "react";
+import {
+  Layout as AntLayout,
+  Badge,
+  Avatar,
+  Dropdown,
+  Space,
+  Typography,
+  Grid,
+  Button,
+} from "antd";
+import {
+  BellOutlined,
+  UserOutlined,
+  DownOutlined,
+  MenuOutlined,
+  SettingOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import { useAuthStore } from "@/store/authStore";
+import { usePageTitleStore } from "@/store/pageTitleStore";
+import { useNavigate } from "react-router-dom";
+import MobileDrawerMenu from "./MobileDrawerMenu";
 
-const { Header: AntHeader } = AntLayout
-const { Text } = Typography
-const { useBreakpoint } = Grid
+const { Header: AntHeader } = AntLayout;
+const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const Header = () => {
-  const { user, logout } = useAuthStore()
-  const { pageTitle } = usePageTitleStore()
-  const navigate = useNavigate()
-  const screens = useBreakpoint()
-  const isMobile = !screens.md
-  const [drawerVisible, setDrawerVisible] = useState(false)
+  const { user, logout } = useAuthStore();
+  const { pageTitle } = usePageTitleStore();
+  const navigate = useNavigate();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   const userMenuItems = [
     // Пункты только для админов
-    ...(user?.role === 'admin' ? [
-      {
-        key: 'employees',
-        label: 'Сотрудники',
-        icon: <TeamOutlined />,
-        onClick: () => {
-          navigate('/employees')
-        }
-      },
-      {
-        key: 'admin',
-        label: 'Администирование',
-        icon: <SettingOutlined />,
-        onClick: () => {
-          navigate('/admin')
-        }
-      },
-      {
-        type: 'divider',
-      },
-    ] : []),
+    ...(user?.role === "admin"
+      ? [
+          {
+            key: "employees",
+            label: "Сотрудники1",
+            icon: <TeamOutlined />,
+            onClick: () => {
+              navigate("/employees");
+            },
+          },
+          {
+            key: "admin",
+            label: "Администирование",
+            icon: <SettingOutlined />,
+            onClick: () => {
+              navigate("/admin");
+            },
+          },
+          {
+            type: "divider",
+          },
+        ]
+      : []),
     {
-      key: 'profile',
-      label: 'Профиль',
+      key: "profile",
+      label: "Профиль",
       icon: <UserOutlined />,
       onClick: () => {
-        navigate('/profile')
-      }
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'logout',
-      label: 'Выход',
-      danger: true,
-      onClick: () => {
-        logout()
-        navigate('/login')
+        navigate("/profile");
       },
     },
-  ]
+    {
+      type: "divider",
+    },
+    {
+      key: "logout",
+      label: "Выход",
+      danger: true,
+      onClick: () => {
+        logout();
+        navigate("/login");
+      },
+    },
+  ];
 
   const getRoleLabel = (role) => {
     const roles = {
-      admin: 'Администратор',
-      user: 'Пользователь',
-    }
-    return roles[role] || role
-  }
+      admin: "Администратор",
+      user: "Пользователь",
+    };
+    return roles[role] || role;
+  };
 
   return (
     <>
       <AntHeader
         style={{
-          padding: isMobile ? '0 16px' : '0 24px',
-          background: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid #f0f0f0',
+          padding: isMobile ? "0 16px" : "0 24px",
+          background: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid #f0f0f0",
           // Закрепление header для всех версий
-          position: 'sticky',
+          position: "sticky",
           top: 0,
           zIndex: 1000,
         }}
@@ -93,7 +111,7 @@ const Header = () => {
             type="text"
             icon={<MenuOutlined style={{ fontSize: 20 }} />}
             onClick={() => setDrawerVisible(true)}
-            style={{ padding: '8px 4px' }}
+            style={{ padding: "8px 4px" }}
           />
         ) : (
           <div />
@@ -101,30 +119,45 @@ const Header = () => {
 
         {/* Центральная часть - название страницы на мобильных */}
         {isMobile && pageTitle && (
-          <div style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 600 }}>
+          <div
+            style={{
+              flex: 1,
+              textAlign: "center",
+              fontSize: 16,
+              fontWeight: 600,
+            }}
+          >
             {pageTitle}
           </div>
         )}
 
         {/* Правая часть */}
-        <Space size={isMobile ? 'small' : 'large'}>
+        <Space size={isMobile ? "small" : "large"}>
           {/* Уведомления скрываем на мобильных */}
           {!isMobile && (
             <Badge count={0} showZero={false}>
-              <BellOutlined style={{ fontSize: 20, cursor: 'pointer', color: '#666' }} />
+              <BellOutlined
+                style={{ fontSize: 20, cursor: "pointer", color: "#666" }}
+              />
             </Badge>
           )}
 
           {/* Меню пользователя только на десктопе */}
           {!isMobile && (
-            <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
-              <Space style={{ cursor: 'pointer' }} size="small">
+            <Dropdown menu={{ items: userMenuItems }} trigger={["click"]}>
+              <Space style={{ cursor: "pointer" }} size="small">
                 <Avatar
                   size="default"
-                  style={{ backgroundColor: '#2563eb' }}
+                  style={{ backgroundColor: "#2563eb" }}
                   icon={<UserOutlined />}
                 />
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    lineHeight: "1.2",
+                  }}
+                >
                   <Text strong style={{ fontSize: 14, margin: 0 }}>
                     {user?.firstName} {user?.lastName}
                   </Text>
@@ -132,7 +165,7 @@ const Header = () => {
                     {getRoleLabel(user?.role)}
                   </Text>
                 </div>
-                <DownOutlined style={{ fontSize: 12, color: '#666' }} />
+                <DownOutlined style={{ fontSize: 12, color: "#666" }} />
               </Space>
             </Dropdown>
           )}
@@ -140,9 +173,12 @@ const Header = () => {
       </AntHeader>
 
       {/* Мобильное выдвижное меню */}
-      <MobileDrawerMenu visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
+      <MobileDrawerMenu
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+      />
     </>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
