@@ -10,6 +10,10 @@ export default defineConfig(({ mode }) => {
   const devPort = Number(env.VITE_DEV_PORT || 5173);
   const proxyTarget = env.VITE_PROXY_TARGET || "http://localhost:5000";
   const useHttps = env.VITE_DEV_HTTPS !== "false";
+  const allowedHosts = (env.VITE_ALLOWED_HOSTS || "localhost,127.0.0.1")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean);
 
   return {
     plugins: [react(), basicSsl()],
@@ -27,6 +31,7 @@ export default defineConfig(({ mode }) => {
       port: devPort,
       host: devHost, // localhost для разработки, VPS использует production build
       https: useHttps, // Включить HTTPS с самоподписанным сертификатом (basicSsl плагин)
+      allowedHosts,
       proxy: {
         "/api": {
           target: proxyTarget, // Проксируем на локальный бэкенд
