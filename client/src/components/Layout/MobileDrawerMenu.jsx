@@ -1,12 +1,12 @@
-import { Drawer, Menu } from 'antd';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Drawer, Menu } from "antd";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
   TeamOutlined,
-} from '@ant-design/icons';
-import { useAuthStore } from '@/store/authStore';
+} from "@ant-design/icons";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Мобильное выдвижное меню (Drawer)
@@ -19,44 +19,44 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
 
   // Верхняя часть меню (для админов и пользователей)
   const topMenuItems = [];
-  
+
   // Сотрудники доступны админам и пользователям
-  if (user?.role === 'admin' || user?.role === 'user') {
+  if (user?.role === "admin" || user?.role === "user") {
     topMenuItems.push({
-      key: '/employees',
+      key: "/employees",
       icon: <TeamOutlined />,
-      label: 'Сотрудники',
+      label: "Сотрудники",
     });
   }
-  
+
   // Администирование только для админов
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     topMenuItems.push({
-      key: '/admin',
+      key: "/admin",
       icon: <SettingOutlined />,
-      label: 'Администирование',
+      label: "Администирование",
     });
   }
 
   // Нижняя часть меню (профиль и выход)
   const bottomMenuItems = [
     {
-      key: '/profile',
+      key: "/profile",
       icon: <UserOutlined />,
-      label: 'Профиль',
+      label: "Профиль",
     },
     {
-      key: 'logout',
+      key: "logout",
       icon: <LogoutOutlined />,
-      label: 'Выход',
+      label: "Выход",
       danger: true,
     },
   ];
 
   const handleMenuClick = ({ key }) => {
-    if (key === 'logout') {
+    if (key === "logout") {
       logout();
-      navigate('/login');
+      navigate("/login");
     } else {
       navigate(key);
     }
@@ -65,18 +65,23 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
 
   return (
     <Drawer
-      title="PassDesk"
+      title="PassDesk1"
       placement="left"
       onClose={onClose}
       open={visible}
       width={280}
       styles={{
-        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+        body: {
+          padding: 0,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+        },
         header: {
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: "1px solid #f0f0f0",
           fontSize: 20,
           fontWeight: 700,
-          color: '#2563eb',
+          color: "#2563eb",
         },
       }}
     >
@@ -87,7 +92,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
           selectedKeys={[location.pathname]}
           items={topMenuItems}
           onClick={handleMenuClick}
-          style={{ border: 'none', flex: 0 }}
+          style={{ border: "none", flex: 0 }}
         />
       )}
 
@@ -100,11 +105,10 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
         selectedKeys={[location.pathname]}
         items={bottomMenuItems}
         onClick={handleMenuClick}
-        style={{ border: 'none', borderTop: '1px solid #f0f0f0', flex: 0 }}
+        style={{ border: "none", borderTop: "1px solid #f0f0f0", flex: 0 }}
       />
     </Drawer>
   );
 };
 
 export default MobileDrawerMenu;
-
