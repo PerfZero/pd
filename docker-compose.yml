@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # PostgreSQL для локальной разработки
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: passdesk_postgres
     environment:
       POSTGRES_DB: passdesk
@@ -13,21 +11,83 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./dbsu10_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d passdesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # pgAdmin для управления БД (опционально)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: passdesk_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@passdesk.local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: passdesk_server
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      API_VERSION: v1
+      CLIENT_URL: https://localhost:5173
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: passdesk
+      DB_USER: admin
+      DB_PASSWORD: admin_password
+      DB_SSL: "false"
+      JWT_SECRET: changeme_change_me_change_me_32chars
+      JWT_REFRESH_SECRET: changeme_change_me_change_me_32chars
+      STORAGE_PROVIDER: cloudru
+      CLOUDRU_S3_ENDPOINT: https://s3.cloud.ru
+      CLOUDRU_S3_REGION: ru-1
+      CLOUDRU_S3_ACCESS_KEY_ID: changeme
+      CLOUDRU_S3_SECRET_ACCESS_KEY: changeme
+      CLOUDRU_S3_BUCKET_NAME: changeme
+      CLOUDRU_S3_BASE_PATH: passdesk
+    ports:
+      - "5001:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+      - server_node_modules:/app/node_modules
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: passdesk_client
+    environment:
+      VITE_DEV_HOST: 0.0.0.0
+      VITE_DEV_PORT: 5173
+      VITE_DEV_HTTPS: "true"
+      VITE_PROXY_TARGET: http://server:5000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+    volumes:
+      - ./client:/app
+      - client_node_modules:/app/node_modules
     restart: unless-stopped
 
 volumes:
   postgres_data:
-
+  server_node_modules:
+  client_node_modules:
