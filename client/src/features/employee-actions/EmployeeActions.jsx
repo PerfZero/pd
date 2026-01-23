@@ -1,5 +1,9 @@
-import { Button, Space } from 'antd';
-import { PlusOutlined, FileExcelOutlined, LockOutlined } from '@ant-design/icons';
+import { Button, Space } from "antd";
+import {
+  PlusOutlined,
+  FileExcelOutlined,
+  LockOutlined,
+} from "@ant-design/icons";
 
 /**
  * Feature: Действия над сотрудниками (добавление, заявка, импорт, блокировка)
@@ -25,9 +29,8 @@ export const EmployeeActions = ({
         </Button>
       )}
       <Button type="default" icon={<PlusOutlined />} onClick={onAdd}>
-        Добавить сотрудника
+        Добавить сотрудника1
       </Button>
     </Space>
   );
 };
-

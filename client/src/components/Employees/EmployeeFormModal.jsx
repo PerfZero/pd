@@ -1,36 +1,58 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm, Radio } from 'antd';
-import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { constructionSiteService } from '../../services/constructionSiteService';
-import { counterpartyService } from '../../services/counterpartyService';
-import { employeeStatusService } from '../../services/employeeStatusService';
-import { invalidateCache } from '../../utils/requestCache';
-import { capitalizeFirstLetter, filterCyrillicOnly } from '../../utils/formatters';
-import { useAuthStore } from '../../store/authStore';
-import { useReferencesStore } from '../../store/referencesStore';
-import { DEFAULT_FORM_CONFIG } from '../../shared/config/employeeFields';
-import EmployeeFileUpload from './EmployeeFileUpload.jsx';
-import DocumentTypeUploader from './DocumentTypeUploader.jsx';
-import TransferEmployeeModal from './TransferEmployeeModal.jsx';
-import dayjs from 'dayjs';
+import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  Row,
+  Col,
+  App,
+  Tabs,
+  Button,
+  Space,
+  Checkbox,
+  Popconfirm,
+  Radio,
+} from "antd";
+import {
+  CheckCircleFilled,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
+import { constructionSiteService } from "../../services/constructionSiteService";
+import { counterpartyService } from "../../services/counterpartyService";
+import { employeeStatusService } from "../../services/employeeStatusService";
+import { invalidateCache } from "../../utils/requestCache";
+import {
+  capitalizeFirstLetter,
+  filterCyrillicOnly,
+} from "../../utils/formatters";
+import { useAuthStore } from "../../store/authStore";
+import { useReferencesStore } from "../../store/referencesStore";
+import { DEFAULT_FORM_CONFIG } from "../../shared/config/employeeFields";
+import EmployeeFileUpload from "./EmployeeFileUpload.jsx";
+import DocumentTypeUploader from "./DocumentTypeUploader.jsx";
+import TransferEmployeeModal from "./TransferEmployeeModal.jsx";
+import dayjs from "dayjs";
 
 const { TextArea } = Input;
 const { Option } = Select;
-const DATE_FORMAT = 'DD.MM.YYYY';
+const DATE_FORMAT = "DD.MM.YYYY";
 
 // Общие пропсы для отключения автозаполнения браузера
 const noAutoFillProps = {
-  autoComplete: 'off',
-  autoCorrect: 'off',
-  autoCapitalize: 'off',
+  autoComplete: "off",
+  autoCorrect: "off",
+  autoCapitalize: "off",
   spellCheck: false,
-  'data-form-type': 'other',
-  'data-lpignore': 'true',
+  "data-form-type": "other",
+  "data-lpignore": "true",
   onFocus: (e) => {
     // Убираем readonly с небольшой задержкой
-    if (e.target.hasAttribute('readonly')) {
+    if (e.target.hasAttribute("readonly")) {
       setTimeout(() => {
-        e.target.removeAttribute('readonly');
+        e.target.removeAttribute("readonly");
       }, 120);
     }
   },
@@ -54,25 +76,25 @@ const useSelectAutoFillBlocker = (wrapperId) => {
     const setupInput = () => {
       const wrapper = document.getElementById(wrapperId);
       if (!wrapper) return false;
-      const input = wrapper.querySelector('.ant-select-selection-search-input');
+      const input = wrapper.querySelector(".ant-select-selection-search-input");
       if (!input) return false;
       inputNode = input;
       const handleFocus = () => {
-        input.setAttribute('readonly', 'readonly');
+        input.setAttribute("readonly", "readonly");
         setTimeout(() => {
-          input.removeAttribute('readonly');
+          input.removeAttribute("readonly");
         }, 120);
       };
 
-      input.setAttribute('autocomplete', 'off');
-      input.setAttribute('autocorrect', 'off');
-      input.setAttribute('autocapitalize', 'off');
-      input.setAttribute('spellcheck', 'false');
-      input.setAttribute('data-form-type', 'other');
-      input.setAttribute('data-lpignore', 'true');
-      input.addEventListener('focus', handleFocus);
+      input.setAttribute("autocomplete", "off");
+      input.setAttribute("autocorrect", "off");
+      input.setAttribute("autocapitalize", "off");
+      input.setAttribute("spellcheck", "false");
+      input.setAttribute("data-form-type", "other");
+      input.setAttribute("data-lpignore", "true");
+      input.addEventListener("focus", handleFocus);
       inputNode.__cleanupAutofill = () => {
-        input.removeEventListener('focus', handleFocus);
+        input.removeEventListener("focus", handleFocus);
       };
       return true;
     };
@@ -99,19 +121,19 @@ const useSelectAutoFillBlocker = (wrapperId) => {
 // Маска для телефона: форматирует ввод в +7 (123) 456-78-90
 const formatPhoneNumber = (value) => {
   if (!value) return value;
-  
+
   // Убираем все символы кроме цифр
-  const phoneNumber = value.replace(/[^\d]/g, '');
-  
+  const phoneNumber = value.replace(/[^\d]/g, "");
+
   // Ограничиваем длину до 11 цифр
   const phoneNumberLength = phoneNumber.length;
-  
+
   // Если число начинается с 8, заменяем на 7
   let formattedNumber = phoneNumber;
-  if (phoneNumber.startsWith('8')) {
-    formattedNumber = '7' + phoneNumber.slice(1);
+  if (phoneNumber.startsWith("8")) {
+    formattedNumber = "7" + phoneNumber.slice(1);
   }
-  
+
   // Форматируем: +7 (123) 456-78-90
   if (phoneNumberLength < 2) {
     return formattedNumber;
@@ -132,21 +154,21 @@ const formatPhoneNumber = (value) => {
 // Возвращает формат +79101234567
 const normalizePhoneNumber = (value) => {
   if (!value) return value;
-  const digits = value.replace(/[^\d]/g, '');
+  const digits = value.replace(/[^\d]/g, "");
   // Добавляем + в начало если есть цифры
-  return digits ? `+${digits}` : '';
+  return digits ? `+${digits}` : "";
 };
 
 // Маска для СНИЛС: форматирует ввод в 123-456-789 00
 const formatSnils = (value) => {
   if (!value) return value;
-  
+
   // Убираем все символы кроме цифр
-  const snils = value.replace(/[^\d]/g, '');
-  
+  const snils = value.replace(/[^\d]/g, "");
+
   // Ограничиваем длину до 11 цифр
   const snilsLength = snils.length;
-  
+
   if (snilsLength < 4) {
     return snils;
   }
@@ -162,24 +184,24 @@ const formatSnils = (value) => {
 // Маска для КИГ: форматирует ввод в АА 1234567 (только латинские буквы)
 const formatKig = (value) => {
   if (!value) return value;
-  
+
   // Преобразуем в верхний регистр
   let kig = value.toUpperCase();
-  
+
   // Убираем все символы кроме латинских букв и цифр
-  kig = kig.replace(/[^A-Z0-9]/g, '');
-  
+  kig = kig.replace(/[^A-Z0-9]/g, "");
+
   // Разделяем на буквы и цифры
-  const letters = kig.replace(/[^A-Z]/g, '');
-  const numbers = kig.replace(/[^0-9]/g, '');
-  
+  const letters = kig.replace(/[^A-Z]/g, "");
+  const numbers = kig.replace(/[^0-9]/g, "");
+
   // Ограничиваем: 2 буквы + 7 цифр
   const limitedLetters = letters.slice(0, 2);
   const limitedNumbers = numbers.slice(0, 7);
-  
+
   // Форматируем: АА 1234567
   if (limitedLetters.length === 0) {
-    return '';
+    return "";
   }
   if (limitedNumbers.length === 0) {
     return limitedLetters;
@@ -191,19 +213,19 @@ const formatKig = (value) => {
 // Возвращает формат АА1234567 (без пробела)
 const normalizeKig = (value) => {
   if (!value) return value;
-  return value.replace(/\s/g, '');
+  return value.replace(/\s/g, "");
 };
 
 // Маска для ИНН: форматирует ввод в XXXX-XXXXX-X (10 цифр) или XXXX-XXXXXX-XX (12 цифр)
 const formatInn = (value) => {
   if (!value) return value;
-  
+
   // Убираем все символы кроме цифр
-  const inn = value.replace(/[^\d]/g, '');
-  
+  const inn = value.replace(/[^\d]/g, "");
+
   // Ограничиваем длину до 12 цифр
   const innLength = inn.length;
-  
+
   if (innLength <= 4) {
     return inn;
   }
@@ -226,19 +248,19 @@ const formatInn = (value) => {
 // Маска для номера патента: форматирует ввод в XX №1234567890 (где XX - любые 2 цифры от 01 до 99)
 const formatPatentNumber = (value) => {
   if (!value) return value;
-  
+
   // Убираем все символы кроме цифр и №
-  const cleaned = value.replace(/[^\d№]/g, '');
-  
+  const cleaned = value.replace(/[^\d№]/g, "");
+
   // Убираем все символы №, чтобы потом добавить один
-  const numbersOnly = cleaned.replace(/№/g, '');
-  
+  const numbersOnly = cleaned.replace(/№/g, "");
+
   // Ограничиваем длину до 12 цифр (2 цифры кода + 10 цифр номера)
   const limited = numbersOnly.slice(0, 12);
-  
+
   // Если введено меньше 2 символов, просто возвращаем
   if (limited.length === 0) {
-    return '';
+    return "";
   }
   if (limited.length === 1) {
     return limited;
@@ -246,7 +268,7 @@ const formatPatentNumber = (value) => {
   if (limited.length === 2) {
     return limited;
   }
-  
+
   // Форматируем: XX №1234567890
   return `${limited.slice(0, 2)} №${limited.slice(2)}`;
 };
@@ -256,27 +278,27 @@ const formatPatentNumber = (value) => {
 const normalizePatentNumber = (value) => {
   if (!value) return value;
   // Убираем пробелы, оставляем только цифры и №
-  return value.replace(/\s/g, '');
+  return value.replace(/\s/g, "");
 };
 
 // Маска для российского паспорта: форматирует ввод в 1234 №567890 (4 цифры, пробел, №, 6 цифр)
 const formatRussianPassportNumber = (value) => {
   if (!value) return value;
-  
+
   // Убираем все символы кроме цифр и №
-  const cleaned = value.replace(/[^\d№]/g, '');
-  
+  const cleaned = value.replace(/[^\d№]/g, "");
+
   // Убираем все символы №, чтобы потом добавить один
-  const numbersOnly = cleaned.replace(/№/g, '');
-  
+  const numbersOnly = cleaned.replace(/№/g, "");
+
   // Ограничиваем длину до 10 цифр (4 серия + 6 номер)
   const limited = numbersOnly.slice(0, 10);
-  
+
   // Если введено меньше 4 символов, просто возвращаем
   if (limited.length <= 4) {
     return limited;
   }
-  
+
   // Форматируем: XXXX №XXXXXX
   return `${limited.slice(0, 4)} №${limited.slice(4)}`;
 };
@@ -286,27 +308,27 @@ const formatRussianPassportNumber = (value) => {
 const normalizeRussianPassportNumber = (value) => {
   if (!value) return value;
   // Убираем пробелы и символ №, оставляем только цифры
-  return value.replace(/[\s№]/g, '');
+  return value.replace(/[\s№]/g, "");
 };
 
 // Маска для номера бланка: форматирует ввод в ПР1234567 (кириллица)
 const formatBlankNumber = (value) => {
   if (!value) return value;
-  
+
   // Преобразуем в верхний регистр
   let blank = value.toUpperCase();
-  
+
   // Убираем все символы кроме кириллических букв и цифр
-  blank = blank.replace(/[^А-ЯЁ0-9]/g, '');
-  
+  blank = blank.replace(/[^А-ЯЁ0-9]/g, "");
+
   // Разделяем на буквы и цифры
-  const letters = blank.replace(/[^А-ЯЁ]/g, '');
-  const numbers = blank.replace(/[^0-9]/g, '');
-  
+  const letters = blank.replace(/[^А-ЯЁ]/g, "");
+  const numbers = blank.replace(/[^0-9]/g, "");
+
   // Ограничиваем: 2 буквы + 7 цифр
   const limitedLetters = letters.slice(0, 2);
   const limitedNumbers = numbers.slice(0, 7);
-  
+
   // Форматируем: ПР1234567
   return `${limitedLetters}${limitedNumbers}`;
 };
@@ -314,12 +336,23 @@ const formatBlankNumber = (value) => {
 /**
  * Компонент кнопок для действий со статусом уволен/неактивен
  */
-const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounterpartyUser, isAdmin, onTransfer }) => {
+const EmployeeActionButtons = ({
+  employee,
+  messageApi,
+  onCancel,
+  isDefaultCounterpartyUser,
+  isAdmin,
+  onTransfer,
+}) => {
   const [loadingFire, setLoadingFire] = useState(false);
   const [loadingReinstate, setLoadingReinstate] = useState(false);
 
-  const isFired = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_fired';
-  const isInactive = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_inactive';
+  const isFired =
+    employee.statusMappings?.find((m) => m.statusGroup === "status_active")
+      ?.status?.name === "status_active_fired";
+  const isInactive =
+    employee.statusMappings?.find((m) => m.statusGroup === "status_active")
+      ?.status?.name === "status_active_inactive";
 
   const handleFire = async () => {
     try {
@@ -327,14 +360,16 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
       await employeeStatusService.fireEmployee(employee.id);
       // Очищаем кэш для этого сотрудника
       invalidateCache(`employees:getById:${employee.id}`);
-      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} уволен`);
+      messageApi.success(
+        `Сотрудник ${employee.lastName} ${employee.firstName} уволен`,
+      );
       // Закрываем модал
       setTimeout(() => {
         onCancel && onCancel();
       }, 500);
     } catch (error) {
-      console.error('Error firing employee:', error);
-      messageApi.error('Ошибка при увольнении сотрудника');
+      console.error("Error firing employee:", error);
+      messageApi.error("Ошибка при увольнении сотрудника");
     } finally {
       setLoadingFire(false);
     }
@@ -346,14 +381,16 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
       await employeeStatusService.reinstateEmployee(employee.id);
       // Очищаем кэш для этого сотрудника
       invalidateCache(`employees:getById:${employee.id}`);
-      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`);
+      messageApi.success(
+        `Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`,
+      );
       // Закрываем модал
       setTimeout(() => {
         onCancel && onCancel();
       }, 500);
     } catch (error) {
-      console.error('Error reinstating employee:', error);
-      messageApi.error('Ошибка при восстановлении сотрудника');
+      console.error("Error reinstating employee:", error);
+      messageApi.error("Ошибка при восстановлении сотрудника");
     } finally {
       setLoadingReinstate(false);
     }
@@ -365,14 +402,16 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
       await employeeStatusService.deactivateEmployee(employee.id);
       // Очищаем кэш для этого сотрудника
       invalidateCache(`employees:getById:${employee.id}`);
-      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} деактивирован`);
+      messageApi.success(
+        `Сотрудник ${employee.lastName} ${employee.firstName} деактивирован`,
+      );
       // Закрываем модал
       setTimeout(() => {
         onCancel && onCancel();
       }, 500);
     } catch (error) {
-      console.error('Error deactivating employee:', error);
-      messageApi.error('Ошибка при деактивации сотрудника');
+      console.error("Error deactivating employee:", error);
+      messageApi.error("Ошибка при деактивации сотрудника");
     } finally {
       setLoadingFire(false);
     }
@@ -384,14 +423,16 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
       await employeeStatusService.activateEmployee(employee.id);
       // Очищаем кэш для этого сотрудника
       invalidateCache(`employees:getById:${employee.id}`);
-      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} активирован`);
+      messageApi.success(
+        `Сотрудник ${employee.lastName} ${employee.firstName} активирован`,
+      );
       // Закрываем модал
       setTimeout(() => {
         onCancel && onCancel();
       }, 500);
     } catch (error) {
-      console.error('Error activating employee:', error);
-      messageApi.error('Ошибка при активации сотрудника');
+      console.error("Error activating employee:", error);
+      messageApi.error("Ошибка при активации сотрудника");
     } finally {
       setLoadingReinstate(false);
     }
@@ -424,7 +465,7 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
           </Button>
         </Popconfirm>
       )}
-      
+
       {isInactive ? (
         <Popconfirm
           title="Активировать сотрудника?"
@@ -453,12 +494,12 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
           </Popconfirm>
         )
       )}
-      
+
       {/* Кнопка перевода в другую компанию (только для admin) */}
       {isAdmin && onTransfer && (
-        <Button 
+        <Button
           onClick={onTransfer}
-          style={{ borderColor: '#1890ff', color: '#1890ff' }}
+          style={{ borderColor: "#1890ff", color: "#1890ff" }}
         >
           Перевести в другую компанию
         </Button>
@@ -467,7 +508,13 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
   );
 };
 
-const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn }) => {
+const EmployeeFormModal = ({
+  visible,
+  employee,
+  onCancel,
+  onSuccess,
+  onCheckInn,
+}) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
@@ -477,11 +524,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const [loading, setLoading] = useState(false);
   const [checkingCitizenship, setCheckingCitizenship] = useState(false); // Флаг проверки гражданства
   const [dataLoaded, setDataLoaded] = useState(false); // Новый флаг: данные полностью загружены
-  const [activeTab, setActiveTab] = useState('1');
+  const [activeTab, setActiveTab] = useState("1");
   const [tabsValidation, setTabsValidation] = useState({
-    '1': false, // Личная информация
-    '2': false, // Документы
-    '3': false, // Патент
+    1: false, // Личная информация
+    2: false, // Документы
+    3: false, // Патент
   });
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
@@ -501,20 +548,25 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   // Определяем активный конфиг
   useEffect(() => {
     const isDefault = user?.counterpartyId === defaultCounterpartyId;
-    const config = isDefault ? (formConfigDefault || DEFAULT_FORM_CONFIG) : (formConfigExternal || DEFAULT_FORM_CONFIG);
+    const config = isDefault
+      ? formConfigDefault || DEFAULT_FORM_CONFIG
+      : formConfigExternal || DEFAULT_FORM_CONFIG;
     setActiveConfig(config);
   }, [user, defaultCounterpartyId, formConfigDefault, formConfigExternal]);
 
   // Хелпер для получения настроек поля
   const getFieldProps = (fieldName) => {
-    const fieldConfig = activeConfig[fieldName] || { visible: true, required: false };
-    
+    const fieldConfig = activeConfig[fieldName] || {
+      visible: true,
+      required: false,
+    };
+
     // Базовые правила (например, паттерны)
     let rules = [];
     if (fieldConfig.required) {
       rules.push({ required: true, message: `Заполните поле` });
     }
-    
+
     return {
       hidden: !fieldConfig.visible,
       required: fieldConfig.required,
@@ -534,31 +586,57 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
 
   // Определяем обязательные поля для каждой вкладки (динамически)
-  const getRequiredFieldsByTab = (currentRequiresPatent, currentPassportType) => {
+  const getRequiredFieldsByTab = (
+    currentRequiresPatent,
+    currentPassportType,
+  ) => {
     const allFields = {
-      '1': ['inn', 'lastName', 'firstName', 'middleName', 'gender', 'positionId', 'citizenshipId', 'birthCountryId', 'birthDate', 'registrationAddress', 'email', 'phone', 'notes'],
-      '2': ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer', 'passportExpiryDate'],
-      '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
+      1: [
+        "inn",
+        "lastName",
+        "firstName",
+        "middleName",
+        "gender",
+        "positionId",
+        "citizenshipId",
+        "birthCountryId",
+        "birthDate",
+        "registrationAddress",
+        "email",
+        "phone",
+        "notes",
+      ],
+      2: [
+        "snils",
+        "kig",
+        "kigEndDate",
+        "passportType",
+        "passportNumber",
+        "passportDate",
+        "passportIssuer",
+        "passportExpiryDate",
+      ],
+      3: ["patentNumber", "patentIssueDate", "blankNumber"],
     };
 
     const requiredFields = {};
 
-    Object.keys(allFields).forEach(tabKey => {
-      requiredFields[tabKey] = allFields[tabKey].filter(fieldName => {
+    Object.keys(allFields).forEach((tabKey) => {
+      requiredFields[tabKey] = allFields[tabKey].filter((fieldName) => {
         const props = getFieldProps(fieldName);
-        
+
         // Если поле скрыто или не обязательно в настройках - оно нас не интересует для "зеленой галочки"
         if (props.hidden || !props.required) {
           return false;
         }
 
         // Специфичная логика
-        if (fieldName === 'kig' || fieldName === 'kigEndDate') {
+        if (fieldName === "kig" || fieldName === "kigEndDate") {
           if (!currentRequiresPatent) return false;
         }
-        
-        if (fieldName === 'passportExpiryDate') {
-          if (currentPassportType !== 'foreign') return false;
+
+        if (fieldName === "passportExpiryDate") {
+          if (currentPassportType !== "foreign") return false;
         }
 
         return true;
@@ -566,48 +644,57 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     });
 
     if (!currentRequiresPatent) {
-      delete requiredFields['3'];
+      delete requiredFields["3"];
     }
 
     return requiredFields;
   };
 
-  const requiredFieldsByTab = getRequiredFieldsByTab(requiresPatent, passportType);
+  const requiredFieldsByTab = getRequiredFieldsByTab(
+    requiresPatent,
+    passportType,
+  );
 
-  const computeValidation = (forceCompute = false, citizenshipOverride = null) => {
+  const computeValidation = (
+    forceCompute = false,
+    citizenshipOverride = null,
+  ) => {
     const values = form.getFieldsValue(true);
     const validation = {};
-    
+
     const currentCitizenship = citizenshipOverride || selectedCitizenship;
     const currentRequiresPatent = currentCitizenship?.requiresPatent !== false;
     // passportType берем из формы, чтобы было актуально
     const currentPassportType = values.passportType || passportType;
-    
-    const currentRequiredFieldsByTab = getRequiredFieldsByTab(currentRequiresPatent, currentPassportType);
-    
+
+    const currentRequiredFieldsByTab = getRequiredFieldsByTab(
+      currentRequiresPatent,
+      currentPassportType,
+    );
+
     Object.entries(currentRequiredFieldsByTab).forEach(([tabKey, fields]) => {
       if (!fields) {
         validation[tabKey] = true;
         return;
       }
-      
-      const fieldsStatus = fields.map(field => {
+
+      const fieldsStatus = fields.map((field) => {
         const value = values[field];
-        const isValid = Array.isArray(value) 
-          ? value.length > 0 
-          : value !== undefined && value !== null && value !== '';
-          
+        const isValid = Array.isArray(value)
+          ? value.length > 0
+          : value !== undefined && value !== null && value !== "";
+
         return { field, value, isValid };
       });
-      
-      validation[tabKey] = fieldsStatus.every(f => f.isValid);
+
+      validation[tabKey] = fieldsStatus.every((f) => f.isValid);
     });
-    
+
     return validation;
   };
 
   const scheduleValidation = () => {
-    if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
           const validation = computeValidation();
@@ -624,7 +711,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   useEffect(() => {
     const abortController = new AbortController();
-    
+
     const initializeModal = async () => {
       if (!visible) {
         // Сбрасываем состояние при закрытии
@@ -636,18 +723,24 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       }
 
       setDataLoaded(false);
-      setActiveTab('1');
-      
+      setActiveTab("1");
+
       try {
         // Загружаем справочники параллельно и получаем загруженные данные напрямую
-        const [loadedCitizenships, loadedSites, loadedPositions, loadedCounterpartyId, loadedCounterparties] = await Promise.all([
+        const [
+          loadedCitizenships,
+          loadedSites,
+          loadedPositions,
+          loadedCounterpartyId,
+          loadedCounterparties,
+        ] = await Promise.all([
           fetchCitizenships(),
           fetchConstructionSites(),
           fetchPositions(),
           fetchDefaultCounterparty(),
-          fetchCounterparties()
+          fetchCounterparties(),
         ]);
-        
+
         // Проверяем, не был ли запрос отменен
         if (abortController.signal.aborted) {
           return;
@@ -656,38 +749,55 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         if (employee) {
           // 🎯 Используем linkingMode из employee напрямую
           const shouldUseLinkingMode = employee.linkingMode === true;
-          console.log('🔍 EmployeeFormModal useEffect: employee.linkingMode=', employee.linkingMode, 'shouldUseLinkingMode=', shouldUseLinkingMode);
+          console.log(
+            "🔍 EmployeeFormModal useEffect: employee.linkingMode=",
+            employee.linkingMode,
+            "shouldUseLinkingMode=",
+            shouldUseLinkingMode,
+          );
           setLinkingMode(shouldUseLinkingMode);
-          
+
           // Сразу устанавливаем данные сотрудника в форму
           const mapping = employee.employeeCounterpartyMappings?.[0];
-          
+
           // Определяем текущие статусы из маппинга
           let isFired = false;
           let isInactive = false;
-          
-          if (employee.statusMappings && Array.isArray(employee.statusMappings)) {
-            const statusMapping = employee.statusMappings.find(m => {
+
+          if (
+            employee.statusMappings &&
+            Array.isArray(employee.statusMappings)
+          ) {
+            const statusMapping = employee.statusMappings.find((m) => {
               const mappingGroup = m.statusGroup || m.status_group;
-              return mappingGroup === 'status_active';
+              return mappingGroup === "status_active";
             });
             if (statusMapping) {
               const statusObj = statusMapping.status || statusMapping.Status;
               const statusName = statusObj?.name;
-              if (statusName === 'status_active_fired' || statusName === 'status_active_fired_compl') {
+              if (
+                statusName === "status_active_fired" ||
+                statusName === "status_active_fired_compl"
+              ) {
                 isFired = true;
-              } else if (statusName === 'status_active_inactive') {
+              } else if (statusName === "status_active_inactive") {
                 isInactive = true;
               }
             }
           }
-          
+
           const formData = {
             ...employee,
             birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
-            passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
-            passportExpiryDate: employee.passportExpiryDate ? dayjs(employee.passportExpiryDate) : null,
-            patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+            passportDate: employee.passportDate
+              ? dayjs(employee.passportDate)
+              : null,
+            passportExpiryDate: employee.passportExpiryDate
+              ? dayjs(employee.passportExpiryDate)
+              : null,
+            patentIssueDate: employee.patentIssueDate
+              ? dayjs(employee.patentIssueDate)
+              : null,
             kigEndDate: employee.kigEndDate ? dayjs(employee.kigEndDate) : null,
             constructionSiteId: mapping?.constructionSiteId || null,
             counterpartyId: mapping?.counterpartyId || null, // Контрагент из маппинга
@@ -699,55 +809,61 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             snils: employee.snils ? formatSnils(employee.snils) : null,
             phone: employee.phone ? formatPhoneNumber(employee.phone) : null,
             kig: employee.kig ? formatKig(employee.kig) : null,
-            patentNumber: employee.patentNumber ? formatPatentNumber(employee.patentNumber) : null,
-            blankNumber: employee.blankNumber ? formatBlankNumber(employee.blankNumber) : null,
+            patentNumber: employee.patentNumber
+              ? formatPatentNumber(employee.patentNumber)
+              : null,
+            blankNumber: employee.blankNumber
+              ? formatBlankNumber(employee.blankNumber)
+              : null,
           };
-          
+
           form.setFieldsValue(formData);
-          
+
           // Инициализируем тип паспорта
           setPassportType(employee.passportType || null);
-          
+
           // Определяем гражданство используя загруженные данные напрямую
           setCheckingCitizenship(true);
-          
+
           if (employee.citizenshipId && loadedCitizenships.length > 0) {
-            const citizenship = loadedCitizenships.find(c => c.id === employee.citizenshipId);
-            
+            const citizenship = loadedCitizenships.find(
+              (c) => c.id === employee.citizenshipId,
+            );
+
             if (citizenship) {
               setSelectedCitizenship(citizenship);
-              
+
               // Небольшая задержка для обновления DOM
-              await new Promise(resolve => setTimeout(resolve, 50));
-              
+              await new Promise((resolve) => setTimeout(resolve, 50));
+
               // Запускаем валидацию с учетом гражданства
               const validation = computeValidation(true, citizenship);
               setTabsValidation(validation);
             }
           }
-          
+
           setCheckingCitizenship(false);
           setDataLoaded(true);
         } else {
           // Для нового сотрудника просто загружаем справочники
           form.resetFields();
-          
+
           // Устанавливаем counterpartyId по умолчанию - контрагента текущего пользователя
           if (user?.counterpartyId) {
             form.setFieldsValue({ counterpartyId: user.counterpartyId });
           }
-          
-          setActiveTab('1');
-          setTabsValidation({ '1': false, '2': false, '3': false });
+
+          setActiveTab("1");
+          setTabsValidation({ 1: false, 2: false, 3: false });
           setSelectedCitizenship(null);
           setDataLoaded(true);
         }
       } catch (error) {
         // Игнорируем ошибки отмены запроса
-        if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        if (error.name === "AbortError" || error.name === "CanceledError") {
           return;
         }
-        console.error('❌ EmployeeFormModal: initialization error', error);
+        console.error("❌ EmployeeFormModal: initialization error", error);
         if (!abortController.signal.aborted) {
           setCheckingCitizenship(false);
           setDataLoaded(true);
@@ -756,7 +872,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     };
 
     initializeModal();
-    
+
     // Cleanup: отменяем запросы при размонтировании или изменении visible/employee
     return () => {
       abortController.abort();
@@ -767,12 +883,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   useEffect(() => {
     // Не запускаем во время проверки гражданства
     if (checkingCitizenship) return;
-    
-    if (!requiresPatent && activeTab === '3') {
+
+    if (!requiresPatent && activeTab === "3") {
       // Если патент больше не требуется и мы на вкладке "Патент", переключаемся на первую вкладку
-      setActiveTab('1');
+      setActiveTab("1");
     }
-    
+
     // Запускаем валидацию только если данные загружены и форма открыта
     // НЕ запускаем при первой загрузке (это делается в initializeModal)
     if (visible && dataLoaded && selectedCitizenship !== null) {
@@ -784,7 +900,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   }, [requiresPatent]);
 
   const updateSelectedCitizenship = (citizenshipId) => {
-    const citizenship = citizenships.find(c => c.id === citizenshipId);
+    const citizenship = citizenships.find((c) => c.id === citizenshipId);
     setSelectedCitizenship(citizenship || null);
   };
 
@@ -796,12 +912,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const fetchCitizenships = async () => {
     try {
       // Используем глобальный кэш
-      const { fetchCitizenships: fetchFromCache } = useReferencesStore.getState();
+      const { fetchCitizenships: fetchFromCache } =
+        useReferencesStore.getState();
       const loadedCitizenships = await fetchFromCache();
       setCitizenships(loadedCitizenships);
       return loadedCitizenships;
     } catch (error) {
-      console.error('Error loading citizenships:', error);
+      console.error("Error loading citizenships:", error);
       return [];
     }
   };
@@ -819,14 +936,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         loadedSites = data.data.constructionSites || [];
       } else {
         // Для остальных контрагентов - только назначенные объекты
-        const { data } = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
+        const { data } = await constructionSiteService.getCounterpartyObjects(
+          user.counterpartyId,
+        );
         loadedSites = data.data || [];
       }
-      
+
       setConstructionSites(loadedSites);
       return loadedSites;
     } catch (error) {
-      console.error('Error loading construction sites:', error);
+      console.error("Error loading construction sites:", error);
       // Не показываем ошибку, просто возвращаем пустой массив
       setConstructionSites([]);
       return [];
@@ -841,7 +960,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       setPositions(loadedPositions);
       return loadedPositions;
     } catch (error) {
-      console.error('Error loading positions:', error);
+      console.error("Error loading positions:", error);
       return [];
     }
   };
@@ -855,7 +974,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       setDefaultCounterpartyId(dcId);
       return dcId;
     } catch (error) {
-      console.error('Error loading default counterparty:', error);
+      console.error("Error loading default counterparty:", error);
       return null;
     }
   };
@@ -870,7 +989,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       }
       return [];
     } catch (error) {
-      console.error('Error loading counterparties:', error);
+      console.error("Error loading counterparties:", error);
       setAvailableCounterparties([]);
       return [];
     } finally {
@@ -885,9 +1004,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
     try {
       const values = form.getFieldsValue();
-      const allFilled = requiredFields.every(field => {
+      const allFilled = requiredFields.every((field) => {
         const value = values[field];
-        return value !== undefined && value !== null && value !== '';
+        return value !== undefined && value !== null && value !== "";
       });
       return allFilled;
     } catch {
@@ -901,11 +1020,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     setTabsValidation(validation);
     // Логируем только если включен debug режим
     if (window.DEBUG_VALIDATION) {
-      console.log('🔍 Tab validation:', {
+      console.log("🔍 Tab validation:", {
         requiresPatent,
         requiredFieldsByTab,
         validation,
-        allValid: Object.keys(requiredFieldsByTab).every(tabKey => validation[tabKey] === true)
+        allValid: Object.keys(requiredFieldsByTab).every(
+          (tabKey) => validation[tabKey] === true,
+        ),
       });
     }
     return validation;
@@ -915,7 +1036,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const allTabsValid = () => {
     // Проверяем только те вкладки, которые существуют в requiredFieldsByTab
     const requiredTabs = Object.keys(requiredFieldsByTab);
-    return requiredTabs.every(tabKey => tabsValidation[tabKey] === true);
+    return requiredTabs.every((tabKey) => tabsValidation[tabKey] === true);
   };
 
   // Обработчик изменения полей формы
@@ -923,13 +1044,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     if (!dataLoaded) {
       return; // Не запускаем валидацию, пока данные не загружены
     }
-    
+
     // Обновляем тип паспорта
-    const currentPassportType = form.getFieldValue('passportType');
+    const currentPassportType = form.getFieldValue("passportType");
     if (currentPassportType !== passportType) {
       setPassportType(currentPassportType);
     }
-    
+
     if (window.validationTimeout) {
       clearTimeout(window.validationTimeout);
     }
@@ -948,9 +1069,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       return;
     }
 
-    const innValue = form.getFieldValue('inn');
-    const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
-    
+    const innValue = form.getFieldValue("inn");
+    const normalized = innValue ? innValue.replace(/[^\d]/g, "") : "";
+
     // Проверяем только если ИНН полностью заполнен (10 или 12 цифр)
     if ((normalized.length === 10 || normalized.length === 12) && innValue) {
       try {
@@ -959,10 +1080,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         // 🎯 Обработка ошибок проверки ИНН (409, 404 и т.д.)
         if (error.response?.status === 409) {
           // Сотрудник найден в другом контрагенте
-          message.error(error.response?.data?.message || 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.');
+          message.error(
+            error.response?.data?.message ||
+              "Сотрудник с таким ИНН уже существует. Обратитесь к администратору.",
+          );
         } else if (error.response?.status !== 404) {
           // 404 это нормально (сотрудник не найден)
-          console.error('Ошибка при проверке ИНН:', error);
+          console.error("Ошибка при проверке ИНН:", error);
         }
       }
     }
@@ -972,22 +1096,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const handleFullNameChange = (fieldName, value) => {
     // Проверяем, был ли введен латинский символ
     const hasLatin = /[a-zA-Z]/.test(value);
-    
+
     if (hasLatin) {
       // Показываем ошибку для текущего поля
       setLatinInputError(fieldName);
-      
+
       // Очищаем предыдущий таймер если есть
       if (latinErrorTimeoutRef.current) {
         clearTimeout(latinErrorTimeoutRef.current);
       }
-      
+
       // Очищаем ошибку через 3 секунды
       latinErrorTimeoutRef.current = setTimeout(() => {
         setLatinInputError(null);
       }, 3000);
     }
-    
+
     // Фильтруем латиницу - оставляем только кириллицу
     const filtered = filterCyrillicOnly(value);
     // Капитализируем первую букву и обновляем значение в форме
@@ -998,7 +1122,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   // Переход на следующую вкладку
   const handleNext = () => {
     // Определяем доступные вкладки в зависимости от requiresPatent
-    const tabOrder = requiresPatent ? ['1', '2', '3'] : ['1', '2'];
+    const tabOrder = requiresPatent ? ["1", "2", "3"] : ["1", "2"];
     const currentIndex = tabOrder.indexOf(activeTab);
     if (currentIndex < tabOrder.length - 1) {
       setActiveTab(tabOrder[currentIndex + 1]);
@@ -1011,44 +1135,51 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       setLoading(true);
       // Получаем ВСЕ значения, включая скрытые поля
       const values = form.getFieldsValue(true);
-      
+
       const formattedValues = {};
-      const uuidFields = ['positionId', 'citizenshipId']; // UUID поля требуют null вместо пустых строк
-      
-      Object.keys(values).forEach(key => {
+      const uuidFields = ["positionId", "citizenshipId"]; // UUID поля требуют null вместо пустых строк
+
+      Object.keys(values).forEach((key) => {
         // constructionSiteId обрабатывается отдельно
-        if (key === 'constructionSiteId') {
+        if (key === "constructionSiteId") {
           return;
         }
-        
+
         const value = values[key];
-        
+
         // Обрабатываем чекбоксы статусов отдельно - отправляем как boolean
-        if (key === 'isFired' || key === 'isInactive') {
+        if (key === "isFired" || key === "isInactive") {
           formattedValues[key] = !!value;
           return;
         }
-        
-        if (value === '' || value === undefined || value === null) {
+
+        if (value === "" || value === undefined || value === null) {
           formattedValues[key] = null;
-        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate' || key === 'kigEndDate' || key === 'passportExpiryDate') {
+        } else if (
+          key === "birthDate" ||
+          key === "passportDate" ||
+          key === "patentIssueDate" ||
+          key === "kigEndDate" ||
+          key === "passportExpiryDate"
+        ) {
           // Проверяем что это dayjs объект (имеет метод format), а не строка
-          formattedValues[key] = (value && value.format) ? value.format('YYYY-MM-DD') : null;
-        } else if (key === 'phone') {
+          formattedValues[key] =
+            value && value.format ? value.format("YYYY-MM-DD") : null;
+        } else if (key === "phone") {
           // Убираем форматирование телефона и добавляем + в начало
           formattedValues[key] = normalizePhoneNumber(value);
-        } else if (key === 'kig') {
+        } else if (key === "kig") {
           // Убираем пробел из КИГ (АА 1234567 → АА1234567)
           formattedValues[key] = normalizeKig(value);
-        } else if (key === 'patentNumber') {
+        } else if (key === "patentNumber") {
           // Убираем пробел из номера патента (01 №1234567890 → 01№1234567890)
           formattedValues[key] = normalizePatentNumber(value);
-        } else if (key === 'inn' || key === 'snils') {
+        } else if (key === "inn" || key === "snils") {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
-          formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
-        } else if (key === 'passportNumber') {
+          formattedValues[key] = value ? value.replace(/[^\d]/g, "") : null;
+        } else if (key === "passportNumber") {
           // Обработка номера паспорта в зависимости от типа
-          if (values.passportType === 'russian') {
+          if (values.passportType === "russian") {
             // Для российского паспорта: убираем пробелы и символ №, оставляем только цифры
             formattedValues[key] = normalizeRussianPassportNumber(value);
           } else {
@@ -1057,7 +1188,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
           }
         } else if (uuidFields.includes(key)) {
           // Для UUID полей - убеждаемся что пустые строки становятся null
-          formattedValues[key] = (value && String(value).trim()) ? value : null;
+          formattedValues[key] = value && String(value).trim() ? value : null;
         } else {
           formattedValues[key] = value;
         }
@@ -1065,7 +1196,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
       formattedValues.isDraft = true; // Флаг для фронтенда
       await onSuccess(formattedValues);
-      
+
       // При сохранении черновика модальное окно НЕ закрывается
       // Если это добавление нового сотрудника - сбрасываем форму
       if (!employee) {
@@ -1075,14 +1206,14 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         }
         isFormResetRef.current = true;
         form.resetFields();
-        setActiveTab('1');
-        setTabsValidation({ '1': false, '2': false, '3': false });
+        setActiveTab("1");
+        setTabsValidation({ 1: false, 2: false, 3: false });
         setSelectedCitizenship(null);
         setPassportType(null);
       }
       // Если это редактирование - оставляем окно открытым с загруженными данными
     } catch (error) {
-      console.error('Save draft error:', error);
+      console.error("Save draft error:", error);
       // Ошибка уже показана в родительском компоненте через message.error
       // Не закрываем модальное окно
     } finally {
@@ -1096,47 +1227,54 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       setLoading(true);
       // Сначала валидируем видимые поля
       await form.validateFields();
-      
+
       // Получаем ВСЕ значения для отправки, включая скрытые
       const values = form.getFieldsValue(true);
-      
+
       const formattedValues = {};
-      const uuidFields = ['positionId', 'citizenshipId']; // UUID поля требуют null вместо пустых строк
-      
-      Object.keys(values).forEach(key => {
+      const uuidFields = ["positionId", "citizenshipId"]; // UUID поля требуют null вместо пустых строк
+
+      Object.keys(values).forEach((key) => {
         // constructionSiteId обрабатывается отдельно
-        if (key === 'constructionSiteId') {
+        if (key === "constructionSiteId") {
           return;
         }
-        
+
         const value = values[key];
-        
+
         // Обрабатываем чекбоксы статусов отдельно - отправляем как boolean
-        if (key === 'isFired' || key === 'isInactive') {
+        if (key === "isFired" || key === "isInactive") {
           formattedValues[key] = !!value;
           return;
         }
-        
-        if (value === '' || value === undefined || value === null) {
+
+        if (value === "" || value === undefined || value === null) {
           formattedValues[key] = null;
-        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate' || key === 'kigEndDate' || key === 'passportExpiryDate') {
+        } else if (
+          key === "birthDate" ||
+          key === "passportDate" ||
+          key === "patentIssueDate" ||
+          key === "kigEndDate" ||
+          key === "passportExpiryDate"
+        ) {
           // Проверяем что это dayjs объект (имеет метод format), а не строка
-          formattedValues[key] = (value && value.format) ? value.format('YYYY-MM-DD') : null;
-        } else if (key === 'phone') {
+          formattedValues[key] =
+            value && value.format ? value.format("YYYY-MM-DD") : null;
+        } else if (key === "phone") {
           // Убираем форматирование телефона и добавляем + в начало
           formattedValues[key] = normalizePhoneNumber(value);
-        } else if (key === 'kig') {
+        } else if (key === "kig") {
           // Убираем пробел из КИГ (АА 1234567 → АА1234567)
           formattedValues[key] = normalizeKig(value);
-        } else if (key === 'patentNumber') {
+        } else if (key === "patentNumber") {
           // Убираем пробел из номера патента (01 №1234567890 → 01№1234567890)
           formattedValues[key] = normalizePatentNumber(value);
-        } else if (key === 'inn' || key === 'snils') {
+        } else if (key === "inn" || key === "snils") {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
-          formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
-        } else if (key === 'passportNumber') {
+          formattedValues[key] = value ? value.replace(/[^\d]/g, "") : null;
+        } else if (key === "passportNumber") {
           // Обработка номера паспорта в зависимости от типа
-          if (values.passportType === 'russian') {
+          if (values.passportType === "russian") {
             // Для российского паспорта: убираем пробелы и символ №, оставляем только цифры
             formattedValues[key] = normalizeRussianPassportNumber(value);
           } else {
@@ -1145,33 +1283,39 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
           }
         } else if (uuidFields.includes(key)) {
           // Для UUID полей - убеждаемся что пустые строки становятся null
-          formattedValues[key] = (value && String(value).trim()) ? value : null;
+          formattedValues[key] = value && String(value).trim() ? value : null;
         } else {
           formattedValues[key] = value;
         }
       });
 
       formattedValues.isDraft = false; // Флаг для бэкенда
-      
+
       // 🎯 РЕЖИМ ПРИВЯЗКИ: отправляем ID сотрудника вместо его данных
-      console.log('🔍 EmployeeFormModal before onSuccess:', {
+      console.log("🔍 EmployeeFormModal before onSuccess:", {
         linkingMode,
         employeeId: employee?.id,
-        willAddEmployeeId: linkingMode && employee?.id
+        willAddEmployeeId: linkingMode && employee?.id,
       });
-      
+
       if (linkingMode && employee?.id) {
         formattedValues.employeeId = employee.id; // Указываем, что привязываем существующего сотрудника
         delete formattedValues.id; // ❌ Удаляем id, чтобы не конфликтовал с employeeId
-        console.log('✅ EmployeeFormModal: Added employeeId to formattedValues:', formattedValues.employeeId);
+        console.log(
+          "✅ EmployeeFormModal: Added employeeId to formattedValues:",
+          formattedValues.employeeId,
+        );
       }
 
-      console.log('📤 EmployeeFormModal: Calling onSuccess with formattedValues.employeeId=', formattedValues.employeeId);
+      console.log(
+        "📤 EmployeeFormModal: Calling onSuccess with formattedValues.employeeId=",
+        formattedValues.employeeId,
+      );
       await onSuccess(formattedValues);
-      
+
       // 🎯 Если это режим привязки - остаемся на странице с сообщением
       if (linkingMode) {
-        message.success('Сотрудник успешно привязан к вашему профилю');
+        message.success("Сотрудник успешно привязан к вашему профилю");
         // 🎯 ВАЖНО: очищаем таймер проверки ИНН ДО сброса формы
         if (innCheckTimeoutRef.current) {
           clearTimeout(innCheckTimeoutRef.current);
@@ -1179,8 +1323,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         // Сбрасываем форму и режим привязки
         isFormResetRef.current = true;
         form.resetFields();
-        setActiveTab('1');
-        setTabsValidation({ '1': false, '2': false, '3': false });
+        setActiveTab("1");
+        setTabsValidation({ 1: false, 2: false, 3: false });
         setSelectedCitizenship(null);
         setPassportType(null);
         setLinkingMode(false);
@@ -1193,8 +1337,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         // Сбрасываем форму для добавления следующего сотрудника
         isFormResetRef.current = true;
         form.resetFields();
-        setActiveTab('1');
-        setTabsValidation({ '1': false, '2': false, '3': false });
+        setActiveTab("1");
+        setTabsValidation({ 1: false, 2: false, 3: false });
         setSelectedCitizenship(null);
         setPassportType(null);
       } else {
@@ -1202,10 +1346,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         onCancel();
       }
     } catch (error) {
-      console.error('Validation or save error:', error);
+      console.error("Validation or save error:", error);
       // Если это ошибка валидации формы, показываем сообщение
       if (error.errorFields) {
-        message.error('Пожалуйста, заполните все обязательные поля');
+        message.error("Пожалуйста, заполните все обязательные поля");
       }
       // Если это ошибка сохранения (дубликат ИНН и т.д.), сообщение уже показано в родителе
       // Не закрываем модальное окно
@@ -1227,9 +1371,17 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   // Рендерим иконку статуса вкладки
   const getTabIcon = (tabKey) => {
     if (tabsValidation[tabKey]) {
-      return <CheckCircleFilled style={{ color: '#52c41a', fontSize: 16, marginRight: 8 }} />;
+      return (
+        <CheckCircleFilled
+          style={{ color: "#52c41a", fontSize: 16, marginRight: 8 }}
+        />
+      );
     }
-    return <CheckCircleOutlined style={{ color: '#d9d9d9', fontSize: 16, marginRight: 8 }} />;
+    return (
+      <CheckCircleOutlined
+        style={{ color: "#d9d9d9", fontSize: 16, marginRight: 8 }}
+      />
+    );
   };
 
   // Генерируем items для Tabs в новом формате
@@ -1237,10 +1389,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     const items = [
       // Вкладка 1: Личная информация
       {
-        key: '1',
+        key: "1",
         label: (
           <span style={getTabStyle()}>
-            {getTabIcon('1')}
+            {getTabIcon("1")}
             Личная информация
           </span>
         ),
@@ -1251,115 +1403,142 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={24}>
                   <Space size="middle" wrap>
-                    <EmployeeActionButtons 
+                    <EmployeeActionButtons
                       employee={employee}
                       messageApi={message}
                       onCancel={onCancel}
-                      isDefaultCounterpartyUser={user?.counterpartyId === defaultCounterpartyId}
-                      isAdmin={user?.role === 'admin'}
+                      isDefaultCounterpartyUser={
+                        user?.counterpartyId === defaultCounterpartyId
+                      }
+                      isAdmin={user?.role === "admin"}
                       onTransfer={() => setTransferModalVisible(true)}
                     />
                   </Space>
                 </Col>
               </Row>
             )}
-            
+
             {/* ИНН и Пол - первая строка */}
             <Row gutter={16}>
-              {!getFieldProps('inn').hidden && (
+              {!getFieldProps("inn").hidden && (
                 <Col xs={24} sm={3} md={3} lg={3}>
-                  <Form.Item 
-                    name="inn" 
+                  <Form.Item
+                    name="inn"
                     label="ИНН"
-                    required={getFieldProps('inn').required}
+                    required={getFieldProps("inn").required}
                     rules={[
-                      ...getFieldProps('inn').rules,
+                      ...getFieldProps("inn").rules,
                       {
                         pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
-                        message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
-                      }
+                        message:
+                          "ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX",
+                      },
                     ]}
                     normalize={(value) => {
                       return formatInn(value);
                     }}
                   >
-                    <Input 
-                      maxLength={14} 
-                      placeholder="XXXX-XXXXX-X" 
+                    <Input
+                      maxLength={14}
+                      placeholder="XXXX-XXXXX-X"
                       onBlur={handleInnBlur}
-                      {...noAutoFillProps} 
+                      {...noAutoFillProps}
                     />
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('gender').hidden && (
+              {!getFieldProps("gender").hidden && (
                 <Col xs={24} sm={3} md={3} lg={3}>
                   <Form.Item
                     name="gender"
                     label="Пол"
-                    required={getFieldProps('gender').required}
-                    rules={getFieldProps('gender').rules}
+                    required={getFieldProps("gender").required}
+                    rules={getFieldProps("gender").rules}
                   >
-                    <Radio.Group style={{ display: 'flex', gap: '8px' }}>
+                    <Radio.Group style={{ display: "flex", gap: "8px" }}>
                       <Radio value="male">Муж</Radio>
                       <Radio value="female">Жен</Radio>
                     </Radio.Group>
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('lastName').hidden && (
+              {!getFieldProps("lastName").hidden && (
                 <Col xs={24} sm={6} md={6} lg={6}>
                   <Form.Item
                     name="lastName"
                     label="Фамилия"
-                    required={getFieldProps('lastName').required}
-                    rules={getFieldProps('lastName').rules}
-                    validateStatus={latinInputError === 'lastName' ? 'error' : ''}
-                    help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
+                    required={getFieldProps("lastName").required}
+                    rules={getFieldProps("lastName").rules}
+                    validateStatus={
+                      latinInputError === "lastName" ? "error" : ""
+                    }
+                    help={
+                      latinInputError === "lastName"
+                        ? "Ввод только на кириллице"
+                        : ""
+                    }
                   >
-                    <Input 
-                      id={antiAutofillIds.lastName} 
-                      name={antiAutofillIds.lastName} 
+                    <Input
+                      id={antiAutofillIds.lastName}
+                      name={antiAutofillIds.lastName}
                       {...noAutoFillProps}
-                      onChange={(e) => handleFullNameChange('lastName', e.target.value)}
+                      onChange={(e) =>
+                        handleFullNameChange("lastName", e.target.value)
+                      }
                     />
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('firstName').hidden && (
+              {!getFieldProps("firstName").hidden && (
                 <Col xs={24} sm={6} md={6} lg={6}>
                   <Form.Item
                     name="firstName"
                     label="Имя"
-                    required={getFieldProps('firstName').required}
-                    rules={getFieldProps('firstName').rules}
-                    validateStatus={latinInputError === 'firstName' ? 'error' : ''}
-                    help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
+                    required={getFieldProps("firstName").required}
+                    rules={getFieldProps("firstName").rules}
+                    validateStatus={
+                      latinInputError === "firstName" ? "error" : ""
+                    }
+                    help={
+                      latinInputError === "firstName"
+                        ? "Ввод только на кириллице"
+                        : ""
+                    }
                   >
-                    <Input 
-                      id={antiAutofillIds.firstName} 
-                      name={antiAutofillIds.firstName} 
+                    <Input
+                      id={antiAutofillIds.firstName}
+                      name={antiAutofillIds.firstName}
                       {...noAutoFillProps}
-                      onChange={(e) => handleFullNameChange('firstName', e.target.value)}
+                      onChange={(e) =>
+                        handleFullNameChange("firstName", e.target.value)
+                      }
                     />
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('middleName').hidden && (
+              {!getFieldProps("middleName").hidden && (
                 <Col xs={24} sm={6} md={6} lg={6}>
-                  <Form.Item 
-                    name="middleName" 
+                  <Form.Item
+                    name="middleName"
                     label="Отчество"
-                    required={getFieldProps('middleName').required}
-                    rules={getFieldProps('middleName').rules}
-                    validateStatus={latinInputError === 'middleName' ? 'error' : ''}
-                    help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
+                    required={getFieldProps("middleName").required}
+                    rules={getFieldProps("middleName").rules}
+                    validateStatus={
+                      latinInputError === "middleName" ? "error" : ""
+                    }
+                    help={
+                      latinInputError === "middleName"
+                        ? "Ввод только на кириллице"
+                        : ""
+                    }
                   >
-                    <Input 
-                      id={antiAutofillIds.middleName} 
-                      name={antiAutofillIds.middleName} 
+                    <Input
+                      id={antiAutofillIds.middleName}
+                      name={antiAutofillIds.middleName}
                       {...noAutoFillProps}
-                      onChange={(e) => handleFullNameChange('middleName', e.target.value)}
+                      onChange={(e) =>
+                        handleFullNameChange("middleName", e.target.value)
+                      }
                     />
                   </Form.Item>
                 </Col>
@@ -1368,13 +1547,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Должность на отдельной строке с гражданством и датой рождения */}
             <Row gutter={16}>
-              {!getFieldProps('positionId').hidden && (
+              {!getFieldProps("positionId").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
                   <Form.Item
                     name="positionId"
                     label="Должность"
-                    required={getFieldProps('positionId').required}
-                    rules={getFieldProps('positionId').rules}
+                    required={getFieldProps("positionId").required}
+                    rules={getFieldProps("positionId").rules}
                   >
                     <Select
                       placeholder="Выберите должность"
@@ -1382,12 +1561,14 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                       showSearch
                       optionFilterProp="children"
                       filterOption={(input, option) =>
-                        option.children.toLowerCase().includes(input.toLowerCase())
+                        option.children
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
                       }
                       virtual={false}
                       listHeight={400}
                       popupMatchSelectWidth={false}
-                      classNames={{ popup: { root: 'dropdown-wide' } }}
+                      classNames={{ popup: { root: "dropdown-wide" } }}
                       autoComplete="off"
                     >
                       {positions.map((p) => (
@@ -1399,13 +1580,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('citizenshipId').hidden && (
+              {!getFieldProps("citizenshipId").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="citizenshipId" 
+                  <Form.Item
+                    name="citizenshipId"
                     label="Гражданство"
-                    required={getFieldProps('citizenshipId').required}
-                    rules={getFieldProps('citizenshipId').rules}
+                    required={getFieldProps("citizenshipId").required}
+                    rules={getFieldProps("citizenshipId").rules}
                   >
                     <Select
                       placeholder="Выберите гражданство"
@@ -1425,33 +1606,41 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('birthDate').hidden && (
+              {!getFieldProps("birthDate").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="birthDate" 
+                  <Form.Item
+                    name="birthDate"
                     label="Дата рождения"
-                    required={getFieldProps('birthDate').required}
+                    required={getFieldProps("birthDate").required}
                     rules={[
-                      ...getFieldProps('birthDate').rules,
+                      ...getFieldProps("birthDate").rules,
                       {
                         validator: (_, value) => {
                           if (!value) {
                             return Promise.resolve();
                           }
-                          const age = dayjs().diff(value, 'year');
+                          const age = dayjs().diff(value, "year");
                           if (age < 16) {
-                            return Promise.reject(new Error('Возраст сотрудника должен быть не менее 16 лет'));
+                            return Promise.reject(
+                              new Error(
+                                "Возраст сотрудника должен быть не менее 16 лет",
+                              ),
+                            );
                           }
                           if (age > 80) {
-                            return Promise.reject(new Error('Возраст сотрудника должен быть не менее 80 лет'));
+                            return Promise.reject(
+                              new Error(
+                                "Возраст сотрудника должен быть не менее 80 лет",
+                              ),
+                            );
                           }
                           return Promise.resolve();
-                        }
-                      }
+                        },
+                      },
                     ]}
                   >
                     <DatePicker
-                      style={{ width: '100%' }}
+                      style={{ width: "100%" }}
                       format={DATE_FORMAT}
                       placeholder="ДД.ММ.ГГГГ"
                     />
@@ -1462,13 +1651,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Дата рождения (мобила) + Страна рождения + Адрес регистрации */}
             <Row gutter={16}>
-              {!getFieldProps('birthCountryId').hidden && (
+              {!getFieldProps("birthCountryId").hidden && (
                 <Col xs={24} sm={12} md={8} lg={8}>
-                  <Form.Item 
-                    name="birthCountryId" 
+                  <Form.Item
+                    name="birthCountryId"
                     label="Страна рождения"
-                    required={getFieldProps('birthCountryId').required}
-                    rules={getFieldProps('birthCountryId').rules}
+                    required={getFieldProps("birthCountryId").required}
+                    rules={getFieldProps("birthCountryId").rules}
                     trigger="onChange"
                   >
                     <Select
@@ -1496,15 +1685,20 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('registrationAddress').hidden && (
+              {!getFieldProps("registrationAddress").hidden && (
                 <Col xs={24} sm={12} md={16} lg={16}>
-                  <Form.Item 
-                    name="registrationAddress" 
+                  <Form.Item
+                    name="registrationAddress"
                     label="Адрес регистрации"
-                    required={getFieldProps('registrationAddress').required}
-                    rules={getFieldProps('registrationAddress').rules}
+                    required={getFieldProps("registrationAddress").required}
+                    rules={getFieldProps("registrationAddress").rules}
                   >
-                  <Input id={antiAutofillIds.registrationAddress} name={antiAutofillIds.registrationAddress} placeholder="г. Москва, ул. Тверская, д.21, кв.11" {...noAutoFillProps} />
+                    <Input
+                      id={antiAutofillIds.registrationAddress}
+                      name={antiAutofillIds.registrationAddress}
+                      placeholder="г. Москва, ул. Тверская, д.21, кв.11"
+                      {...noAutoFillProps}
+                    />
                   </Form.Item>
                 </Col>
               )}
@@ -1512,42 +1706,47 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Контакты */}
             <Row gutter={16}>
-              {!getFieldProps('email').hidden && (
+              {!getFieldProps("email").hidden && (
                 <Col xs={24} sm={12} md={12} lg={12}>
                   <Form.Item
                     name="email"
                     label="Email"
-                    required={getFieldProps('email').required}
+                    required={getFieldProps("email").required}
                     rules={[
-                      ...getFieldProps('email').rules,
-                      { 
-                        type: 'email', 
-                        message: 'Введите корректный email (например: ivanov@example.com)' 
-                      }
+                      ...getFieldProps("email").rules,
+                      {
+                        type: "email",
+                        message:
+                          "Введите корректный email (например: ivanov@example.com)",
+                      },
                     ]}
                   >
-                    <Input placeholder="ivanov@example.com" {...noAutoFillProps} />
+                    <Input
+                      placeholder="ivanov@example.com"
+                      {...noAutoFillProps}
+                    />
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('phone').hidden && (
+              {!getFieldProps("phone").hidden && (
                 <Col xs={24} sm={12} md={12} lg={12}>
-                  <Form.Item 
-                    name="phone" 
+                  <Form.Item
+                    name="phone"
                     label="Телефон"
-                    required={getFieldProps('phone').required}
+                    required={getFieldProps("phone").required}
                     rules={[
-                      ...getFieldProps('phone').rules,
+                      ...getFieldProps("phone").rules,
                       {
                         pattern: /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/,
-                        message: 'Телефон должен быть в формате +7 (999) 123-45-67'
-                      }
+                        message:
+                          "Телефон должен быть в формате +7 (999) 123-45-67",
+                      },
                     ]}
                     normalize={(value) => {
                       return formatPhoneNumber(value);
                     }}
                   >
-                    <Input 
+                    <Input
                       id={antiAutofillIds.phone}
                       name={antiAutofillIds.phone}
                       placeholder="+7 (999) 123-45-67"
@@ -1560,10 +1759,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             </Row>
 
             {/* Примечания */}
-            {!getFieldProps('notes').hidden && (
+            {!getFieldProps("notes").hidden && (
               <Row gutter={16}>
                 <Col span={24}>
-                  <Form.Item name="notes" label="Примечания" required={getFieldProps('notes').required} rules={getFieldProps('notes').rules}>
+                  <Form.Item
+                    name="notes"
+                    label="Примечания"
+                    required={getFieldProps("notes").required}
+                    rules={getFieldProps("notes").rules}
+                  >
                     <TextArea rows={2} {...noAutoFillProps} />
                   </Form.Item>
                 </Col>
@@ -1574,68 +1778,76 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       },
       // Вкладка 2: Документы
       {
-        key: '2',
+        key: "2",
         label: (
           <span style={getTabStyle()}>
-            {getTabIcon('2')}
+            {getTabIcon("2")}
             Документы
           </span>
         ),
         children: (
           <>
             <Row gutter={16}>
-              {!getFieldProps('snils').hidden && (
+              {!getFieldProps("snils").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="snils" 
+                  <Form.Item
+                    name="snils"
                     label="СНИЛС"
-                    required={getFieldProps('snils').required}
+                    required={getFieldProps("snils").required}
                     rules={[
-                      ...getFieldProps('snils').rules,
+                      ...getFieldProps("snils").rules,
                       {
                         pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
-                        message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX'
-                      }
+                        message: "СНИЛС должен быть в формате XXX-XXX-XXX XX",
+                      },
                     ]}
                     normalize={(value) => {
                       return formatSnils(value);
                     }}
                   >
-                    <Input maxLength={14} placeholder="123-456-789 00" {...noAutoFillProps} />
+                    <Input
+                      maxLength={14}
+                      placeholder="123-456-789 00"
+                      {...noAutoFillProps}
+                    />
                   </Form.Item>
                 </Col>
               )}
-              {requiresPatent && !getFieldProps('kig').hidden && (
+              {requiresPatent && !getFieldProps("kig").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="kig" 
+                  <Form.Item
+                    name="kig"
                     label="КИГ"
-                    required={getFieldProps('kig').required}
+                    required={getFieldProps("kig").required}
                     rules={[
-                      ...getFieldProps('kig').rules,
+                      ...getFieldProps("kig").rules,
                       {
                         pattern: /^[A-Z]{2}\s\d{7}$/,
-                        message: 'КИГ должен быть в формате: AF 1234567'
-                      }
+                        message: "КИГ должен быть в формате: AF 1234567",
+                      },
                     ]}
                     normalize={(value) => {
                       return formatKig(value);
                     }}
                   >
-                    <Input maxLength={10} placeholder="AF 1234567" {...noAutoFillProps} />
+                    <Input
+                      maxLength={10}
+                      placeholder="AF 1234567"
+                      {...noAutoFillProps}
+                    />
                   </Form.Item>
                 </Col>
               )}
-              {requiresPatent && !getFieldProps('kigEndDate').hidden && (
+              {requiresPatent && !getFieldProps("kigEndDate").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="kigEndDate" 
+                  <Form.Item
+                    name="kigEndDate"
                     label="Дата окончания КИГ"
-                    required={getFieldProps('kigEndDate').required}
-                    rules={getFieldProps('kigEndDate').rules}
+                    required={getFieldProps("kigEndDate").required}
+                    rules={getFieldProps("kigEndDate").rules}
                   >
                     <DatePicker
-                      style={{ width: '100%' }}
+                      style={{ width: "100%" }}
                       format={DATE_FORMAT}
                       placeholder="ДД.ММ.ГГГГ"
                     />
@@ -1645,17 +1857,17 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             </Row>
 
             <Row gutter={16}>
-              {!getFieldProps('passportType').hidden && (
+              {!getFieldProps("passportType").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="passportType" 
+                  <Form.Item
+                    name="passportType"
                     label="Тип паспорта"
-                    required={getFieldProps('passportType').required}
-                    rules={getFieldProps('passportType').rules}
+                    required={getFieldProps("passportType").required}
+                    rules={getFieldProps("passportType").rules}
                   >
-                    <Select 
-                      placeholder="Выберите тип паспорта" 
-                      allowClear 
+                    <Select
+                      placeholder="Выберите тип паспорта"
+                      allowClear
                       autoComplete="off"
                       onChange={(value) => setPassportType(value)}
                     >
@@ -1665,39 +1877,43 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('passportNumber').hidden && (
+              {!getFieldProps("passportNumber").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="passportNumber" 
+                  <Form.Item
+                    name="passportNumber"
                     label="№ паспорта"
-                    required={getFieldProps('passportNumber').required}
-                    rules={getFieldProps('passportNumber').rules}
+                    required={getFieldProps("passportNumber").required}
+                    rules={getFieldProps("passportNumber").rules}
                     getValueFromEvent={(e) => {
                       // Применяем маску только для российского паспорта
-                      if (passportType === 'russian') {
+                      if (passportType === "russian") {
                         return formatRussianPassportNumber(e.target.value);
                       }
                       return e.target.value;
                     }}
                   >
-                    <Input 
+                    <Input
                       {...noAutoFillProps}
-                      placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'}
-                      maxLength={passportType === 'russian' ? 13 : undefined}
+                      placeholder={
+                        passportType === "russian"
+                          ? "1234 №123456"
+                          : "Номер паспорта"
+                      }
+                      maxLength={passportType === "russian" ? 13 : undefined}
                     />
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('passportDate').hidden && (
+              {!getFieldProps("passportDate").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="passportDate" 
+                  <Form.Item
+                    name="passportDate"
                     label="Дата выдачи паспорта"
-                    required={getFieldProps('passportDate').required}
-                    rules={getFieldProps('passportDate').rules}
+                    required={getFieldProps("passportDate").required}
+                    rules={getFieldProps("passportDate").rules}
                   >
                     <DatePicker
-                      style={{ width: '100%' }}
+                      style={{ width: "100%" }}
                       format={DATE_FORMAT}
                       placeholder="ДД.ММ.ГГГГ"
                     />
@@ -1707,31 +1923,40 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             </Row>
 
             <Row gutter={16}>
-              {passportType === 'foreign' && !getFieldProps('passportExpiryDate').hidden && (
-                <Col xs={24} sm={12} md={12} lg={12}>
-                  <Form.Item 
-                    name="passportExpiryDate" 
-                    label="Дата окончания паспорта"
-                    required={getFieldProps('passportExpiryDate').required}
-                    rules={getFieldProps('passportExpiryDate').rules}
-                  >
-                    <DatePicker
-                      style={{ width: '100%' }}
-                      format={DATE_FORMAT}
-                      placeholder="ДД.ММ.ГГГГ"
-                    />
-                  </Form.Item>
-                </Col>
-              )}
-              {!getFieldProps('passportIssuer').hidden && (
-                <Col xs={24} sm={passportType === 'foreign' ? 12 : 24} md={passportType === 'foreign' ? 12 : 24} lg={passportType === 'foreign' ? 12 : 24}>
-                  <Form.Item 
-                    name="passportIssuer" 
+              {passportType === "foreign" &&
+                !getFieldProps("passportExpiryDate").hidden && (
+                  <Col xs={24} sm={12} md={12} lg={12}>
+                    <Form.Item
+                      name="passportExpiryDate"
+                      label="Дата окончания паспорта"
+                      required={getFieldProps("passportExpiryDate").required}
+                      rules={getFieldProps("passportExpiryDate").rules}
+                    >
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        format={DATE_FORMAT}
+                        placeholder="ДД.ММ.ГГГГ"
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
+              {!getFieldProps("passportIssuer").hidden && (
+                <Col
+                  xs={24}
+                  sm={passportType === "foreign" ? 12 : 24}
+                  md={passportType === "foreign" ? 12 : 24}
+                  lg={passportType === "foreign" ? 12 : 24}
+                >
+                  <Form.Item
+                    name="passportIssuer"
                     label="Кем выдан паспорт"
-                    required={getFieldProps('passportIssuer').required}
-                    rules={getFieldProps('passportIssuer').rules}
+                    required={getFieldProps("passportIssuer").required}
+                    rules={getFieldProps("passportIssuer").rules}
                   >
-                    <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" {...noAutoFillProps} />
+                    <Input
+                      placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20"
+                      {...noAutoFillProps}
+                    />
                   </Form.Item>
                 </Col>
               )}
@@ -1744,40 +1969,43 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     // Вкладка 3: Патент (только если требуется)
     if (requiresPatent || checkingCitizenship) {
       items.push({
-        key: '3',
+        key: "3",
         label: (
           <span style={getTabStyle()}>
-            {getTabIcon('3')}
+            {getTabIcon("3")}
             Патент
-            {checkingCitizenship && ' (проверка...)'}
+            {checkingCitizenship && " (проверка...)"}
           </span>
         ),
         disabled: checkingCitizenship,
         children: checkingCitizenship ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+          <div
+            style={{ textAlign: "center", padding: "40px 0", color: "#999" }}
+          >
             Проверка необходимости патента...
           </div>
         ) : (
           <>
             <Row gutter={16}>
-              {!getFieldProps('patentNumber').hidden && (
+              {!getFieldProps("patentNumber").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="patentNumber" 
+                  <Form.Item
+                    name="patentNumber"
                     label="Номер патента"
-                    required={getFieldProps('patentNumber').required}
+                    required={getFieldProps("patentNumber").required}
                     rules={[
-                      ...getFieldProps('patentNumber').rules,
+                      ...getFieldProps("patentNumber").rules,
                       {
                         pattern: /^\d{2}\s№\d{10}$/,
-                        message: 'Номер патента должен быть в формате XX №1234567890 (где XX - код от 01 до 99)'
-                      }
+                        message:
+                          "Номер патента должен быть в формате XX №1234567890 (где XX - код от 01 до 99)",
+                      },
                     ]}
                     normalize={(value) => {
                       return formatPatentNumber(value);
                     }}
                   >
-                    <Input 
+                    <Input
                       placeholder="01 №1234567890 (код 01-99)"
                       maxLength={15}
                       {...noAutoFillProps}
@@ -1785,40 +2013,41 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('patentIssueDate').hidden && (
+              {!getFieldProps("patentIssueDate").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="patentIssueDate" 
+                  <Form.Item
+                    name="patentIssueDate"
                     label="Дата выдачи патента"
-                    required={getFieldProps('patentIssueDate').required}
-                    rules={getFieldProps('patentIssueDate').rules}
+                    required={getFieldProps("patentIssueDate").required}
+                    rules={getFieldProps("patentIssueDate").rules}
                   >
                     <DatePicker
-                      style={{ width: '100%' }}
+                      style={{ width: "100%" }}
                       format={DATE_FORMAT}
                       placeholder="ДД.ММ.ГГГГ"
                     />
                   </Form.Item>
                 </Col>
               )}
-              {!getFieldProps('blankNumber').hidden && (
+              {!getFieldProps("blankNumber").hidden && (
                 <Col xs={24} sm={8} md={8} lg={8}>
-                  <Form.Item 
-                    name="blankNumber" 
+                  <Form.Item
+                    name="blankNumber"
                     label="Номер бланка"
-                    required={getFieldProps('blankNumber').required}
+                    required={getFieldProps("blankNumber").required}
                     rules={[
-                      ...getFieldProps('blankNumber').rules,
+                      ...getFieldProps("blankNumber").rules,
                       {
                         pattern: /^[А-ЯЁ]{2}\d{7}$/,
-                        message: 'Номер бланка должен быть в формате ПР1234567 (кириллица)'
-                      }
+                        message:
+                          "Номер бланка должен быть в формате ПР1234567 (кириллица)",
+                      },
                     ]}
                     normalize={(value) => {
                       return formatBlankNumber(value);
                     }}
                   >
-                    <Input 
+                    <Input
                       placeholder="ПР1234567 (буквы - кириллица)"
                       maxLength={9}
                       {...noAutoFillProps}
@@ -1835,16 +2064,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     // Вкладка 4: Файлы (только для существующих сотрудников)
     if (employee?.id) {
       items.push({
-        key: '4',
-        label: 'Файлы',
-        children: <DocumentTypeUploader employeeId={employee.id} readonly={false} onFilesUpdated={handleFilesChange} />,
+        key: "4",
+        label: "Файлы",
+        children: (
+          <DocumentTypeUploader
+            employeeId={employee.id}
+            readonly={false}
+            onFilesUpdated={handleFilesChange}
+          />
+        ),
       });
     }
 
     // Вкладка 5: Контрагент (без галочки, не участвует в проверке обязательных полей)
     items.push({
-      key: '5',
-      label: '🏢 Контрагент',
+      key: "5",
+      label: "🏢 Контрагент",
       children: (
         <Row gutter={16}>
           <Col span={12}>
@@ -1855,8 +2090,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
               rules={[
                 {
                   required: true,
-                  message: 'Выберите контрагента'
-                }
+                  message: "Выберите контрагента",
+                },
               ]}
             >
               <Select
@@ -1867,7 +2102,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   option.children.toLowerCase().includes(input.toLowerCase())
                 }
                 loading={loadingCounterparties}
-                disabled={loadingCounterparties || availableCounterparties.length === 0}
+                disabled={
+                  loadingCounterparties || availableCounterparties.length === 0
+                }
                 autoComplete="off"
               >
                 {availableCounterparties.map((cp) => (
@@ -1879,14 +2116,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             </Form.Item>
 
             {availableCounterparties.length === 0 && !loadingCounterparties && (
-              <div style={{ 
-                padding: 16, 
-                background: '#f5f5f5', 
-                borderRadius: 4,
-                textAlign: 'center',
-                color: '#8c8c8c',
-                marginTop: 16
-              }}>
+              <div
+                style={{
+                  padding: 16,
+                  background: "#f5f5f5",
+                  borderRadius: 4,
+                  textAlign: "center",
+                  color: "#8c8c8c",
+                  marginTop: 16,
+                }}
+              >
                 📝 Нет доступных контрагентов
               </div>
             )}
@@ -1902,40 +2141,50 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const formContent = (
     <>
       {/* Скрытые поля-ловушки для автозаполнения браузера */}
-      <div style={{ display: 'none' }} aria-hidden="true">
-        <input type="text" name="fakeusernameremember" autoComplete="username" />
+      <div style={{ display: "none" }} aria-hidden="true">
+        <input
+          type="text"
+          name="fakeusernameremember"
+          autoComplete="username"
+        />
         <input type="text" name="fakefirstname" autoComplete="given-name" />
         <input type="text" name="fakelastname" autoComplete="family-name" />
         <input type="text" name="fakeaddress" autoComplete="street-address" />
         <input type="text" name="fakecountry" autoComplete="country-name" />
         <input type="tel" name="fakephone" autoComplete="tel" />
         <input type="email" name="fakeemail" autoComplete="email" />
-        <input type="password" name="fakepasswordremember" autoComplete="current-password" />
+        <input
+          type="password"
+          name="fakepasswordremember"
+          autoComplete="current-password"
+        />
       </div>
-      <Form 
-        form={form} 
+      <Form
+        form={form}
         layout="vertical"
-        initialValues={{ gender: 'male' }}
+        initialValues={{ gender: "male" }}
         onFieldsChange={handleFieldsChange}
-        validateTrigger={['onChange', 'onBlur']}
+        validateTrigger={["onChange", "onBlur"]}
         autoComplete="off"
         requiredMark={(label, { required }) => (
           <>
             {label}
-            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+            {required && (
+              <span style={{ color: "#ff4d4f", marginLeft: 4 }}>*</span>
+            )}
           </>
         )}
       >
-      <Tabs 
-        activeKey={activeTab}
-        onChange={(key) => {
-          setActiveTab(key);
-          // Валидация запустится через useEffect при изменении activeTab
-        }}
-        style={{ marginTop: 16 }}
-        destroyOnHidden={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
-        items={getTabsItems()}
-      />
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            // Валидация запустится через useEffect при изменении activeTab
+          }}
+          style={{ marginTop: 16 }}
+          destroyOnHidden={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
+          items={getTabsItems()}
+        />
       </Form>
     </>
   );
@@ -1944,17 +2193,17 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const footer = (
     <Space>
       <Button onClick={handleModalCancel}>
-        {employee ? 'Закрыть' : 'Отмена'}
+        {employee ? "Закрыть" : "Отмена"}
       </Button>
       <Button onClick={handleSaveDraft} loading={loading}>
         Сохранить черновик
       </Button>
       {allTabsValid() ? (
-        <Button 
-          type="primary" 
-          onClick={handleSave} 
+        <Button
+          type="primary"
+          onClick={handleSave}
           loading={loading}
-          style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+          style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
         >
           Сохранить
         </Button>
@@ -1970,13 +2219,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   return (
     <>
       <Modal
-        title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
+        title={employee ? "Редактировать сотрудника" : "Добавить сотрудника1"}
         open={visible}
         onCancel={handleModalCancel}
         maskClosable={false}
         width={1350}
         footer={footer}
-        styles={{ body: { maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' } }}
+        styles={{
+          body: { maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" },
+        }}
       >
         {formContent}
       </Modal>
