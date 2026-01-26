@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Input, Space, Modal, Form, message as msgStatic, Typography, App } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, Typography, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { constructionSiteService } from '../services/constructionSiteService';
 

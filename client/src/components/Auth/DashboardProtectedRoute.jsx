@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
 import { Result, Spin } from 'antd';
 import { useAuthStore } from '@/store/authStore';
 import settingsService from '@/services/settingsService';

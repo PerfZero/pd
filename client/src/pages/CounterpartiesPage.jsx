@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App, Alert, Result } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
+import { useState, useEffect, useRef } from 'react';
+import { Card, Table, Button, Input, Space, Modal, Form, Select, Tag, Tooltip, Typography, Row, Col, App, Alert, Result } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
-import { constructionSiteService } from '../services/constructionSiteService';
 import settingsService from '../services/settingsService';
 import { CounterpartyObjectsModal } from './CounterpartiesPage/CounterpartyObjectsModal';
 import { useAuthStore } from '../store/authStore';

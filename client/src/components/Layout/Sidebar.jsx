@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu } from 'antd'
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Layout, Menu } from "antd";
 import {
   UserOutlined,
   LogoutOutlined,
@@ -8,14 +8,14 @@ import {
   ShopOutlined,
   BankOutlined,
   FileTextOutlined,
-  ProfileOutlined,
   ControlOutlined,
-  BookOutlined
-} from '@ant-design/icons'
-import { useAuthStore } from '@/store/authStore'
-import settingsService from '@/services/settingsService'
+  BookOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons";
+import { useAuthStore } from "@/store/authStore";
+import settingsService from "@/services/settingsService";
 
-const { Sider } = Layout
+const { Sider } = Layout;
 
 // Стили для кнопки сворачивания
 const sidebarStyles = `
@@ -26,115 +26,130 @@ const sidebarStyles = `
 `;
 
 const Sidebar = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { logout, user } = useAuthStore()
-  const [collapsed, setCollapsed] = useState(false)
-  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { logout, user } = useAuthStore();
+  const [collapsed, setCollapsed] = useState(false);
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
 
   // Загрузить defaultCounterpartyId при монтировании
   useEffect(() => {
     const loadDefaultCounterpartyId = async () => {
       try {
-        const response = await settingsService.getPublicSettings()
+        const response = await settingsService.getPublicSettings();
         if (response.success && response.data.defaultCounterpartyId) {
-          setDefaultCounterpartyId(response.data.defaultCounterpartyId)
+          setDefaultCounterpartyId(response.data.defaultCounterpartyId);
         }
       } catch (error) {
-        console.error('Error loading default counterparty ID:', error)
+        console.error("Error loading default counterparty ID:", error);
       }
-    }
-    
-    loadDefaultCounterpartyId()
-  }, [])
+    };
+
+    loadDefaultCounterpartyId();
+  }, []);
 
   // Проверка: показывать ли меню Контрагенты для user
-  const showCounterpartiesMenu = 
-    user?.role === 'admin' || 
-    (user?.role === 'user' && user?.counterpartyId && user?.counterpartyId !== defaultCounterpartyId)
+  const showCounterpartiesMenu =
+    user?.role === "admin" ||
+    (user?.role === "user" &&
+      user?.counterpartyId &&
+      user?.counterpartyId !== defaultCounterpartyId);
 
   // Меню для обычных пользователей (role: user)
   const userMenuItems = [
     {
-      key: '/employees',
+      key: "/employees",
       icon: <TeamOutlined />,
-      label: 'Сотрудники',
-    }
-  ]
+      label: "Сотрудники",
+    },
+  ];
+
+  if (showCounterpartiesMenu) {
+    userMenuItems.push({
+      key: "/ot",
+      icon: <SafetyCertificateOutlined />,
+      label: "Охрана труда",
+    });
+  }
 
   // Добавляем Справочники для user (не default)
   if (showCounterpartiesMenu) {
     userMenuItems.push({
-      key: 'references',
+      key: "references",
       icon: <BankOutlined />,
-      label: 'Справочники',
+      label: "Справочники",
       children: [
         {
-          key: '/counterparties',
+          key: "/counterparties",
           icon: <ShopOutlined />,
-          label: 'Контрагенты',
-        }
-      ]
-    })
+          label: "Контрагенты",
+        },
+      ],
+    });
   }
 
   // Меню для администраторов
   const adminMenuItems = [
     {
-      key: '/employees',
+      key: "/employees",
       icon: <UserOutlined />,
-      label: 'Сотрудники',
+      label: "Сотрудники",
     },
     {
-      key: 'references',
+      key: "/ot",
+      icon: <SafetyCertificateOutlined />,
+      label: "Охрана труда",
+    },
+    {
+      key: "references",
       icon: <BankOutlined />,
-      label: 'Справочники',
+      label: "Справочники",
       children: [
         {
-          key: '/counterparties',
+          key: "/counterparties",
           icon: <ShopOutlined />,
-          label: 'Контрагенты',
+          label: "Контрагенты",
         },
         {
-          key: '/construction-sites',
+          key: "/construction-sites",
           icon: <BankOutlined />,
-          label: 'Объекты',
+          label: "Объекты",
         },
         {
-          key: '/contracts',
+          key: "/contracts",
           icon: <FileTextOutlined />,
-          label: 'Договора',
+          label: "Договора",
         },
         {
-          key: '/directories',
+          key: "/directories",
           icon: <BookOutlined />,
-          label: 'Подразделения',
+          label: "Подразделения",
         },
       ],
     },
     {
-      key: '/administration',
+      key: "/administration",
       icon: <ControlOutlined />,
-      label: 'Администрирование',
-    }
-  ]
+      label: "Администрирование",
+    },
+  ];
 
   // Выбираем меню на основе роли пользователя
-  let menuItems = []
-  if (user?.role === 'user') {
-    menuItems = [...userMenuItems]
-  } else if (user?.role === 'admin') {
-    menuItems = [...adminMenuItems]
+  let menuItems = [];
+  if (user?.role === "user") {
+    menuItems = [...userMenuItems];
+  } else if (user?.role === "admin") {
+    menuItems = [...adminMenuItems];
   }
 
   const handleMenuClick = ({ key }) => {
-    if (key === 'logout') {
-      logout()
-      navigate('/login')
+    if (key === "logout") {
+      logout();
+      navigate("/login");
     } else {
-      navigate(key)
+      navigate(key);
     }
-  }
+  };
 
   return (
     <>
@@ -145,55 +160,62 @@ const Sidebar = () => {
         onCollapse={setCollapsed}
         width={250}
         style={{
-          overflow: 'auto',
-          height: '100vh',
-          position: 'sticky',
+          overflow: "auto",
+          height: "100vh",
+          position: "sticky",
           left: 0,
           top: 0,
           bottom: 0,
         }}
       >
-      <div
-        style={{
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: collapsed ? 18 : 24,
-          fontWeight: 700,
-          color: '#2563eb',
-          padding: '0 16px',
-        }}
-      >
-        {collapsed ? 'PD' : 'PassDesk'}
-      </div>
+        <div
+          style={{
+            height: 64,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: collapsed ? 18 : 24,
+            fontWeight: 700,
+            color: "#2563eb",
+            padding: "0 16px",
+          }}
+        >
+          {collapsed ? "PD" : "PassDesk"}
+        </div>
 
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        onClick={handleMenuClick}
-        style={{ border: 'none' }}
-      />
-
-      <div style={{ position: 'absolute', bottom: 16, width: '100%', padding: '0 16px' }}>
         <Menu
           mode="inline"
-          items={[
-            {
-              key: 'logout',
-              icon: <LogoutOutlined />,
-              label: 'Выйти',
-              danger: true,
-            },
-          ]}
+          selectedKeys={[location.pathname]}
+          items={menuItems}
           onClick={handleMenuClick}
-          style={{ border: 'none' }}
+          style={{ border: "none" }}
         />
-      </div>
+
+        <div
+          style={{
+            position: "absolute",
+            bottom: 16,
+            width: "100%",
+            padding: "0 16px",
+          }}
+        >
+          <Menu
+            mode="inline"
+            items={[
+              {
+                key: "logout",
+                icon: <LogoutOutlined />,
+                label: "Выйти",
+                danger: true,
+              },
+            ]}
+            onClick={handleMenuClick}
+            style={{ border: "none" }}
+          />
+        </div>
       </Sider>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

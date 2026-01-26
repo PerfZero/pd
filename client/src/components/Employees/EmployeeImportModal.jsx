@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Modal, Steps, Button, Upload, Table, Space, App, Spin, Empty, Radio, message, Tooltip, Divider, Tag } from 'antd';
-import { UploadOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons';
+import { Modal, Steps, Button, Upload, Table, Space, App, Spin, Empty, Radio, Tooltip, Divider } from 'antd';
+import { UploadOutlined, CheckCircleOutlined, ExclamationCircleOutlined, LinkOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Modal, Form, Select, DatePicker, Input, message as msgStatic, Tag, Typography, App } from 'antd';
+import { Card, Table, Button, Space, Modal, Form, Select, DatePicker, Input, Tag, Typography, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { contractService } from '../services/contractService';
 import { counterpartyService } from '../services/counterpartyService';

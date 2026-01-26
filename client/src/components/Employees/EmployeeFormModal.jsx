@@ -11,14 +11,12 @@ import {
   Tabs,
   Button,
   Space,
-  Checkbox,
   Popconfirm,
   Radio,
 } from "antd";
 import {
   CheckCircleFilled,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { constructionSiteService } from "../../services/constructionSiteService";
 import { counterpartyService } from "../../services/counterpartyService";
@@ -31,7 +29,6 @@ import {
 import { useAuthStore } from "../../store/authStore";
 import { useReferencesStore } from "../../store/referencesStore";
 import { DEFAULT_FORM_CONFIG } from "../../shared/config/employeeFields";
-import EmployeeFileUpload from "./EmployeeFileUpload.jsx";
 import DocumentTypeUploader from "./DocumentTypeUploader.jsx";
 import TransferEmployeeModal from "./TransferEmployeeModal.jsx";
 import dayjs from "dayjs";

@@ -1,4 +1,4 @@
-import { Modal, Descriptions, Tag, Button, Tabs, Row, Col, Space, Checkbox } from 'antd';
+import { Modal, Descriptions, Button, Tabs, Row, Col, Space, Checkbox } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import EmployeeFileUpload from './EmployeeFileUpload';
 import dayjs from 'dayjs';

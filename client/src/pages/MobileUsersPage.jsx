@@ -1,11 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Input, App, Modal, Form, Select, Space, Button, Dropdown } from 'antd';
-import { SearchOutlined, LockOutlined, UserOutlined, LogoutOutlined, FilterOutlined, CheckOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { userService } from '@/services/userService';
-import { counterpartyService } from '@/services/counterpartyService';
-import { useAuthStore } from '@/store/authStore';
-import MobileUsersList from '@/components/Admin/MobileUsersList';
+import { useState, useEffect } from "react";
+import { Input, App, Modal, Form, Select, Button, Dropdown } from "antd";
+import {
+  SearchOutlined,
+  LockOutlined,
+  UserOutlined,
+  FilterOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { userService } from "@/services/userService";
+import { counterpartyService } from "@/services/counterpartyService";
+import { useAuthStore } from "@/store/authStore";
+import MobileUsersList from "@/components/Admin/MobileUsersList";
 
 /**
  * Мобильная страница управления пользователями
@@ -17,7 +23,7 @@ const MobileUsersPage = () => {
   const [users, setUsers] = useState([]);
   const [counterparties, setCounterparties] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [form] = Form.useForm();
@@ -28,8 +34,8 @@ const MobileUsersPage = () => {
 
   // Роли
   const roleLabels = {
-    admin: { text: 'Администратор', color: 'red' },
-    user: { text: 'Пользователь', color: 'default' },
+    admin: { text: "Администратор", color: "red" },
+    user: { text: "Пользователь", color: "default" },
   };
 
   // Загрузка данных при монтировании
@@ -45,9 +51,9 @@ const MobileUsersPage = () => {
       const response = await userService.getAll();
       setUsers(response?.data?.users || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error("Error fetching users:", error);
       setUsers([]);
-      message.error('Ошибка загрузки пользователей');
+      message.error("Ошибка загрузки пользователей");
     } finally {
       setLoading(false);
     }
@@ -57,11 +63,14 @@ const MobileUsersPage = () => {
   const fetchCounterparties = async () => {
     try {
       // Загружаем все контрагенты без ограничения для поиска в Select
-      const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
+      const { data } = await counterpartyService.getAll({
+        limit: 10000,
+        page: 1,
+      });
       setCounterparties(data.data.counterparties);
     } catch (error) {
-      console.error('Error loading counterparties:', error);
-      message.error('Ошибка загрузки контрагентов');
+      console.error("Error loading counterparties:", error);
+      message.error("Ошибка загрузки контрагентов");
     }
   };
 
@@ -69,18 +78,22 @@ const MobileUsersPage = () => {
   const filteredUsers = users.filter((user) => {
     const searchLower = searchText.toLowerCase();
     const searchMatch =
-      (user.email?.toLowerCase().includes(searchLower) || false) ||
-      (user.firstName?.toLowerCase().includes(searchLower) || false) ||
-      (user.lastName?.toLowerCase().includes(searchLower) || false) ||
-      (user.identificationNumber?.toLowerCase().includes(searchLower) || false);
+      user.email?.toLowerCase().includes(searchLower) ||
+      false ||
+      user.firstName?.toLowerCase().includes(searchLower) ||
+      false ||
+      user.lastName?.toLowerCase().includes(searchLower) ||
+      false ||
+      user.identificationNumber?.toLowerCase().includes(searchLower) ||
+      false;
 
     // Фильтрация по статусу
     let statusMatch = true;
     if (statusFilter) {
       const isActive = user.isActive;
-      statusMatch = 
-        (statusFilter === 'active' && isActive) ||
-        (statusFilter === 'inactive' && !isActive);
+      statusMatch =
+        (statusFilter === "active" && isActive) ||
+        (statusFilter === "inactive" && !isActive);
     }
 
     return searchMatch && statusMatch;
@@ -90,10 +103,12 @@ const MobileUsersPage = () => {
   const handleToggleStatus = async (id) => {
     try {
       await userService.toggleStatus(id);
-      message.success('Статус пользователя изменен');
+      message.success("Статус пользователя изменен");
       fetchUsers();
     } catch (error) {
-      message.error(error.response?.data?.message || 'Ошибка изменения статуса');
+      message.error(
+        error.response?.data?.message || "Ошибка изменения статуса",
+      );
     }
   };
 
@@ -118,10 +133,10 @@ const MobileUsersPage = () => {
 
       if (editingUser) {
         await userService.update(editingUser.id, values);
-        message.success('Пользователь обновлен');
+        message.success("Пользователь обновлен");
       } else {
         await userService.create(values);
-        message.success('Пользователь создан');
+        message.success("Пользователь создан");
       }
 
       setIsModalOpen(false);
@@ -131,7 +146,9 @@ const MobileUsersPage = () => {
       if (error.errorFields) {
         return;
       }
-      message.error(error.response?.data?.message || 'Ошибка сохранения пользователя');
+      message.error(
+        error.response?.data?.message || "Ошибка сохранения пользователя",
+      );
     }
   };
 
@@ -141,7 +158,7 @@ const MobileUsersPage = () => {
       const values = await passwordForm.validateFields();
 
       await userService.updatePassword(editingUser.id, values);
-      message.success('Пароль обновлен');
+      message.success("Пароль обновлен");
 
       setIsPasswordModalOpen(false);
       passwordForm.resetFields();
@@ -149,7 +166,9 @@ const MobileUsersPage = () => {
       if (error.errorFields) {
         return;
       }
-      message.error(error.response?.data?.message || 'Ошибка обновления пароля');
+      message.error(
+        error.response?.data?.message || "Ошибка обновления пароля",
+      );
     }
   };
 
@@ -169,42 +188,80 @@ const MobileUsersPage = () => {
   // Опции фильтра по статусу
   const statusFilterItems = [
     {
-      key: 'all',
+      key: "all",
       label: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <span>Все</span>
-          {!statusFilter && <CheckOutlined style={{ color: '#1890ff' }} />}
+          {!statusFilter && <CheckOutlined style={{ color: "#1890ff" }} />}
         </div>
       ),
     },
     {
-      key: 'active',
+      key: "active",
       label: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <span>Активные</span>
-          {statusFilter === 'active' && <CheckOutlined style={{ color: '#1890ff' }} />}
+          {statusFilter === "active" && (
+            <CheckOutlined style={{ color: "#1890ff" }} />
+          )}
         </div>
       ),
     },
     {
-      key: 'inactive',
+      key: "inactive",
       label: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <span>Неактивные</span>
-          {statusFilter === 'inactive' && <CheckOutlined style={{ color: '#1890ff' }} />}
+          {statusFilter === "inactive" && (
+            <CheckOutlined style={{ color: "#1890ff" }} />
+          )}
         </div>
       ),
     },
   ];
 
   const handleStatusFilterChange = ({ key }) => {
-    setStatusFilter(key === 'all' ? null : key);
+    setStatusFilter(key === "all" ? null : key);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
       {/* Поиск и фильтр */}
-      <div style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, borderBottom: '1px solid #f0f0f0' }}>
+      <div
+        style={{
+          padding: "12px 16px",
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          flexShrink: 0,
+          borderBottom: "1px solid #f0f0f0",
+        }}
+      >
         <Input
           placeholder="Поиск по email или ФИО..."
           prefix={<SearchOutlined />}
@@ -217,11 +274,11 @@ const MobileUsersPage = () => {
           placement="bottomRight"
         >
           <Button
-            type={statusFilter ? 'primary' : 'default'}
+            type={statusFilter ? "primary" : "default"}
             icon={<FilterOutlined />}
             style={{ height: 40 }}
           >
-            {!statusFilter ? '▼' : ''}
+            {!statusFilter ? "▼" : ""}
           </Button>
         </Dropdown>
       </div>
@@ -238,12 +295,14 @@ const MobileUsersPage = () => {
 
       {/* Modal для редактирования пользователя */}
       <Modal
-        title={editingUser ? 'Редактировать пользователя' : 'Добавить пользователя'}
+        title={
+          editingUser ? "Редактировать пользователя" : "Добавить пользователя"
+        }
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={320}
-        okText={editingUser ? 'Сохранить' : 'Добавить'}
+        okText={editingUser ? "Сохранить" : "Добавить"}
         cancelText="Отмена"
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -251,8 +310,8 @@ const MobileUsersPage = () => {
             name="email"
             label="Email"
             rules={[
-              { required: true, message: 'Введите email' },
-              { type: 'email', message: 'Введите корректный email' },
+              { required: true, message: "Введите email" },
+              { type: "email", message: "Введите корректный email" },
             ]}
           >
             <Input prefix={<UserOutlined />} placeholder="user@example.com" />
@@ -263,26 +322,24 @@ const MobileUsersPage = () => {
               name="password"
               label="Пароль"
               rules={[
-                { required: true, message: 'Введите пароль' },
-                { min: 6, message: 'Пароль должен содержать минимум 6 символов' },
+                { required: true, message: "Введите пароль" },
+                {
+                  min: 6,
+                  message: "Пароль должен содержать минимум 6 символов",
+                },
               ]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="••••••••"
+              />
             </Form.Item>
           )}
 
           <Form.Item
             name="firstName"
-            label="Имя"
-            rules={[{ required: true, message: 'Введите имя' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="lastName"
-            label="Фамилия"
-            rules={[{ required: true, message: 'Введите фамилию' }]}
+            label="ФИО"
+            rules={[{ required: true, message: "Введите ФИО" }]}
           >
             <Input />
           </Form.Item>
@@ -290,7 +347,7 @@ const MobileUsersPage = () => {
           <Form.Item
             name="role"
             label="Роль"
-            rules={[{ required: true, message: 'Выберите роль' }]}
+            rules={[{ required: true, message: "Выберите роль" }]}
             initialValue="user"
           >
             <Select>
@@ -315,7 +372,8 @@ const MobileUsersPage = () => {
               filterOption={(input, option) => {
                 // Безопасное преобразование: проверяем тип данных перед вызовом toLowerCase
                 const label = option?.label;
-                const searchText = typeof label === 'string' ? label : String(label || '');
+                const searchText =
+                  typeof label === "string" ? label : String(label || "");
                 return searchText.toLowerCase().includes(input.toLowerCase());
               }}
               popupMatchSelectWidth={false}
@@ -323,7 +381,7 @@ const MobileUsersPage = () => {
               popupMaxHeight={300}
               virtual={true}
             >
-              {counterparties.map(c => (
+              {counterparties.map((c) => (
                 <Select.Option key={c.id} value={c.id}>
                   {c.name} ({c.inn})
                 </Select.Option>
@@ -348,8 +406,8 @@ const MobileUsersPage = () => {
             name="newPassword"
             label="Новый пароль"
             rules={[
-              { required: true, message: 'Введите новый пароль' },
-              { min: 6, message: 'Пароль должен содержать минимум 6 символов' },
+              { required: true, message: "Введите новый пароль" },
+              { min: 6, message: "Пароль должен содержать минимум 6 символов" },
             ]}
           >
             <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
@@ -358,15 +416,15 @@ const MobileUsersPage = () => {
           <Form.Item
             name="confirmPassword"
             label="Подтвердите пароль"
-            dependencies={['newPassword']}
+            dependencies={["newPassword"]}
             rules={[
-              { required: true, message: 'Подтвердите пароль' },
+              { required: true, message: "Подтвердите пароль" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
+                  if (!value || getFieldValue("newPassword") === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('Пароли не совпадают'));
+                  return Promise.reject(new Error("Пароли не совпадают"));
                 },
               }),
             ]}
@@ -380,4 +438,3 @@ const MobileUsersPage = () => {
 };
 
 export default MobileUsersPage;
-

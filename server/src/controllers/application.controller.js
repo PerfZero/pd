@@ -1,8 +1,26 @@
-import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, Position, sequelize, Status, EmployeeStatusMapping } from '../models/index.js';
-import { Op } from 'sequelize';
-import storageProvider from '../config/storage.js';
-import { generateApplicationDocument } from '../services/documentService.js';
-import EmployeeStatusService from '../services/employeeStatusService.js';
+import {
+  Application,
+  Counterparty,
+  ConstructionSite,
+  Contract,
+  Employee,
+  User,
+  ApplicationEmployeeMapping,
+  ApplicationFileMapping,
+  File,
+  Citizenship,
+  EmployeeCounterpartyMapping,
+  CounterpartyConstructionSiteMapping,
+  Position,
+  sequelize,
+  Status,
+  EmployeeStatusMapping,
+} from "../models/index.js";
+import { Op } from "sequelize";
+import storageProvider from "../config/storage.js";
+import { generateApplicationDocument } from "../services/documentService.js";
+import EmployeeStatusService from "../services/employeeStatusService.js";
+import { getAccessibleEmployeeIds } from "../utils/permissionUtils.js";
 
 // Функция генерации номера заявки
 const generateApplicationNumber = async (constructionSiteId) => {
@@ -10,54 +28,72 @@ const generateApplicationNumber = async (constructionSiteId) => {
     // Если объект строительства не указан, используем запасной формат
     if (!constructionSiteId) {
       const timestamp = Date.now();
-      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      const random = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
       return `APP-${timestamp}-${random}`;
     }
-    
+
     // Загружаем объект строительства
     const site = await ConstructionSite.findByPk(constructionSiteId);
-    
+
     if (site && site.shortName) {
       // Получаем первые 3 буквы названия объекта (только русские буквы)
       const sitePrefix = site.shortName
-        .replace(/[^А-ЯЁа-яё]/g, '') // Оставляем только русские буквы
+        .replace(/[^А-ЯЁа-яё]/g, "") // Оставляем только русские буквы
         .substring(0, 3)
         .toUpperCase();
-      
+
       // Форматируем дату (ДДММГГ)
       const now = new Date();
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, "0");
+      const month = String(now.getMonth() + 1).padStart(2, "0");
       const year = String(now.getFullYear()).substring(2);
       const dateStr = `${day}${month}${year}`;
-      
+
       // Получаем начало и конец текущего дня
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-      
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0,
+        0,
+        0,
+      );
+      const endOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+      );
+
       // Подсчитываем количество заявок на этот объект за сегодня
       const count = await Application.count({
         where: {
           constructionSiteId: constructionSiteId,
           createdAt: {
-            [Op.between]: [startOfDay, endOfDay]
-          }
-        }
+            [Op.between]: [startOfDay, endOfDay],
+          },
+        },
       });
-      
+
       // Порядковый номер (следующий)
-      const sequence = String(count + 1).padStart(3, '0');
-      
+      const sequence = String(count + 1).padStart(3, "0");
+
       // Формируем номер заявки: ЗИЛ-171125-001
       return `${sitePrefix}-${dateStr}-${sequence}`;
     }
   } catch (error) {
-    console.error('Error generating application number:', error);
+    console.error("Error generating application number:", error);
   }
-  
+
   // В случае ошибки используем старый формат
   const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
   return `APP-${timestamp}-${random}`;
 };
 
@@ -65,95 +101,119 @@ const generateApplicationNumber = async (constructionSiteId) => {
 export const getAllApplications = async (req, res) => {
   try {
     const { counterpartyId, status, page = 1, limit = 10 } = req.query;
-    
+
     const where = {};
-    
+
     // Каждый пользователь видит только свои заявки
     where.createdBy = req.user.id;
-    
+
     if (counterpartyId) {
       where.counterparty_id = counterpartyId;
     }
-    
+
     if (status) {
       where.status = status;
     }
-    
+
     const offset = (page - 1) * limit;
-    
+
     const { count, rows } = await Application.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       include: [
         {
           model: Counterparty,
-          as: 'counterparty',
-          attributes: ['id', 'name', 'type']
+          as: "counterparty",
+          attributes: ["id", "name", "type"],
         },
         {
           model: ConstructionSite,
-          as: 'constructionSite',
-          attributes: ['id', 'shortName', 'fullName']
+          as: "constructionSite",
+          attributes: ["id", "shortName", "fullName"],
         },
         {
           model: Contract,
-          as: 'subcontract',
-          attributes: ['id', 'contractNumber']
+          as: "subcontract",
+          attributes: ["id", "contractNumber"],
         },
         {
           model: User,
-          as: 'creator',
-          attributes: ['id', 'firstName', 'lastName']
+          as: "creator",
+          attributes: ["id", "firstName", "lastName"],
         },
         {
           model: Employee,
-          as: 'employees',
+          as: "employees",
           include: [
-            { 
-              model: Citizenship, 
-              as: 'citizenship', 
-              attributes: ['name'] 
+            {
+              model: Citizenship,
+              as: "citizenship",
+              attributes: ["name"],
             },
             {
               model: EmployeeCounterpartyMapping,
-              as: 'employeeCounterpartyMappings',
+              as: "employeeCounterpartyMappings",
               include: [
                 {
                   model: Counterparty,
-                  as: 'counterparty',
-                  attributes: ['name', 'inn', 'kpp']
-                }
-              ]
+                  as: "counterparty",
+                  attributes: ["name", "inn", "kpp"],
+                },
+              ],
             },
             {
               model: Position,
-              as: 'position',
-              attributes: ['id', 'name']
-            }
+              as: "position",
+              attributes: ["id", "name"],
+            },
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'positionId'],
-          through: { attributes: [] } // Не включать поля из связующей таблицы
+          attributes: [
+            "id",
+            "firstName",
+            "lastName",
+            "middleName",
+            "kig",
+            "birthDate",
+            "snils",
+            "inn",
+            "positionId",
+          ],
+          through: { attributes: [] }, // Не включать поля из связующей таблицы
         },
         {
           model: File,
-          as: 'scanFile',
-          attributes: ['id', 'fileKey', 'fileName', 'originalName', 'mimeType', 'fileSize', 'createdAt'],
-          required: false // LEFT JOIN - заявка может существовать без скана
+          as: "scanFile",
+          attributes: [
+            "id",
+            "fileKey",
+            "fileName",
+            "originalName",
+            "mimeType",
+            "fileSize",
+            "createdAt",
+          ],
+          required: false, // LEFT JOIN - заявка может существовать без скана
         },
         {
           model: File,
-          as: 'files',
-          attributes: ['id', 'fileName', 'originalName', 'mimeType', 'fileSize'],
+          as: "files",
+          attributes: [
+            "id",
+            "fileName",
+            "originalName",
+            "mimeType",
+            "fileSize",
+          ],
           through: {
-            attributes: ['employeeId'], // Включаем employeeId из маппинга
-            as: 'fileMapping'
-          }
-        }
-      ]
+            attributes: ["employeeId"], // Включаем employeeId из маппинга
+            as: "fileMapping",
+          },
+        },
+      ],
     });
-    
+
     res.json({
       success: true,
       data: {
@@ -162,16 +222,16 @@ export const getAllApplications = async (req, res) => {
           total: count,
           page: parseInt(page),
           limit: parseInt(limit),
-          pages: Math.ceil(count / limit)
-        }
-      }
+          pages: Math.ceil(count / limit),
+        },
+      },
     });
   } catch (error) {
-    console.error('Error fetching applications:', error);
+    console.error("Error fetching applications:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при получении заявок',
-      error: error.message
+      message: "Ошибка при получении заявок",
+      error: error.message,
     });
   }
 };
@@ -180,225 +240,369 @@ export const getAllApplications = async (req, res) => {
 export const getApplicationById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const application = await Application.findOne({
       where: {
         id: id,
-        createdBy: req.user.id // Только свои заявки
+        createdBy: req.user.id, // Только свои заявки
       },
       include: [
         {
           model: Counterparty,
-          as: 'counterparty'
+          as: "counterparty",
         },
         {
           model: ConstructionSite,
-          as: 'constructionSite'
+          as: "constructionSite",
         },
         {
           model: Contract,
-          as: 'subcontract'
+          as: "subcontract",
         },
         {
           model: User,
-          as: 'creator'
+          as: "creator",
         },
         {
           model: Employee,
-          as: 'employees',
+          as: "employees",
           include: [
-            { 
-              model: Citizenship, 
-              as: 'citizenship', 
-              attributes: ['name'] 
+            {
+              model: Citizenship,
+              as: "citizenship",
+              attributes: ["name"],
             },
             {
               model: EmployeeCounterpartyMapping,
-              as: 'employeeCounterpartyMappings',
+              as: "employeeCounterpartyMappings",
               include: [
                 {
                   model: Counterparty,
-                  as: 'counterparty',
-                  attributes: ['name', 'inn', 'kpp']
-                }
-              ]
+                  as: "counterparty",
+                  attributes: ["name", "inn", "kpp"],
+                },
+              ],
             },
             {
               model: Position,
-              as: 'position',
-              attributes: ['id', 'name']
+              as: "position",
+              attributes: ["id", "name"],
             },
             {
               model: File,
-              as: 'files',
-              attributes: ['id', 'fileKey', 'fileName', 'documentType'],
+              as: "files",
+              attributes: ["id", "fileKey", "fileName", "documentType"],
               where: {
-                documentType: 'biometric_consent_developer',
-                isDeleted: false
+                documentType: "biometric_consent_developer",
+                isDeleted: false,
               },
-              required: false
-            }
+              required: false,
+            },
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'positionId'],
-          through: { attributes: [] }
+          attributes: [
+            "id",
+            "firstName",
+            "lastName",
+            "middleName",
+            "kig",
+            "birthDate",
+            "snils",
+            "inn",
+            "positionId",
+          ],
+          through: { attributes: [] },
         },
         {
           model: File,
-          as: 'scanFile',
-          attributes: ['id', 'fileKey', 'fileName', 'originalName', 'mimeType', 'fileSize', 'createdAt'],
-          required: false // LEFT JOIN - заявка может существовать без скана
-        }
-      ]
+          as: "scanFile",
+          attributes: [
+            "id",
+            "fileKey",
+            "fileName",
+            "originalName",
+            "mimeType",
+            "fileSize",
+            "createdAt",
+          ],
+          required: false, // LEFT JOIN - заявка может существовать без скана
+        },
+      ],
     });
-    
+
     if (!application) {
       return res.status(404).json({
         success: false,
-        message: 'Заявка не найдена'
+        message: "Заявка не найдена",
       });
     }
-    
+
     res.json({
       success: true,
-      data: application
+      data: application,
     });
   } catch (error) {
-    console.error('Error fetching application:', error);
+    console.error("Error fetching application:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при получении заявки',
-      error: error.message
+      message: "Ошибка при получении заявки",
+      error: error.message,
     });
   }
 };
 
 // Создать заявку
 export const createApplication = async (req, res) => {
-  console.log('[createApplication] ===== START ===== req.body:', JSON.stringify(req.body, null, 2));
-  console.log('[createApplication] user:', req.user?.id, 'counterpartyId:', req.user?.counterpartyId);
-  
+  console.log(
+    "[createApplication] ===== START ===== req.body:",
+    JSON.stringify(req.body, null, 2),
+  );
+  console.log(
+    "[createApplication] user:",
+    req.user?.id,
+    "counterpartyId:",
+    req.user?.counterpartyId,
+  );
+
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { employeeIds, selectedFiles, ...applicationData } = req.body;
-    
+
     // Проверяем, что выбран хотя бы один сотрудник
-    if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+    if (
+      !employeeIds ||
+      !Array.isArray(employeeIds) ||
+      employeeIds.length === 0
+    ) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Необходимо выбрать хотя бы одного сотрудника'
+        message: "Необходимо выбрать хотя бы одного сотрудника",
       });
     }
-    
+
+    const { deniedIds: deniedEmployeeIds } = await getAccessibleEmployeeIds(
+      req.user,
+      employeeIds,
+      "write",
+      transaction,
+    );
+    if (deniedEmployeeIds.length > 0) {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Недостаточно прав для работы с выбранными сотрудниками",
+      });
+    }
+
+    if (applicationData.constructionSiteId && req.user.role !== "admin") {
+      const siteMapping = await CounterpartyConstructionSiteMapping.findOne({
+        where: {
+          counterpartyId: req.user.counterpartyId,
+          constructionSiteId: applicationData.constructionSiteId,
+        },
+        transaction,
+      });
+
+      if (!siteMapping) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Недостаточно прав для выбора объекта строительства",
+        });
+      }
+    }
+
+    if (applicationData.subcontractId) {
+      const subcontract = await Contract.findByPk(
+        applicationData.subcontractId,
+        {
+          transaction,
+        },
+      );
+
+      if (!subcontract) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Договор не найден",
+        });
+      }
+
+      if (subcontract.type !== "subcontract") {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Некорректный тип договора для заявки",
+        });
+      }
+
+      if (
+        req.user.role !== "admin" &&
+        subcontract.counterparty1Id !== req.user.counterpartyId &&
+        subcontract.counterparty2Id !== req.user.counterpartyId
+      ) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Недостаточно прав для выбора договора",
+        });
+      }
+
+      if (
+        applicationData.constructionSiteId &&
+        String(subcontract.constructionSiteId) !==
+          String(applicationData.constructionSiteId)
+      ) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Договор не принадлежит выбранному объекту строительства",
+        });
+      }
+    }
+
     // Генерируем номер заявки
-    const applicationNumber = await generateApplicationNumber(applicationData.constructionSiteId);
-    
+    const applicationNumber = await generateApplicationNumber(
+      applicationData.constructionSiteId,
+    );
+
     // Создаем заявку
-    const application = await Application.create({
-      ...applicationData,
-      applicationNumber,
-      counterpartyId: req.user.counterpartyId,
-      createdBy: req.user.id
-    }, { transaction });
-    
+    const application = await Application.create(
+      {
+        ...applicationData,
+        applicationNumber,
+        counterpartyId: req.user.counterpartyId,
+        createdBy: req.user.id,
+      },
+      { transaction },
+    );
+
     // Добавляем сотрудников через таблицу маппинга
-    const mappingRecords = employeeIds.map(employeeId => ({
+    const mappingRecords = employeeIds.map((employeeId) => ({
       applicationId: application.id,
-      employeeId: employeeId
+      employeeId: employeeId,
     }));
-    
-    await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
-    
+
+    await ApplicationEmployeeMapping.bulkCreate(mappingRecords, {
+      transaction,
+    });
+
     // Обновляем статусы сотрудников при создании заявки
     // status_new и status_tb_passed становятся неактивными (is_active=false)
     // status_processed становится активным (is_active=true)
-    console.log('[createApplication] Начинаем обновление статусов для', employeeIds.length, 'сотрудников');
-    
+    console.log(
+      "[createApplication] Начинаем обновление статусов для",
+      employeeIds.length,
+      "сотрудников",
+    );
+
     for (const employeeId of employeeIds) {
       try {
         // Получаем текущий статус сотрудника в группе 'status'
         const currentMapping = await EmployeeStatusMapping.findOne({
           where: {
             employeeId: employeeId,
-            statusGroup: 'status',
-            isActive: true
+            statusGroup: "status",
+            isActive: true,
           },
-          include: [{ model: Status, as: 'status' }],
-          transaction
+          include: [{ model: Status, as: "status" }],
+          transaction,
         });
-        
-        console.log(`[createApplication] Сотрудник ${employeeId}: текущий статус = ${currentMapping?.status?.name}`);
-        
+
+        console.log(
+          `[createApplication] Сотрудник ${employeeId}: текущий статус = ${currentMapping?.status?.name}`,
+        );
+
         const currentStatusName = currentMapping?.status?.name;
-        
+
         // Если текущий статус - 'status_new' или 'status_tb_passed', переводим в 'status_processed'
-        if (currentStatusName === 'status_new' || currentStatusName === 'status_tb_passed') {
-          console.log(`[createApplication] Переводим ${employeeId} из ${currentStatusName} в status_processed`);
-          
+        if (
+          currentStatusName === "status_new" ||
+          currentStatusName === "status_tb_passed"
+        ) {
+          console.log(
+            `[createApplication] Переводим ${employeeId} из ${currentStatusName} в status_processed`,
+          );
+
           // Деактивируем старый статус
           await EmployeeStatusMapping.update(
             { isActive: false },
             {
               where: {
                 employeeId: employeeId,
-                statusGroup: 'status',
-                isActive: true
+                statusGroup: "status",
+                isActive: true,
               },
-              transaction
-            }
+              transaction,
+            },
           );
-          
+
           // Получаем статус 'status_processed'
           const processedStatus = await Status.findOne({
-            where: { name: 'status_processed', group: 'status' },
-            transaction
+            where: { name: "status_processed", group: "status" },
+            transaction,
           });
-          
+
           if (!processedStatus) {
-            console.error(`[createApplication] Статус 'status_processed' не найден!`);
+            console.error(
+              `[createApplication] Статус 'status_processed' не найден!`,
+            );
             continue;
           }
-          
+
           // Проверяем, есть ли уже запись для этого статуса
           let mapping = await EmployeeStatusMapping.findOne({
             where: {
               employeeId: employeeId,
-              statusId: processedStatus.id
+              statusId: processedStatus.id,
             },
-            transaction
+            transaction,
           });
-          
+
           if (mapping) {
             // Обновляем существующую запись
             await mapping.update(
               { isActive: true, updatedBy: req.user.id },
-              { transaction }
+              { transaction },
             );
-            console.log(`[createApplication] Активировали существующий маппинг для ${employeeId}`);
+            console.log(
+              `[createApplication] Активировали существующий маппинг для ${employeeId}`,
+            );
           } else {
             // Создаем новую запись
-            await EmployeeStatusMapping.create({
-              employeeId: employeeId,
-              statusId: processedStatus.id,
-              statusGroup: 'status',
-              createdBy: req.user.id,
-              updatedBy: req.user.id,
-              isActive: true
-            }, { transaction });
-            console.log(`[createApplication] Создали новый маппинг для ${employeeId}`);
+            await EmployeeStatusMapping.create(
+              {
+                employeeId: employeeId,
+                statusId: processedStatus.id,
+                statusGroup: "status",
+                createdBy: req.user.id,
+                updatedBy: req.user.id,
+                isActive: true,
+              },
+              { transaction },
+            );
+            console.log(
+              `[createApplication] Создали новый маппинг для ${employeeId}`,
+            );
           }
         } else {
-          console.log(`[createApplication] Статус ${currentStatusName} не требует изменения`);
+          console.log(
+            `[createApplication] Статус ${currentStatusName} не требует изменения`,
+          );
         }
       } catch (error) {
-        console.error(`[createApplication] Ошибка при обновлении статуса сотрудника ${employeeId}:`, error.message, error.stack);
+        console.error(
+          `[createApplication] Ошибка при обновлении статуса сотрудника ${employeeId}:`,
+          error.message,
+          error.stack,
+        );
         // Продолжаем создание заявки даже если обновление статуса не удалось
       }
     }
-    
-    console.log('[createApplication] Обновление статусов завершено');
-    
+
+    console.log("[createApplication] Обновление статусов завершено");
+
     // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
     // Только если указан объект строительства
     if (applicationData.constructionSiteId) {
@@ -408,9 +612,9 @@ export const createApplication = async (req, res) => {
           where: {
             employeeId: employeeId,
             counterpartyId: req.user.counterpartyId,
-            constructionSiteId: applicationData.constructionSiteId
+            constructionSiteId: applicationData.constructionSiteId,
           },
-          transaction
+          transaction,
         });
 
         if (mapping) {
@@ -418,82 +622,171 @@ export const createApplication = async (req, res) => {
           await mapping.save({ transaction });
         } else {
           // Связки нет - создаем новую
-          await EmployeeCounterpartyMapping.create({
-            employeeId: employeeId,
-            counterpartyId: req.user.counterpartyId,
-            constructionSiteId: applicationData.constructionSiteId,
-            departmentId: null
-          }, { transaction });
+          await EmployeeCounterpartyMapping.create(
+            {
+              employeeId: employeeId,
+              counterpartyId: req.user.counterpartyId,
+              constructionSiteId: applicationData.constructionSiteId,
+              departmentId: null,
+            },
+            { transaction },
+          );
         }
       }
     }
-    
+
     // Добавляем файлы, если они выбраны
     // selectedFiles должен быть массивом объектов: [{ employeeId, fileId }, ...]
-    if (selectedFiles && Array.isArray(selectedFiles) && selectedFiles.length > 0) {
+    if (
+      selectedFiles &&
+      Array.isArray(selectedFiles) &&
+      selectedFiles.length > 0
+    ) {
+      const selectedEmployeeIds = [
+        ...new Set(
+          selectedFiles.map((item) => item?.employeeId).filter(Boolean),
+        ),
+      ];
+      const selectedFileIds = [
+        ...new Set(selectedFiles.map((item) => item?.fileId).filter(Boolean)),
+      ];
+
+      if (selectedEmployeeIds.length === 0 || selectedFileIds.length === 0) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Некорректный список файлов для привязки",
+        });
+      }
+
+      const employeeIdSet = new Set(employeeIds.map((id) => String(id)));
+      const invalidEmployeeIds = selectedEmployeeIds.filter(
+        (id) => !employeeIdSet.has(String(id)),
+      );
+      if (invalidEmployeeIds.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Файлы можно привязывать только к сотрудникам из заявки",
+        });
+      }
+
+      const { deniedIds: deniedSelectedEmployeeIds } =
+        await getAccessibleEmployeeIds(
+          req.user,
+          selectedEmployeeIds,
+          "write",
+          transaction,
+        );
+      if (deniedSelectedEmployeeIds.length > 0) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message:
+            "Недостаточно прав для привязки файлов к выбранным сотрудникам",
+        });
+      }
+
+      const files = await File.findAll({
+        where: {
+          id: { [Op.in]: selectedFileIds },
+          isDeleted: false,
+        },
+        attributes: ["id", "employeeId"],
+        transaction,
+      });
+      const fileMap = new Map(
+        files.map((file) => [String(file.id), String(file.employeeId)]),
+      );
+
+      const invalidFiles = selectedFiles.filter(({ employeeId, fileId }) => {
+        const mappedEmployeeId = fileMap.get(String(fileId));
+        return !mappedEmployeeId || String(employeeId) !== mappedEmployeeId;
+      });
+
+      if (invalidFiles.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Некоторые файлы не принадлежат указанным сотрудникам",
+        });
+      }
+
       const fileRecords = selectedFiles.map(({ employeeId, fileId }) => ({
         applicationId: application.id,
         employeeId: employeeId,
-        fileId: fileId
+        fileId: fileId,
       }));
-      
+
       await ApplicationFileMapping.bulkCreate(fileRecords, { transaction });
     }
-    
+
     await transaction.commit();
-    
+
     // Загружаем заявку с сотрудниками и файлами
     const result = await Application.findByPk(application.id, {
       include: [
         {
           model: Employee,
-          as: 'employees',
+          as: "employees",
           include: [
             {
               model: Position,
-              as: 'position',
-              attributes: ['id', 'name']
-            }
+              as: "position",
+              attributes: ["id", "name"],
+            },
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
-          through: { attributes: [] }
+          attributes: [
+            "id",
+            "firstName",
+            "lastName",
+            "middleName",
+            "positionId",
+          ],
+          through: { attributes: [] },
         },
         {
           model: File,
-          as: 'files',
-          attributes: ['id', 'fileName', 'originalName', 'mimeType', 'fileSize'],
+          as: "files",
+          attributes: [
+            "id",
+            "fileName",
+            "originalName",
+            "mimeType",
+            "fileSize",
+          ],
           through: {
-            attributes: ['employeeId'],
-            as: 'fileMapping'
-          }
-        }
-      ]
+            attributes: ["employeeId"],
+            as: "fileMapping",
+          },
+        },
+      ],
     });
-    
+
     res.status(201).json({
       success: true,
-      message: 'Заявка успешно создана',
-      data: result
+      message: "Заявка успешно создана",
+      data: result,
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Error creating application:', error);
-    
-    if (error.name === 'SequelizeValidationError') {
+    console.error("Error creating application:", error);
+
+    if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
-        message: 'Ошибка валидации',
-        errors: error.errors.map(e => ({
+        message: "Ошибка валидации",
+        errors: error.errors.map((e) => ({
           field: e.path,
-          message: e.message
-        }))
+          message: e.message,
+        })),
       });
     }
-    
+
     res.status(500).json({
       success: false,
-      message: 'Ошибка при создании заявки',
-      error: error.message
+      message: "Ошибка при создании заявки",
+      error: error.message,
     });
   }
 };
@@ -501,70 +794,160 @@ export const createApplication = async (req, res) => {
 // Обновить заявку
 export const updateApplication = async (req, res) => {
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { id } = req.params;
     const { employeeIds, ...updates } = req.body;
-    
+
     const application = await Application.findOne({
       where: {
         id: id,
-        createdBy: req.user.id // Только свои заявки
+        createdBy: req.user.id, // Только свои заявки
       },
-      transaction
+      transaction,
     });
-    
+
     if (!application) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Заявка не найдена'
+        message: "Заявка не найдена",
       });
     }
-    
+
     // Обновляем данные заявки (не перезаписываем counterpartyId)
     const { counterpartyId, ...updateData } = updates;
-    
-    await application.update({
-      ...updateData,
-      updatedBy: req.user.id
-    }, { transaction });
-    
+
+    const targetConstructionSiteId =
+      updateData.constructionSiteId ?? application.constructionSiteId;
+    const targetSubcontractId =
+      updateData.subcontractId ?? application.subcontractId;
+
+    if (updateData.constructionSiteId && req.user.role !== "admin") {
+      const siteMapping = await CounterpartyConstructionSiteMapping.findOne({
+        where: {
+          counterpartyId: req.user.counterpartyId,
+          constructionSiteId: updateData.constructionSiteId,
+        },
+        transaction,
+      });
+
+      if (!siteMapping) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Недостаточно прав для выбора объекта строительства",
+        });
+      }
+    }
+
+    if (targetSubcontractId) {
+      const subcontract = await Contract.findByPk(targetSubcontractId, {
+        transaction,
+      });
+
+      if (!subcontract) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Договор не найден",
+        });
+      }
+
+      if (subcontract.type !== "subcontract") {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Некорректный тип договора для заявки",
+        });
+      }
+
+      if (
+        req.user.role !== "admin" &&
+        subcontract.counterparty1Id !== req.user.counterpartyId &&
+        subcontract.counterparty2Id !== req.user.counterpartyId
+      ) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Недостаточно прав для выбора договора",
+        });
+      }
+
+      if (
+        targetConstructionSiteId &&
+        String(subcontract.constructionSiteId) !==
+          String(targetConstructionSiteId)
+      ) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Договор не принадлежит выбранному объекту строительства",
+        });
+      }
+    }
+
+    await application.update(
+      {
+        ...updateData,
+        updatedBy: req.user.id,
+      },
+      { transaction },
+    );
+
     // Если переданы employeeIds, обновляем связи
     if (employeeIds && Array.isArray(employeeIds)) {
       if (employeeIds.length === 0) {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
-          message: 'Необходимо выбрать хотя бы одного сотрудника'
+          message: "Необходимо выбрать хотя бы одного сотрудника",
         });
       }
-      
+
+      const { deniedIds: deniedEmployeeIds } = await getAccessibleEmployeeIds(
+        req.user,
+        employeeIds,
+        "write",
+        transaction,
+      );
+      if (deniedEmployeeIds.length > 0) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Недостаточно прав для работы с выбранными сотрудниками",
+        });
+      }
+
       // Получаем старый список сотрудников из заявки
       const oldEmployeeMappings = await ApplicationEmployeeMapping.findAll({
         where: { applicationId: id },
-        attributes: ['employeeId'],
-        transaction
+        attributes: ["employeeId"],
+        transaction,
       });
-      const oldEmployeeIds = oldEmployeeMappings.map(m => m.employeeId);
-      
+      const oldEmployeeIds = oldEmployeeMappings.map((m) => m.employeeId);
+
       // Определяем сотрудников, у которых были сняты чекбоксы
-      const removedEmployeeIds = oldEmployeeIds.filter(empId => !employeeIds.includes(empId));
-      
+      const removedEmployeeIds = oldEmployeeIds.filter(
+        (empId) => !employeeIds.includes(empId),
+      );
+
       // Удаляем старые связи
       await ApplicationEmployeeMapping.destroy({
         where: { applicationId: id },
-        transaction
+        transaction,
       });
-      
+
       // Создаем новые связи
-      const mappingRecords = employeeIds.map(employeeId => ({
+      const mappingRecords = employeeIds.map((employeeId) => ({
         applicationId: id,
-        employeeId: employeeId
+        employeeId: employeeId,
       }));
-      
-      await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
-      
+
+      await ApplicationEmployeeMapping.bulkCreate(mappingRecords, {
+        transaction,
+      });
+
       // Обновляем/создаем записи в employee_counterparty_mapping для добавленных сотрудников
       for (const employeeId of employeeIds) {
         // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
@@ -572,9 +955,9 @@ export const updateApplication = async (req, res) => {
           where: {
             employeeId: employeeId,
             counterpartyId: application.counterpartyId,
-            constructionSiteId: application.constructionSiteId
+            constructionSiteId: application.constructionSiteId,
           },
-          transaction
+          transaction,
         });
 
         if (mapping) {
@@ -582,73 +965,82 @@ export const updateApplication = async (req, res) => {
           await mapping.save({ transaction });
         } else {
           // Связки нет - создаем новую
-          await EmployeeCounterpartyMapping.create({
-            employeeId: employeeId,
-            counterpartyId: application.counterpartyId,
-            constructionSiteId: application.constructionSiteId,
-            departmentId: null
-          }, { transaction });
+          await EmployeeCounterpartyMapping.create(
+            {
+              employeeId: employeeId,
+              counterpartyId: application.counterpartyId,
+              constructionSiteId: application.constructionSiteId,
+              departmentId: null,
+            },
+            { transaction },
+          );
         }
       }
-      
+
       // Удаляем записи из employee_counterparty_mapping для сотрудников, у которых сняли чекбоксы
       for (const employeeId of removedEmployeeIds) {
         await EmployeeCounterpartyMapping.destroy({
           where: {
             employeeId: employeeId,
             counterpartyId: application.counterpartyId,
-            constructionSiteId: application.constructionSiteId
+            constructionSiteId: application.constructionSiteId,
           },
-          transaction
+          transaction,
         });
       }
     }
-    
+
     await transaction.commit();
-    
+
     // Загружаем обновленную заявку с сотрудниками
     const result = await Application.findByPk(id, {
       include: [
         {
           model: Employee,
-          as: 'employees',
+          as: "employees",
           include: [
             {
               model: Position,
-              as: 'position',
-              attributes: ['id', 'name']
-            }
+              as: "position",
+              attributes: ["id", "name"],
+            },
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
-          through: { attributes: [] }
-        }
-      ]
+          attributes: [
+            "id",
+            "firstName",
+            "lastName",
+            "middleName",
+            "positionId",
+          ],
+          through: { attributes: [] },
+        },
+      ],
     });
-    
+
     res.json({
       success: true,
-      message: 'Заявка успешно обновлена',
-      data: result
+      message: "Заявка успешно обновлена",
+      data: result,
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Error updating application:', error);
-    
-    if (error.name === 'SequelizeValidationError') {
+    console.error("Error updating application:", error);
+
+    if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
-        message: 'Ошибка валидации',
-        errors: error.errors.map(e => ({
+        message: "Ошибка валидации",
+        errors: error.errors.map((e) => ({
           field: e.path,
-          message: e.message
-        }))
+          message: e.message,
+        })),
       });
     }
-    
+
     res.status(500).json({
       success: false,
-      message: 'Ошибка при обновлении заявки',
-      error: error.message
+      message: "Ошибка при обновлении заявки",
+      error: error.message,
     });
   }
 };
@@ -656,57 +1048,57 @@ export const updateApplication = async (req, res) => {
 // Удалить заявку
 export const deleteApplication = async (req, res) => {
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { id } = req.params;
-    
+
     const application = await Application.findOne({
       where: {
         id: id,
-        createdBy: req.user.id // Только свои заявки
+        createdBy: req.user.id, // Только свои заявки
       },
       include: [
         {
           model: Employee,
-          as: 'employees',
-          attributes: ['id'],
-          through: { attributes: [] }
+          as: "employees",
+          attributes: ["id"],
+          through: { attributes: [] },
         },
         {
           model: Counterparty,
-          as: 'counterparty',
-          attributes: ['id', 'name']
-        }
+          as: "counterparty",
+          attributes: ["id", "name"],
+        },
       ],
-      transaction
+      transaction,
     });
-    
+
     if (!application) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Заявка не найдена'
+        message: "Заявка не найдена",
       });
     }
-    
-    console.log('=== DELETING APPLICATION ===');
-    console.log('Application:', {
+
+    console.log("=== DELETING APPLICATION ===");
+    console.log("Application:", {
       id: application.id,
-      number: application.applicationNumber
+      number: application.applicationNumber,
     });
-    
+
     // 1. Удаляем файлы, прикрепленные к заявке
     const files = await File.findAll({
       where: {
-        entityType: 'application',
+        entityType: "application",
         entityId: id,
-        isDeleted: false
+        isDeleted: false,
       },
-      transaction
+      transaction,
     });
-    
+
     console.log(`Found ${files.length} files to delete`);
-    
+
     // Удаляем каждый файл из хранилища
     for (const file of files) {
       try {
@@ -715,59 +1107,61 @@ export const deleteApplication = async (req, res) => {
         console.log(`✓ File deleted: ${file.filePath}`);
       } catch (error) {
         console.error(`✗ Error deleting file from storage: ${file.filePath}`);
-        console.error('Error details:', {
+        console.error("Error details:", {
           message: error.message,
-          stack: error.stack
+          stack: error.stack,
         });
         // Продолжаем удаление, даже если файл уже отсутствует
       }
     }
-    
+
     // Физически удаляем файлы из БД
     const deletedFilesCount = await File.destroy({
       where: {
-        entityType: 'application',
-        entityId: id
+        entityType: "application",
+        entityId: id,
       },
-      transaction
+      transaction,
     });
     console.log(`Deleted ${deletedFilesCount} file records from DB`);
-    
+
     // 2. Удаляем записи из employee_counterparty_mapping для сотрудников этой заявки
     // Удаляем только те записи, которые соответствуют комбинации:
     // сотрудник из заявки + контрагент заявки + объект заявки
-    const employeeIds = application.employees.map(emp => emp.id);
-    
+    const employeeIds = application.employees.map((emp) => emp.id);
+
     if (employeeIds.length > 0) {
       const deletedMappingsCount = await EmployeeCounterpartyMapping.destroy({
         where: {
           employeeId: employeeIds,
           counterpartyId: application.counterpartyId,
-          constructionSiteId: application.constructionSiteId
+          constructionSiteId: application.constructionSiteId,
         },
-        transaction
+        transaction,
       });
-      console.log(`Deleted ${deletedMappingsCount} employee-counterparty mappings`);
+      console.log(
+        `Deleted ${deletedMappingsCount} employee-counterparty mappings`,
+      );
     }
-    
+
     // 3. Удаляем саму заявку (каскадно удалятся записи из application_employees_mapping)
     await application.destroy({ transaction });
-    
+
     await transaction.commit();
-    
-    console.log('✓ Application deleted successfully');
-    
+
+    console.log("✓ Application deleted successfully");
+
     res.json({
       success: true,
-      message: 'Заявка успешно удалена'
+      message: "Заявка успешно удалена",
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Error deleting application:', error);
+    console.error("Error deleting application:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при удалении заявки',
-      error: error.message
+      message: "Ошибка при удалении заявки",
+      error: error.message,
     });
   }
 };
@@ -775,81 +1169,90 @@ export const deleteApplication = async (req, res) => {
 // Копировать заявку
 export const copyApplication = async (req, res) => {
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { id } = req.params;
-    
+
     const original = await Application.findOne({
       where: {
         id: id,
-        createdBy: req.user.id // Только свои заявки
+        createdBy: req.user.id, // Только свои заявки
       },
       include: [
         {
           model: Employee,
-          as: 'employees',
-          attributes: ['id'],
-          through: { attributes: [] }
-        }
+          as: "employees",
+          attributes: ["id"],
+          through: { attributes: [] },
+        },
       ],
-      transaction
+      transaction,
     });
-    
+
     if (!original) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Заявка не найдена'
+        message: "Заявка не найдена",
       });
     }
-    
+
     // Создаем копию
-    const copy = await Application.create({
-      counterpartyId: original.counterpartyId,
-      constructionSiteId: original.constructionSiteId,
-      subcontractId: original.subcontractId,
-      notes: original.notes ? `Копия: ${original.notes}` : 'Копия заявки',
-      status: 'draft',
-      createdBy: req.user.id
-    }, { transaction });
-    
+    const copy = await Application.create(
+      {
+        counterpartyId: original.counterpartyId,
+        constructionSiteId: original.constructionSiteId,
+        subcontractId: original.subcontractId,
+        notes: original.notes ? `Копия: ${original.notes}` : "Копия заявки",
+        status: "draft",
+        createdBy: req.user.id,
+      },
+      { transaction },
+    );
+
     // Копируем сотрудников
-    const employeeIds = original.employees.map(emp => emp.id);
+    const employeeIds = original.employees.map((emp) => emp.id);
     await copy.addEmployees(employeeIds, { transaction });
-    
+
     await transaction.commit();
-    
+
     // Загружаем копию с сотрудниками
     const result = await Application.findByPk(copy.id, {
       include: [
         {
           model: Employee,
-          as: 'employees',
+          as: "employees",
           include: [
             {
               model: Position,
-              as: 'position',
-              attributes: ['id', 'name']
-            }
+              as: "position",
+              attributes: ["id", "name"],
+            },
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
-          through: { attributes: [] }
-        }
-      ]
+          attributes: [
+            "id",
+            "firstName",
+            "lastName",
+            "middleName",
+            "positionId",
+          ],
+          through: { attributes: [] },
+        },
+      ],
     });
-    
+
     res.status(201).json({
       success: true,
-      message: 'Заявка успешно скопирована',
-      data: result
+      message: "Заявка успешно скопирована",
+      data: result,
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Error copying application:', error);
+    console.error("Error copying application:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при копировании заявки',
-      error: error.message
+      message: "Ошибка при копировании заявки",
+      error: error.message,
     });
   }
 };
@@ -858,87 +1261,90 @@ export const copyApplication = async (req, res) => {
 export const getContractsForApplication = async (req, res) => {
   try {
     const { counterpartyId, constructionSiteId } = req.query;
-    
+
     if (!counterpartyId || !constructionSiteId) {
       return res.status(400).json({
         success: false,
-        message: 'Требуются counterpartyId и constructionSiteId'
+        message: "Требуются counterpartyId и constructionSiteId",
       });
     }
 
     // Проверка прав: пользователь может смотреть договоры только своего контрагента
-    if (req.user.role !== 'admin' && req.user.counterpartyId !== counterpartyId) {
-       return res.status(403).json({
+    if (
+      req.user.role !== "admin" &&
+      req.user.counterpartyId !== counterpartyId
+    ) {
+      return res.status(403).json({
         success: false,
-        message: 'Нет доступа к данным другого контрагента'
+        message: "Нет доступа к данным другого контрагента",
       });
     }
-    
+
     // Получаем контрагента
     const counterparty = await Counterparty.findByPk(counterpartyId);
-    
+
     if (!counterparty) {
       return res.status(404).json({
         success: false,
-        message: 'Контрагент не найден'
+        message: "Контрагент не найден",
       });
     }
-    
+
     const result = {
       generalContract: null,
-      subcontracts: []
+      subcontracts: [],
     };
-    
+
     // Ищем договор генподряда для этого объекта
     const generalContract = await Contract.findOne({
       where: {
         construction_site_id: constructionSiteId,
-        type: 'general_contract',
+        type: "general_contract",
         [Op.or]: [
           { counterparty1_id: counterpartyId },
-          { counterparty2_id: counterpartyId }
-        ]
+          { counterparty2_id: counterpartyId },
+        ],
       },
       include: [
-        { model: Counterparty, as: 'counterparty1' },
-        { model: Counterparty, as: 'counterparty2' }
-      ]
+        { model: Counterparty, as: "counterparty1" },
+        { model: Counterparty, as: "counterparty2" },
+      ],
     });
-    
+
     if (generalContract) {
       result.generalContract = generalContract;
     }
-    
+
     // Если контрагент - подрядчик, ищем договоры подряда
-    if (counterparty.type === 'contractor') {
+    if (counterparty.type === "contractor") {
       const subcontracts = await Contract.findAll({
         where: {
           construction_site_id: constructionSiteId,
-          type: 'subcontract',
+          type: "subcontract",
           [Op.or]: [
             { counterparty1_id: counterpartyId },
-            { counterparty2_id: counterpartyId }
-          ]
+            { counterparty2_id: counterpartyId },
+          ],
         },
         include: [
-          { model: Counterparty, as: 'counterparty1' },
-          { model: Counterparty, as: 'counterparty2' }
-        ]
+          { model: Counterparty, as: "counterparty1" },
+          { model: Counterparty, as: "counterparty2" },
+        ],
       });
-      
+
       result.subcontracts = subcontracts;
     }
-    
+
     res.json({
       success: true,
-      data: result
+      data: result,
     });
   } catch (error) {
-    console.error('Error fetching contracts:', error);
+    console.error("Error fetching contracts:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при получении договоров',
-      error: error.message
+      message: "Ошибка при получении договоров",
+      error: error.message,
     });
   }
 };
@@ -947,45 +1353,45 @@ export const getContractsForApplication = async (req, res) => {
 export const getEmployeesForApplication = async (req, res) => {
   try {
     const { counterpartyId } = req.query;
-    
+
     if (!counterpartyId) {
       return res.status(400).json({
         success: false,
-        message: 'Требуется counterpartyId'
+        message: "Требуется counterpartyId",
       });
     }
-    
+
     // Теперь сотрудники связаны с контрагентами через маппинг
     const employees = await Employee.findAll({
       include: [
         {
           model: EmployeeCounterpartyMapping,
-          as: 'employeeCounterpartyMappings',
+          as: "employeeCounterpartyMappings",
           where: {
-            counterpartyId: counterpartyId
+            counterpartyId: counterpartyId,
           },
-          attributes: []
+          attributes: [],
         },
         {
           model: Position,
-          as: 'position',
-          attributes: ['id', 'name']
-        }
+          as: "position",
+          attributes: ["id", "name"],
+        },
       ],
-      attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
-      order: [['lastName', 'ASC']]
+      attributes: ["id", "firstName", "lastName", "middleName", "positionId"],
+      order: [["lastName", "ASC"]],
     });
-    
+
     res.json({
       success: true,
-      data: employees
+      data: employees,
     });
   } catch (error) {
-    console.error('Error fetching employees:', error);
+    console.error("Error fetching employees:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при получении сотрудников',
-      error: error.message
+      message: "Ошибка при получении сотрудников",
+      error: error.message,
     });
   }
 };
@@ -994,39 +1400,44 @@ export const getEmployeesForApplication = async (req, res) => {
 export const exportApplicationToWord = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Проверяем доступ к заявке
     const application = await Application.findOne({
       where: {
         id: id,
-        createdBy: req.user.id // Только свои заявки
-      }
+        createdBy: req.user.id, // Только свои заявки
+      },
     });
-    
+
     if (!application) {
       return res.status(404).json({
         success: false,
-        message: 'Заявка не найдена'
+        message: "Заявка не найдена",
       });
     }
-    
+
     // Генерируем документ Word
     const buffer = await generateApplicationDocument(id);
-    
+
     // Формируем имя файла
     const fileName = `Заявка_${application.applicationNumber}.docx`;
-    
+
     // Отправляем файл
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(fileName)}"`,
+    );
     res.send(buffer);
-    
   } catch (error) {
-    console.error('Error exporting application to Word:', error);
+    console.error("Error exporting application to Word:", error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при экспорте заявки',
-      error: error.message
+      message: "Ошибка при экспорте заявки",
+      error: error.message,
     });
   }
 };
@@ -1036,104 +1447,137 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
   try {
     const { id } = req.params;
     const { employeeIds } = req.body; // Массив ID выбранных сотрудников
-    
+
     // Проверяем доступ к заявке
     const application = await Application.findOne({
       where: {
         id: id,
-        createdBy: req.user.id // Только свои заявки
+        createdBy: req.user.id, // Только свои заявки
       },
       include: [
         {
           model: Employee,
-          as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'middleName']
-        }
-      ]
+          as: "employees",
+          attributes: ["id", "firstName", "lastName", "middleName"],
+        },
+      ],
     });
-    
+
     if (!application) {
       return res.status(404).json({
         success: false,
-        message: 'Заявка не найдена'
+        message: "Заявка не найдена",
       });
     }
-    
+
     // Валидируем, что employeeIds - это массив
     if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Необходимо выбрать хотя бы одного сотрудника'
+        message: "Необходимо выбрать хотя бы одного сотрудника",
       });
     }
-    
+
+    const { deniedIds: deniedEmployeeIds } = await getAccessibleEmployeeIds(
+      req.user,
+      employeeIds,
+      "read",
+    );
+    if (deniedEmployeeIds.length > 0) {
+      return res.status(403).json({
+        success: false,
+        message: "Недостаточно прав для работы с выбранными сотрудниками",
+      });
+    }
+
+    const applicationEmployeeIdSet = new Set(
+      application.employees.map((emp) => String(emp.id)),
+    );
+    const invalidEmployeeIds = employeeIds.filter(
+      (employeeId) => !applicationEmployeeIdSet.has(String(employeeId)),
+    );
+
+    if (invalidEmployeeIds.length > 0) {
+      return res.status(403).json({
+        success: false,
+        message: "Сотрудники не принадлежат выбранной заявке",
+      });
+    }
+
     // Получаем согласия на перс. данные Застройщика для выбранных сотрудников
     const consentFiles = await File.findAll({
       where: {
-        documentType: 'biometric_consent_developer',
+        documentType: "biometric_consent_developer",
         employeeId: {
-          [Op.in]: employeeIds
+          [Op.in]: employeeIds,
         },
-        isDeleted: false
+        isDeleted: false,
       },
       include: [
         {
           model: Employee,
-          as: 'employee',
-          attributes: ['id', 'firstName', 'lastName', 'middleName']
-        }
-      ]
+          as: "employee",
+          attributes: ["id", "firstName", "lastName", "middleName"],
+        },
+      ],
     });
-    
+
     if (consentFiles.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Нет согласий на обработку перс. данных Застройщика для выбранных сотрудников'
+        message:
+          "Нет согласий на обработку перс. данных Застройщика для выбранных сотрудников",
       });
     }
-    
+
     // Импортируем archiver и axios для загрузки файлов
-    const archiver = (await import('archiver')).default;
-    const axios = (await import('axios')).default;
-    
+    const archiver = (await import("archiver")).default;
+    const axios = (await import("axios")).default;
+
     // Создаем ZIP архив
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
     // Обработчики ошибок
-    archive.on('error', (err) => {
-      console.error('Archiver error:', err);
+    archive.on("error", (err) => {
+      console.error("Archiver error:", err);
       if (!res.headersSent) {
         res.status(500).json({
           success: false,
-          message: 'Ошибка при создании архива',
-          error: err.message
+          message: "Ошибка при создании архива",
+          error: err.message,
         });
       }
     });
-    
+
     // Устанавливаем заголовки для скачивания ZIP
-    const fileName = `Согласия_ПерсДанные_${application.applicationNumber}_${new Date().toISOString().split('T')[0]}.zip`;
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
-    
+    const fileName = `Согласия_ПерсДанные_${application.applicationNumber}_${new Date().toISOString().split("T")[0]}.zip`;
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(fileName)}"`,
+    );
+
     // Пайпим архив в response
     archive.pipe(res);
-    
+
     // Добавляем файлы в архив
     for (const file of consentFiles) {
       try {
         // Получаем подписанный URL для файла
-        const downloadData = await storageProvider.getDownloadUrl(file.filePath, { 
-          expiresIn: 3600,
-          fileName: file.fileName
-        });
-        
+        const downloadData = await storageProvider.getDownloadUrl(
+          file.filePath,
+          {
+            expiresIn: 3600,
+            fileName: file.fileName,
+          },
+        );
+
         // Загружаем файл по URL и добавляем в архив
-        const fileResponse = await axios.get(downloadData.url, { 
-          responseType: 'stream',
-          timeout: 30000
+        const fileResponse = await axios.get(downloadData.url, {
+          responseType: "stream",
+          timeout: 30000,
         });
-        
+
         // Используем оригинальное имя файла из S3 (как указано в задании)
         archive.append(fileResponse.data, { name: file.fileName });
       } catch (error) {
@@ -1141,22 +1585,19 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
         // Продолжаем со следующего файла, не прерываем весь процесс
       }
     }
-    
+
     // Завершаем архив
     await archive.finalize();
-    
   } catch (error) {
-    console.error('Error downloading biometric consents:', error);
-    
+    console.error("Error downloading biometric consents:", error);
+
     // Проверяем, был ли уже отправлен заголовок ответа
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
-        message: 'Ошибка при выгрузке согласий',
-        error: error.message
+        message: "Ошибка при выгрузке согласий",
+        error: error.message,
       });
     }
   }
 };
-
-

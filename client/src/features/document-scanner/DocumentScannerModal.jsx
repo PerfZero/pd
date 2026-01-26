@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Modal, Button, Space, Spin, message, Alert, Switch } from 'antd';
-import { CameraOutlined, CheckOutlined, CloseOutlined, RotateRightOutlined, SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Modal, Button, Spin, message, Alert, Switch } from 'antd';
+import { CameraOutlined, CloseOutlined, RotateRightOutlined, SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 
 /**

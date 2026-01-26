@@ -1,7 +1,10 @@
-import { AppError } from '../middleware/errorHandler.js';
-import { User } from '../models/index.js';
-import { Op } from 'sequelize';
-import { isPasswordAllowed, getForbiddenPasswordMessage } from '../utils/forbiddenPasswords.js';
+import { AppError } from "../middleware/errorHandler.js";
+import { User, RefreshToken } from "../models/index.js";
+import { Op } from "sequelize";
+import {
+  isPasswordAllowed,
+  getForbiddenPasswordMessage,
+} from "../utils/forbiddenPasswords.js";
 
 /**
  * Генерация уникального УИН (6-значный)
@@ -12,18 +15,20 @@ const generateUniqueUIN = async () => {
 
   while (attempts < maxAttempts) {
     // Генерация случайного 6-значного числа
-    const uin = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-    
+    const uin = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+
     // Проверка уникальности
-    const existing = await User.findOne({ where: { identificationNumber: uin } });
+    const existing = await User.findOne({
+      where: { identificationNumber: uin },
+    });
     if (!existing) {
       return uin;
     }
-    
+
     attempts++;
   }
-  
-  throw new AppError('Не удалось сгенерировать уникальный УИН', 500);
+
+  throw new AppError("Не удалось сгенерировать уникальный УИН", 500);
 };
 
 export const getAllUsers = async (req, res, next) => {
@@ -49,15 +54,25 @@ export const getAllUsers = async (req, res, next) => {
 
     // Фильтр по активности
     if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
+      where.isActive = isActive === "true";
     }
 
     const { count, rows: users } = await User.findAndCountAll({
       where,
-      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'counterpartyId', 'identificationNumber', 'isActive', 'createdAt'],
+      attributes: [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "role",
+        "counterpartyId",
+        "identificationNumber",
+        "isActive",
+        "createdAt",
+      ],
       limit: parseInt(limit),
       offset,
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
     });
 
     res.json({
@@ -83,7 +98,7 @@ export const getUserById = async (req, res, next) => {
 
     const user = await User.findByPk(id);
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     res.json({
@@ -97,12 +112,19 @@ export const getUserById = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const { email, password, firstName, lastName, role = 'user', counterpartyId } = req.body;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      role = "user",
+      counterpartyId,
+    } = req.body;
 
     // Проверяем, существует ли пользователь
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      throw new AppError('Пользователь с таким email уже существует', 409);
+      throw new AppError("Пользователь с таким email уже существует", 409);
     }
 
     // Создаем пользователя
@@ -117,7 +139,7 @@ export const createUser = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Пользователь создан успешно',
+      message: "Пользователь создан успешно",
       data: { user },
     });
   } catch (error) {
@@ -135,7 +157,7 @@ export const updateUser = async (req, res, next) => {
 
     const user = await User.findByPk(id);
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     // Если обновляется email, проверяем уникальность
@@ -144,12 +166,12 @@ export const updateUser = async (req, res, next) => {
         where: { email: updateData.email },
       });
       if (existingUser) {
-        throw new AppError('Пользователь с таким email уже существует', 409);
+        throw new AppError("Пользователь с таким email уже существует", 409);
       }
     }
 
     // Если УИН пустой или отсутствует - генерируем новый
-    if (!user.identificationNumber || user.identificationNumber.trim() === '') {
+    if (!user.identificationNumber || user.identificationNumber.trim() === "") {
       updateData.identificationNumber = await generateUniqueUIN();
     }
 
@@ -157,7 +179,7 @@ export const updateUser = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Пользователь обновлен успешно',
+      message: "Пользователь обновлен успешно",
       data: { user },
     });
   } catch (error) {
@@ -171,19 +193,19 @@ export const deleteUser = async (req, res, next) => {
 
     // Проверяем, что это не попытка удалить самого себя
     if (parseInt(id) === req.user.id) {
-      throw new AppError('Вы не можете удалить собственный аккаунт', 400);
+      throw new AppError("Вы не можете удалить собственный аккаунт", 400);
     }
 
     const user = await User.findByPk(id);
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     await user.destroy();
 
     res.json({
       success: true,
-      message: 'Пользователь удален успешно',
+      message: "Пользователь удален успешно",
     });
   } catch (error) {
     next(error);
@@ -196,32 +218,35 @@ export const updatePassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
 
     // Только сам пользователь или admin может менять пароль
-    if (req.user.id !== parseInt(id) && req.user.role !== 'admin') {
-      throw new AppError('Недостаточно прав для изменения пароля', 403);
+    if (req.user.id !== parseInt(id) && req.user.role !== "admin") {
+      throw new AppError("Недостаточно прав для изменения пароля", 403);
     }
 
     const user = await User.findByPk(id, {
-      attributes: { include: ['password'] },
+      attributes: { include: ["password"] },
     });
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     // Если не admin, требуем текущий пароль
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       if (!currentPassword) {
-        throw new AppError('Необходимо указать текущий пароль', 400);
+        throw new AppError("Необходимо указать текущий пароль", 400);
       }
 
       const isPasswordValid = await user.comparePassword(currentPassword);
       if (!isPasswordValid) {
-        throw new AppError('Неверный текущий пароль', 401);
+        throw new AppError("Неверный текущий пароль", 401);
       }
     }
 
     // Проверяем длину нового пароля
     if (newPassword.length < 8) {
-      throw new AppError('Новый пароль должен содержать минимум 8 символов', 400);
+      throw new AppError(
+        "Новый пароль должен содержать минимум 8 символов",
+        400,
+      );
     }
 
     // Проверяем, не является ли новый пароль запрещенным
@@ -231,10 +256,14 @@ export const updatePassword = async (req, res, next) => {
 
     // Обновляем пароль
     await user.update({ password: newPassword });
+    await RefreshToken.update(
+      { revokedAt: new Date() },
+      { where: { userId: user.id } },
+    );
 
     res.json({
       success: true,
-      message: 'Пароль обновлен успешно',
+      message: "Пароль обновлен успешно",
     });
   } catch (error) {
     next(error);
@@ -247,12 +276,15 @@ export const toggleUserStatus = async (req, res, next) => {
 
     const user = await User.findByPk(id);
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     // Не разрешаем деактивировать самого себя
     if (parseInt(id) === req.user.id) {
-      throw new AppError('Вы не можете деактивировать собственный аккаунт', 400);
+      throw new AppError(
+        "Вы не можете деактивировать собственный аккаунт",
+        400,
+      );
     }
 
     await user.update({ isActive: !user.isActive });
@@ -260,8 +292,8 @@ export const toggleUserStatus = async (req, res, next) => {
     res.json({
       success: true,
       message: user.isActive
-        ? 'Пользователь активирован'
-        : 'Пользователь деактивирован',
+        ? "Пользователь активирован"
+        : "Пользователь деактивирован",
       data: { user },
     });
   } catch (error) {
@@ -278,7 +310,7 @@ export const getMyProfile = async (req, res, next) => {
 
     const user = await User.findByPk(userId);
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     res.json({
@@ -300,7 +332,7 @@ export const updateMyProfile = async (req, res, next) => {
 
     const user = await User.findByPk(userId);
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     // Если обновляется email, проверяем уникальность
@@ -309,7 +341,7 @@ export const updateMyProfile = async (req, res, next) => {
         where: { email },
       });
       if (existingUser) {
-        throw new AppError('Пользователь с таким email уже существует', 409);
+        throw new AppError("Пользователь с таким email уже существует", 409);
       }
     }
 
@@ -322,7 +354,7 @@ export const updateMyProfile = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Профиль обновлен успешно',
+      message: "Профиль обновлен успешно",
       data: { user },
     });
   } catch (error) {
@@ -339,11 +371,14 @@ export const changeMyPassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      throw new AppError('Необходимо указать текущий и новый пароль', 400);
+      throw new AppError("Необходимо указать текущий и новый пароль", 400);
     }
 
     if (newPassword.length < 8) {
-      throw new AppError('Новый пароль должен содержать минимум 8 символов', 400);
+      throw new AppError(
+        "Новый пароль должен содержать минимум 8 символов",
+        400,
+      );
     }
 
     // Проверяем, не является ли новый пароль запрещенным
@@ -352,22 +387,22 @@ export const changeMyPassword = async (req, res, next) => {
     }
 
     const user = await User.findByPk(userId, {
-      attributes: { include: ['password'] },
+      attributes: { include: ["password"] },
     });
     if (!user) {
-      throw new AppError('Пользователь не найден', 404);
+      throw new AppError("Пользователь не найден", 404);
     }
 
     // Проверяем текущий пароль
     const isPasswordValid = await user.comparePassword(currentPassword);
     if (!isPasswordValid) {
-      throw new AppError('Неверный текущий пароль', 401);
+      throw new AppError("Неверный текущий пароль", 401);
     }
 
     // Проверяем, что новый пароль отличается от текущего
     const isSamePassword = await user.comparePassword(newPassword);
     if (isSamePassword) {
-      throw new AppError('Новый пароль должен отличаться от текущего', 400);
+      throw new AppError("Новый пароль должен отличаться от текущего", 400);
     }
 
     // Обновляем пароль
@@ -375,10 +410,9 @@ export const changeMyPassword = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Пароль успешно изменен',
+      message: "Пароль успешно изменен",
     });
   } catch (error) {
     next(error);
   }
 };
-

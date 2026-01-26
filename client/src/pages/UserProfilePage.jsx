@@ -16,8 +16,7 @@ import {
   Modal,
   Alert,
   Grid,
-  Badge,
-  Progress
+  Badge
 } from 'antd';
 import {
   EditOutlined,

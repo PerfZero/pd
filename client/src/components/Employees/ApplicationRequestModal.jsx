@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Table, Checkbox, Space, Button, App, Select, Spin } from 'antd';
+import { Modal, Table, Checkbox, Space, Button, App, Select } from 'antd';
 import { FileExcelOutlined, SettingOutlined, DownloadOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { counterpartyService } from '../../services/counterpartyService';
-import { useExcelColumns, AVAILABLE_COLUMNS } from '../../hooks/useExcelColumns';
+import { useExcelColumns } from '../../hooks/useExcelColumns';
 import { getStatusPriority } from '../../entities/employee/model/utils';
 import ExcelColumnsModal from './ExcelColumnsModal';
 import dayjs from 'dayjs';

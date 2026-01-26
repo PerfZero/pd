@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Button, List, Popconfirm, message, Space, Tooltip, Modal } from 'antd';
+import { Upload, Button, List, Popconfirm, message, Space, Tooltip } from 'antd';
 import {
   UploadOutlined,
   DeleteOutlined,

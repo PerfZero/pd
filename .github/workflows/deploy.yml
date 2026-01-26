@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 concurrency:
   group: deploy-main
@@ -24,4 +24,5 @@ jobs:
             cd /opt/apps/passdesk
             git pull --rebase origin main
             docker compose up -d --build
+            bash server/scripts/apply-sql-migrations.sh
             docker compose ps

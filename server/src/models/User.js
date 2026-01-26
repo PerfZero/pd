@@ -1,6 +1,6 @@
-import { DataTypes, Model } from 'sequelize';
-import sequelize from '../config/database.js';
-import bcrypt from 'bcryptjs';
+import { DataTypes, Model } from "sequelize";
+import sequelize from "../config/database.js";
+import bcrypt from "bcryptjs";
 
 class User extends Model {
   // Метод для проверки пароля
@@ -21,85 +21,95 @@ User.init(
     id: {
       type: DataTypes.UUID,
       primaryKey: true,
-      defaultValue: DataTypes.UUIDV4
+      defaultValue: DataTypes.UUIDV4,
     },
     email: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
       validate: {
-        isEmail: true
-      }
+        isEmail: true,
+      },
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     firstName: {
       type: DataTypes.STRING,
       allowNull: false,
-      field: 'first_name'
+      field: "first_name",
     },
     lastName: {
       type: DataTypes.STRING,
       allowNull: true,
-      field: 'last_name'
+      field: "last_name",
     },
     role: {
-      type: DataTypes.ENUM('admin', 'user'),
-      defaultValue: 'user',
-      allowNull: false
+      type: DataTypes.ENUM("admin", "user"),
+      defaultValue: "user",
+      allowNull: false,
     },
     counterpartyId: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'counterparty_id',
+      field: "counterparty_id",
       references: {
-        model: 'counterparties',
-        key: 'id'
-      }
+        model: "counterparties",
+        key: "id",
+      },
     },
     identificationNumber: {
       type: DataTypes.STRING(6),
       allowNull: true,
       unique: true,
-      field: 'identification_number',
-      comment: 'Уникальный идентификационный номер (УИН) пользователя в формате xxxxxx'
+      field: "identification_number",
+      comment:
+        "Уникальный идентификационный номер (УИН) пользователя в формате xxxxxx",
     },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-      field: 'is_active',
-      comment: 'Флаг активации пользователя администратором'
+      field: "is_active",
+      comment: "Флаг активации пользователя администратором",
     },
     lastLogin: {
       type: DataTypes.DATE,
-      field: 'last_login'
-    }
+      field: "last_login",
+    },
+    passwordChangedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "password_changed_at",
+    },
   },
   {
     sequelize,
-    modelName: 'User',
-    tableName: 'users',
+    modelName: "User",
+    tableName: "users",
     timestamps: true,
     underscored: true,
     hooks: {
       // Хэшировать пароль перед сохранением
       beforeCreate: async (user) => {
         if (user.password) {
-          const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS) || 10);
+          const salt = await bcrypt.genSalt(
+            parseInt(process.env.BCRYPT_ROUNDS) || 10,
+          );
           user.password = await bcrypt.hash(user.password, salt);
         }
       },
       beforeUpdate: async (user) => {
-        if (user.changed('password')) {
-          const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS) || 10);
+        if (user.changed("password")) {
+          const salt = await bcrypt.genSalt(
+            parseInt(process.env.BCRYPT_ROUNDS) || 10,
+          );
           user.password = await bcrypt.hash(user.password, salt);
+          user.passwordChangedAt = new Date();
         }
-      }
-    }
-  }
+      },
+    },
+  },
 );
 
 export default User;
-

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Avatar, Typography, Tag, Drawer, Spin, Empty, Button, App, Space } from 'antd';
+import { Card, Avatar, Typography, Tag, Drawer, Spin, Empty, Button, App } from 'antd';
 import {
   ShopOutlined,
   CopyOutlined,

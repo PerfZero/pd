@@ -1,8 +1,8 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import api from '@/services/api'
-import { useReferencesStore } from './referencesStore'
-import { useEmployeesStore } from './employeesStore'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import api from "@/services/api";
+import { useReferencesStore } from "./referencesStore";
+import { useEmployeesStore } from "./employeesStore";
 
 export const useAuthStore = create(
   persist(
@@ -12,76 +12,77 @@ export const useAuthStore = create(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isBootstrapping: true,
 
       login: async (credentials) => {
-        set({ isLoading: true })
+        set({ isLoading: true });
         try {
-          const response = await api.post('/auth/login', credentials)
-          const { user, token, refreshToken } = response.data.data
+          const response = await api.post("/auth/login", credentials);
+          const { user, token } = response.data.data;
 
           set({
             user,
             token,
-            refreshToken,
+            refreshToken: null,
             isAuthenticated: true,
-            isLoading: false
-          })
+            isLoading: false,
+          });
 
-          return response.data
+          return response.data;
         } catch (error) {
-          set({ isLoading: false })
-          throw error
+          set({ isLoading: false });
+          throw error;
         }
       },
 
       register: async (userData) => {
-        set({ isLoading: true })
+        set({ isLoading: true });
         try {
-          const response = await api.post('/auth/register', userData)
-          
-          const { user, token, refreshToken } = response.data.data
+          const response = await api.post("/auth/register", userData);
+
+          const { user, token } = response.data.data;
 
           set({
             user,
             token,
-            refreshToken,
+            refreshToken: null,
             isAuthenticated: true,
-            isLoading: false
-          })
+            isLoading: false,
+          });
 
-          return response.data
+          return response.data;
         } catch (error) {
-          console.error('❌ Registration error:', {
+          console.error("❌ Registration error:", {
             message: error.message,
             code: error.code,
             response: error.response?.data,
             status: error.response?.status,
-            baseURL: api.defaults.baseURL
+            baseURL: api.defaults.baseURL,
           });
-          set({ isLoading: false })
-          throw error
+          set({ isLoading: false });
+          throw error;
         }
       },
 
       logout: async () => {
-        const currentToken = get().token
-        
+        const currentToken = get().token;
+
         // Сначала очищаем локальное состояние
         set({
           user: null,
           token: null,
           refreshToken: null,
-          isAuthenticated: false
-        })
-        
+          isAuthenticated: false,
+        });
+
         // Очищаем все кэши
-        useReferencesStore.getState().clearAll()
-        useEmployeesStore.getState().clear()
-        
+        useReferencesStore.getState().clearAll();
+        useEmployeesStore.getState().clear();
+
         // Если есть токен, пытаемся уведомить сервер (не критично если упадет)
         if (currentToken) {
           try {
-            await api.post('/auth/logout')
+            await api.post("/auth/logout");
           } catch (error) {
             // Игнорируем ошибки logout на сервере
           }
@@ -90,34 +91,42 @@ export const useAuthStore = create(
 
       getCurrentUser: async () => {
         try {
-          const response = await api.get('/auth/me')
+          const response = await api.get("/auth/me");
           // Сохраняем полный объект пользователя с ролью
-          const userData = response.data.data.user || response.data.data
-          set({ user: userData })
-          return response.data
+          const userData = response.data.data.user || response.data.data;
+          set({ user: userData });
+          return response.data;
         } catch (error) {
-          console.error('Get current user error:', error)
-          throw error
+          console.error("Get current user error:", error);
+          throw error;
         }
       },
 
       updateToken: (token) => {
-        set({ token })
+        set({ token, isAuthenticated: !!token });
       },
 
-      updateTokens: (token, refreshToken) => {
-        set({ token, refreshToken })
-      }
+      updateTokens: (token, refreshToken = null) => {
+        set({ token, refreshToken, isAuthenticated: !!token });
+      },
+
+      setBootstrapping: (isBootstrapping) => {
+        set({ isBootstrapping });
+      },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
-        refreshToken: state.refreshToken,
-        isAuthenticated: state.isAuthenticated
-      })
-    }
-  )
-)
-
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state?.token) {
+          state?.setState({
+            user: null,
+            isAuthenticated: false,
+          });
+        }
+      },
+    },
+  ),
+);

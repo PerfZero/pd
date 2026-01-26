@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Table, Checkbox, Button, Space, App, Empty } from 'antd';
+import { Modal, Table, Button, Space, App, Empty } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { employeeApi } from '@/entities/employee';
 import dayjs from 'dayjs';

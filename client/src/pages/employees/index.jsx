@@ -1,32 +1,42 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Typography, App, Grid, Button, Tooltip } from 'antd';
-import { PlusOutlined, FileExcelOutlined, ClearOutlined, SyncOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { useEmployees, useEmployeeActions, useCheckInn, getUniqueFilterValues } from '@/entities/employee';
-import { employeeApi } from '@/entities/employee';
-import { useDepartments } from '@/entities/department';
-import { useSettings } from '@/entities/settings';
-import { useAuthStore } from '@/store/authStore';
-import { counterpartyService } from '@/services/counterpartyService';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { EmployeeTable, MobileEmployeeList } from '@/widgets/employee-table';
-import { EmployeeSearchFilter } from '@/features/employee-search';
-import { EmployeeActions } from '@/features/employee-actions';
-import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
-import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
-import EmployeeViewDrawer from '@/components/Employees/EmployeeViewDrawer';
-import EmployeeFilesModal from '@/components/Employees/EmployeeFilesModal';
-import EmployeeSitesModal from '@/components/Employees/EmployeeSitesModal';
-import ApplicationRequestModal from '@/components/Employees/ApplicationRequestModal';
-import ExportToExcelModal from '@/components/Employees/ExportToExcelModal';
-import EmployeeImportModal from '@/components/Employees/EmployeeImportModal';
-import SecurityModal from '@/components/Employees/SecurityModal';
+import { useState, useMemo, useEffect } from "react";
+import { Typography, App, Grid, Button, Tooltip } from "antd";
+import {
+  PlusOutlined,
+  FileExcelOutlined,
+  ClearOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import {
+  useEmployees,
+  useEmployeeActions,
+  useCheckInn,
+  getUniqueFilterValues,
+} from "@/entities/employee";
+import { employeeApi } from "@/entities/employee";
+import { useDepartments } from "@/entities/department";
+import { useSettings } from "@/entities/settings";
+import { useAuthStore } from "@/store/authStore";
+import { counterpartyService } from "@/services/counterpartyService";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { EmployeeTable, MobileEmployeeList } from "@/widgets/employee-table";
+import { EmployeeSearchFilter } from "@/features/employee-search";
+import { EmployeeActions } from "@/features/employee-actions";
+import EmployeeFormModal from "@/components/Employees/EmployeeFormModal";
+import EmployeeViewModal from "@/components/Employees/EmployeeViewModal";
+import EmployeeViewDrawer from "@/components/Employees/EmployeeViewDrawer";
+import EmployeeFilesModal from "@/components/Employees/EmployeeFilesModal";
+import EmployeeSitesModal from "@/components/Employees/EmployeeSitesModal";
+import ApplicationRequestModal from "@/components/Employees/ApplicationRequestModal";
+import ExportToExcelModal from "@/components/Employees/ExportToExcelModal";
+import EmployeeImportModal from "@/components/Employees/EmployeeImportModal";
+import SecurityModal from "@/components/Employees/SecurityModal";
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
 // Ключ для сохранения фильтров таблицы (должен совпадать с useTableFilters)
-const TABLE_FILTERS_STORAGE_KEY = 'employee_table_filters';
+const TABLE_FILTERS_STORAGE_KEY = "employee_table_filters";
 
 // Функция для получения начальных фильтров из localStorage
 const getInitialFilters = () => {
@@ -34,7 +44,7 @@ const getInitialFilters = () => {
     const saved = localStorage.getItem(TABLE_FILTERS_STORAGE_KEY);
     return saved ? JSON.parse(saved) : {};
   } catch (error) {
-    console.warn('Ошибка при загрузке фильтров таблицы:', error);
+    console.warn("Ошибка при загрузке фильтров таблицы:", error);
     return {};
   }
 };
@@ -52,11 +62,11 @@ const EmployeesPage = () => {
 
   // Получаем данные пользователя в самом начале
   const { user } = useAuthStore();
-  
+
   // Загружаем настройки (нужны для определения defaultCounterpartyId)
   const { defaultCounterpartyId, loading: settingsLoading } = useSettings();
 
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState(null);
   // Инициализируем фильтры из localStorage
   const [tableFilters, setTableFilters] = useState(getInitialFilters);
@@ -70,16 +80,23 @@ const EmployeesPage = () => {
   useEffect(() => {
     const loadCounterparties = async () => {
       try {
-        const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
-        const counterparties = data?.data?.counterparties || data?.counterparties || [];
+        const { data } = await counterpartyService.getAll({
+          limit: 10000,
+          page: 1,
+        });
+        const counterparties =
+          data?.data?.counterparties || data?.counterparties || [];
         const map = {};
-        counterparties.forEach(c => {
+        counterparties.forEach((c) => {
           if (c.name) map[c.name] = c.id;
         });
         setCounterpartyMap(map);
-        
+
         // Проверяем наличие субподрядчиков у текущего контрагента
-        if (user?.counterpartyId && user.counterpartyId !== defaultCounterpartyId) {
+        if (
+          user?.counterpartyId &&
+          user.counterpartyId !== defaultCounterpartyId
+        ) {
           const availableResponse = await counterpartyService.getAvailable();
           if (availableResponse.data.success) {
             const available = availableResponse.data.data || [];
@@ -88,7 +105,7 @@ const EmployeesPage = () => {
           }
         }
       } catch (error) {
-        console.warn('Ошибка загрузки контрагентов:', error);
+        console.warn("Ошибка загрузки контрагентов:", error);
       }
     };
     if (defaultCounterpartyId !== undefined) {
@@ -109,31 +126,34 @@ const EmployeesPage = () => {
   const [sitesEmployee, setSitesEmployee] = useState(null);
 
   // Устанавливаем заголовок страницы для мобильной версии
-  usePageTitle('Сотрудники', isMobile);
+  usePageTitle("Сотрудники", isMobile);
 
   // Загружаем ВСЕ сотрудников без фильтрации по статусам (activeOnly = false)
   // Прогрессивная загрузка: сначала первые 100, потом остальные в фоне
   // Преобразуем имя контрагента в ID для фильтрации на сервере
   const counterpartyIdForFilter = useMemo(() => {
-    if (!tableFilters.counterparty || tableFilters.counterparty.length === 0) return null;
+    if (!tableFilters.counterparty || tableFilters.counterparty.length === 0)
+      return null;
     // Берем первый выбранный контрагент (если выбрано несколько)
     const counterpartyName = tableFilters.counterparty[0];
     return counterpartyMap[counterpartyName] || null;
   }, [tableFilters.counterparty, counterpartyMap]);
 
   // Флаг готовности фильтра контрагента (маппинг загружен или фильтр не установлен)
-  const isCounterpartyFilterReady = !tableFilters.counterparty?.length || Object.keys(counterpartyMap).length > 0;
+  const isCounterpartyFilterReady =
+    !tableFilters.counterparty?.length ||
+    Object.keys(counterpartyMap).length > 0;
 
-  const { 
-    employees, 
-    loading: employeesLoading, 
+  const {
+    employees,
+    loading: employeesLoading,
     backgroundLoading,
     totalCount,
-    refetch: refetchEmployees 
+    refetch: refetchEmployees,
   } = useEmployees(
-    false, 
+    false,
     counterpartyIdForFilter ? { counterpartyId: counterpartyIdForFilter } : {},
-    isCounterpartyFilterReady // Не загружаем пока маппинг не готов
+    isCounterpartyFilterReady, // Не загружаем пока маппинг не готов
   );
   const { departments, loading: departmentsLoading } = useDepartments();
 
@@ -141,16 +161,17 @@ const EmployeesPage = () => {
   const loading = employeesLoading || departmentsLoading || settingsLoading;
 
   // Определяем права доступа
-  const canExport = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
-  
+  const canExport =
+    user?.counterpartyId === defaultCounterpartyId && user?.role !== "user";
+
   // Определяем, должен ли быть виден столбец "Контрагент"
   // Видно для: 1) пользователей с правом экспорта, 2) пользователей с субподрядчиками
   const showCounterpartyColumn = canExport || hasSubcontractors;
-  
+
   // Определяем, может ли пользователь удалять сотрудника
   // Удаление доступно только администраторам
   const canDeleteEmployee = (employee) => {
-    return user?.role === 'admin';
+    return user?.role === "admin";
   };
 
   // Actions для работы с сотрудниками
@@ -165,15 +186,19 @@ const EmployeesPage = () => {
     try {
       const foundEmployee = await checkInn(innValue);
       if (foundEmployee) {
-        const fullName = [foundEmployee.lastName, foundEmployee.firstName, foundEmployee.middleName]
+        const fullName = [
+          foundEmployee.lastName,
+          foundEmployee.firstName,
+          foundEmployee.middleName,
+        ]
           .filter(Boolean)
-          .join(' ');
-        
+          .join(" ");
+
         modal.confirm({
-          title: 'Сотрудник с таким ИНН уже существует',
+          title: "Сотрудник с таким ИНН уже существует",
           content: `Перейти к редактированию?\n\n${fullName}`,
-          okText: 'ОК',
-          cancelText: 'Отмена',
+          okText: "ОК",
+          cancelText: "Отмена",
           onOk: () => {
             setIsModalOpen(false);
             setEditingEmployee(null);
@@ -185,86 +210,95 @@ const EmployeesPage = () => {
       // Обработка ошибки 409 - сотрудник найден в другом контрагенте
       if (error.response?.status === 409) {
         modal.error({
-          title: 'Ошибка',
-          content: error.response?.data?.message || 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.',
-          okText: 'ОК'
+          title: "Ошибка",
+          content:
+            error.response?.data?.message ||
+            "Сотрудник с таким ИНН уже существует. Обратитесь к администратору.",
+          okText: "ОК",
         });
       } else {
-        console.error('Ошибка при проверке ИНН:', error);
+        console.error("Ошибка при проверке ИНН:", error);
       }
     }
   };
 
   // Мемоизированная фильтрация с учетом поиска и статуса
-  const filteredEmployees = useMemo(
-    () => {
-      let filtered = employees;
-      
-      // Фильтр по статусу
-      if (statusFilter) {
-        filtered = filtered.filter((employee) => {
-          // Находим статусы сотрудника (с поддержкой старых неправильных групп из импорта)
-          const cardStatusMapping = employee.statusMappings?.find(m => {
-            const group = m.statusGroup || m.status_group;
-            return group === 'status_card' || group === 'card draft';
-          });
-          const mainStatusMapping = employee.statusMappings?.find(m => {
-            const group = m.statusGroup || m.status_group;
-            return group === 'status' || group === 'draft';
-          });
-          const activeStatusMapping = employee.statusMappings?.find(
-            m => m.statusGroup === 'status_active' || m.status_group === 'status_active'
-          );
-          
-          // Получаем основной статус (status_new, status_tb_passed, status_processed)
-          const mainStatus = mainStatusMapping?.status?.name;
-          
-          // Проверяем статусы (черновик может быть в группе status_card, status или старых группах)
-          const isDraft = cardStatusMapping?.status?.name === 'status_card_draft' || mainStatus === 'status_draft';
-          const isProcessed = cardStatusMapping?.status?.name === 'status_card_processed';
-          const isFired = activeStatusMapping?.status?.name === 'status_active_fired';
-          const isInactive = activeStatusMapping?.status?.name === 'status_active_inactive';
-          // Действующий = status_new или status_tb_passed или status_processed (аналогично десктопной таблице)
-          const isActive = mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
-          
-          if (statusFilter === 'draft') return isDraft;
-          if (statusFilter === 'processed') return isProcessed;
-          if (statusFilter === 'active') return isActive;
-          if (statusFilter === 'fired') return isFired;
-          if (statusFilter === 'inactive') return isInactive;
-          return true;
-        });
-      }
-      
-      // Фильтр по поисковому запросу
-      if (!searchText) return filtered;
+  const filteredEmployees = useMemo(() => {
+    let filtered = employees;
 
-      const searchLower = searchText.toLowerCase();
-      return filtered.filter((employee) => {
-        return (
-          employee.firstName?.toLowerCase().includes(searchLower) ||
-          employee.lastName?.toLowerCase().includes(searchLower) ||
-          employee.middleName?.toLowerCase().includes(searchLower) ||
-          employee.position?.name?.toLowerCase().includes(searchLower) ||
-          employee.inn?.toLowerCase().includes(searchLower) ||
-          employee.snils?.toLowerCase().includes(searchLower)
+    // Фильтр по статусу
+    if (statusFilter) {
+      filtered = filtered.filter((employee) => {
+        // Находим статусы сотрудника (с поддержкой старых неправильных групп из импорта)
+        const cardStatusMapping = employee.statusMappings?.find((m) => {
+          const group = m.statusGroup || m.status_group;
+          return group === "status_card" || group === "card draft";
+        });
+        const mainStatusMapping = employee.statusMappings?.find((m) => {
+          const group = m.statusGroup || m.status_group;
+          return group === "status" || group === "draft";
+        });
+        const activeStatusMapping = employee.statusMappings?.find(
+          (m) =>
+            m.statusGroup === "status_active" ||
+            m.status_group === "status_active",
         );
+
+        // Получаем основной статус (status_new, status_tb_passed, status_processed)
+        const mainStatus = mainStatusMapping?.status?.name;
+
+        // Проверяем статусы (черновик может быть в группе status_card, status или старых группах)
+        const isDraft =
+          cardStatusMapping?.status?.name === "status_card_draft" ||
+          mainStatus === "status_draft";
+        const isProcessed =
+          cardStatusMapping?.status?.name === "status_card_processed";
+        const isFired =
+          activeStatusMapping?.status?.name === "status_active_fired";
+        const isInactive =
+          activeStatusMapping?.status?.name === "status_active_inactive";
+        // Действующий = status_new или status_tb_passed или status_processed (аналогично десктопной таблице)
+        const isActive =
+          mainStatus === "status_new" ||
+          mainStatus === "status_tb_passed" ||
+          mainStatus === "status_processed";
+
+        if (statusFilter === "draft") return isDraft;
+        if (statusFilter === "processed") return isProcessed;
+        if (statusFilter === "active") return isActive;
+        if (statusFilter === "fired") return isFired;
+        if (statusFilter === "inactive") return isInactive;
+        return true;
       });
-    },
-    [employees, searchText, statusFilter]
-  );
+    }
+
+    // Фильтр по поисковому запросу
+    if (!searchText) return filtered;
+
+    const searchLower = searchText.toLowerCase();
+    return filtered.filter((employee) => {
+      return (
+        employee.firstName?.toLowerCase().includes(searchLower) ||
+        employee.lastName?.toLowerCase().includes(searchLower) ||
+        employee.middleName?.toLowerCase().includes(searchLower) ||
+        employee.position?.name?.toLowerCase().includes(searchLower) ||
+        employee.inn?.toLowerCase().includes(searchLower) ||
+        employee.snils?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [employees, searchText, statusFilter]);
 
   // Мемоизированные уникальные значения для фильтров
   const uniqueFilters = useMemo(
     () => getUniqueFilterValues(filteredEmployees, tableFilters.counterparty),
-    [filteredEmployees, tableFilters.counterparty]
+    [filteredEmployees, tableFilters.counterparty],
   );
 
   // Handlers
   const handleAdd = () => {
     if (isMobile) {
       // На мобильных переходим на отдельную страницу
-      navigate('/employees/add');
+      navigate("/employees/add");
     } else {
       // На десктопе открываем модальное окно
       setEditingEmployee(null);
@@ -328,7 +362,7 @@ const EmployeesPage = () => {
   const handleRequest = () => {
     if (isMobile) {
       // На мобильных переходим на отдельную страницу
-      navigate('/employees/request');
+      navigate("/employees/request");
     } else {
       // На десктопе открываем модальное окно
       setIsRequestModalOpen(true);
@@ -351,18 +385,23 @@ const EmployeesPage = () => {
         // Обновление существующего сотрудника
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
-        
+
         // Проверяем есть ли у сотрудника статусы с is_upload = true
         // Если есть - устанавливаем статус "Редактирован" с is_upload = true
-        if (editingEmployee.statusMappings && editingEmployee.statusMappings.length > 0) {
-          const hasUploadedStatus = editingEmployee.statusMappings.some(mapping => mapping.isUpload);
-          
+        if (
+          editingEmployee.statusMappings &&
+          editingEmployee.statusMappings.length > 0
+        ) {
+          const hasUploadedStatus = editingEmployee.statusMappings.some(
+            (mapping) => mapping.isUpload,
+          );
+
           if (hasUploadedStatus) {
             try {
               // Устанавливаем статус "Редактирован" с is_upload = true
               await employeeApi.setEditedStatus(editingEmployee.id, true);
             } catch (error) {
-              console.warn('Error setting edited status:', error);
+              console.warn("Error setting edited status:", error);
               // Не прерываем процесс сохранения если ошибка при установке статуса
             }
           }
@@ -381,46 +420,68 @@ const EmployeesPage = () => {
 
   // Сброс фильтров таблицы
   const handleResetFilters = () => {
-    setSearchText('');
+    setSearchText("");
     setStatusFilter(null);
     setTableFilters({});
     // Инкрементируем триггер для сброса фильтров в таблице
-    setResetTrigger(prev => prev + 1);
+    setResetTrigger((prev) => prev + 1);
   };
 
   return (
-    <div style={{ 
-      height: '100%', // Занимает всю высоту Content
-      display: 'flex', 
-      flexDirection: 'column',
-      overflow: 'hidden', // БЕЗ прокрутки на уровне страницы
-      backgroundColor: '#fff'
-    }}>
+    <div
+      style={{
+        height: "100%", // Занимает всю высоту Content
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden", // БЕЗ прокрутки на уровне страницы
+        backgroundColor: "#fff",
+      }}
+    >
       {/* Заголовок с поиском и действиями */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
           gap: 16,
-          backgroundColor: '#fff',
-          padding: '16px',
-          borderBottom: '1px solid #f0f0f0',
+          backgroundColor: "#fff",
+          padding: "16px",
+          borderBottom: "1px solid #f0f0f0",
           flexShrink: 0, // Не сжимается - всегда виден
-          marginBottom: 0 // БЕЗ отступа снизу
+          marginBottom: 0, // БЕЗ отступа снизу
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
           {/* Заголовок только на десктопе - на мобильных в Header */}
           {!isMobile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexShrink: 0,
+              }}
+            >
               <Title level={2} style={{ margin: 0 }}>
                 Сотрудники
               </Title>
               {backgroundLoading && (
-                <Tooltip title={`Загрузка данных... (${employees.length} из ${totalCount})`}>
-                  <SyncOutlined spin style={{ color: '#1890ff', fontSize: 16 }} />
+                <Tooltip
+                  title={`Загрузка данных... (${employees.length} из ${totalCount})`}
+                >
+                  <SyncOutlined
+                    spin
+                    style={{ color: "#1890ff", fontSize: 16 }}
+                  />
                 </Tooltip>
               )}
             </div>
@@ -428,10 +489,18 @@ const EmployeesPage = () => {
 
           {/* На десктопе показываем поиск и кнопку сброса рядом с заголовком */}
           {!isMobile && (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               <div style={{ flex: 1, minWidth: 250 }}>
-                <EmployeeSearchFilter 
-                  searchText={searchText} 
+                <EmployeeSearchFilter
+                  searchText={searchText}
                   onSearchChange={setSearchText}
                   statusFilter={statusFilter}
                   onStatusFilterChange={setStatusFilter}
@@ -464,14 +533,23 @@ const EmployeesPage = () => {
 
       {/* Поиск на мобильных - отдельной строкой */}
       {isMobile && (
-        <div style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px 12px 16px', flexShrink: 0 }}>
-          <EmployeeSearchFilter 
-            searchText={searchText} 
+        <div
+          style={{
+            marginBottom: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            padding: "0 16px 12px 16px",
+            flexShrink: 0,
+          }}
+        >
+          <EmployeeSearchFilter
+            searchText={searchText}
             onSearchChange={setSearchText}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
           />
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: "flex", gap: 12 }}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -486,18 +564,9 @@ const EmployeesPage = () => {
               icon={<FileExcelOutlined />}
               onClick={handleRequest}
               size="large"
-              style={{ flex: 1, background: '#52c41a', borderColor: '#52c41a' }}
+              style={{ flex: 1, background: "#52c41a", borderColor: "#52c41a" }}
             >
               Заявка
-            </Button>
-            <Button
-              type="default"
-              icon={<FileExcelOutlined />}
-              onClick={() => setIsImportModalOpen(true)}
-              size="large"
-              style={{ flex: 1 }}
-            >
-              Импорт
             </Button>
           </div>
         </div>
@@ -516,7 +585,16 @@ const EmployeesPage = () => {
           canDeleteEmployee={canDeleteEmployee}
         />
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingRight: 15 }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            paddingRight: 15,
+          }}
+        >
           <EmployeeTable
             employees={filteredEmployees}
             departments={departments}
@@ -589,8 +667,8 @@ const EmployeesPage = () => {
         employeeId={filesEmployee?.id}
         employeeName={
           filesEmployee
-            ? `${filesEmployee.lastName} ${filesEmployee.firstName} ${filesEmployee.middleName || ''}`
-            : ''
+            ? `${filesEmployee.lastName} ${filesEmployee.firstName} ${filesEmployee.middleName || ""}`
+            : ""
         }
         onClose={handleCloseFilesModal}
         onFilesUpdated={handleFilesUpdated}
@@ -641,4 +719,3 @@ const EmployeesPage = () => {
 };
 
 export default EmployeesPage;
-

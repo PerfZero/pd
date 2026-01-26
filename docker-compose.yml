@@ -50,12 +50,12 @@ services:
       JWT_SECRET: changeme_change_me_change_me_32chars
       JWT_REFRESH_SECRET: changeme_change_me_change_me_32chars
       STORAGE_PROVIDER: cloudru
-      CLOUDRU_S3_ENDPOINT: https://s3.cloud.ru
-      CLOUDRU_S3_REGION: ru-1
-      CLOUDRU_S3_ACCESS_KEY_ID: changeme
-      CLOUDRU_S3_SECRET_ACCESS_KEY: changeme
-      CLOUDRU_S3_BUCKET_NAME: changeme
-      CLOUDRU_S3_BASE_PATH: passdesk
+      CLOUDRU_S3_ENDPOINT: https://s3.ru1.storage.beget.cloud
+      CLOUDRU_S3_REGION: ru1
+      CLOUDRU_S3_ACCESS_KEY_ID: 19AAL9JOZV9P73EN4SMH
+      CLOUDRU_S3_SECRET_ACCESS_KEY: 9C89InmhRErahYkF0RMjtNv52UaenPBRQuCOu7D0
+      CLOUDRU_S3_BUCKET_NAME: 0fde02935178-thriving-marcelles
+      CLOUDRU_S3_BASE_PATH: ""
     ports:
       - "5003:5000"
     depends_on:

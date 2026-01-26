@@ -1,12 +1,9 @@
-import { useState } from 'react';
-import { Card, Avatar, Typography, Tag, Space, Dropdown, Spin, Empty, Modal } from 'antd';
+import { Card, Avatar, Typography, Tag, Dropdown, Spin, Empty, Modal } from 'antd';
 import {
   UserOutlined,
   PhoneOutlined,
-  EnvironmentOutlined,
   EllipsisOutlined,
   EditOutlined,
-  EyeOutlined,
   DeleteOutlined,
   FileOutlined,
 } from '@ant-design/icons';

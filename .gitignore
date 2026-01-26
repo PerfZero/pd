@@ -12,6 +12,9 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 
+# Secrets
+*.pfx
+
 # Build outputs
 dist/
 build/

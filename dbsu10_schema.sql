@@ -185,7 +185,7 @@ BEGIN
 
         new_code := LPAD(FLOOR(RANDOM() * 100000000)::TEXT, 8, '0');
 
-        
+
 
         -- Проверка уникальности
 
@@ -195,11 +195,11 @@ BEGIN
 
         END IF;
 
-        
+
 
         counter := counter + 1;
 
-        
+
 
         -- Защита от бесконечного цикла
 
@@ -249,7 +249,7 @@ BEGIN
 
         new_uin := LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
 
-        
+
 
         -- Проверка уникальности
 
@@ -259,11 +259,11 @@ BEGIN
 
         END IF;
 
-        
+
 
         counter := counter + 1;
 
-        
+
 
         -- Защита от бесконечного цикла
 
@@ -3056,8 +3056,75 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,
 
 
 --
+-- Name: unauthorized_access_logs; Type: TABLE; Schema: public; Owner: admindb
+--
+
+CREATE TABLE public.unauthorized_access_logs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    status_code integer NOT NULL,
+    method character varying(10) NOT NULL,
+    path text NOT NULL,
+    ip_address character varying(45),
+    user_agent text,
+    error_message text,
+    details jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.unauthorized_access_logs OWNER TO admindb;
+
+--
+-- Name: TABLE unauthorized_access_logs; Type: COMMENT; Schema: public; Owner: admindb
+--
+
+COMMENT ON TABLE public.unauthorized_access_logs IS 'Логи попыток несанкционированного доступа (401/403)';
+
+--
+-- Name: COLUMN unauthorized_access_logs.user_id; Type: COMMENT; Schema: public; Owner: admindb
+--
+
+COMMENT ON COLUMN public.unauthorized_access_logs.user_id IS 'ID пользователя (если удалось определить)';
+
+--
+-- Name: COLUMN unauthorized_access_logs.status_code; Type: COMMENT; Schema: public; Owner: admindb
+--
+
+COMMENT ON COLUMN public.unauthorized_access_logs.status_code IS 'HTTP статус (401/403)';
+
+--
+-- Name: COLUMN unauthorized_access_logs.path; Type: COMMENT; Schema: public; Owner: admindb
+--
+
+COMMENT ON COLUMN public.unauthorized_access_logs.path IS 'Запрошенный путь';
+
+--
+-- Name: COLUMN unauthorized_access_logs.details; Type: COMMENT; Schema: public; Owner: admindb
+--
+
+COMMENT ON COLUMN public.unauthorized_access_logs.details IS 'Дополнительные детали запроса (JSON)';
+
+--
+-- Name: idx_unauth_logs_user_id; Type: INDEX; Schema: public; Owner: admindb
+--
+
+CREATE INDEX idx_unauth_logs_user_id ON public.unauthorized_access_logs USING btree (user_id);
+
+--
+-- Name: idx_unauth_logs_status_code; Type: INDEX; Schema: public; Owner: admindb
+--
+
+CREATE INDEX idx_unauth_logs_status_code ON public.unauthorized_access_logs USING btree (status_code);
+
+--
+-- Name: idx_unauth_logs_created_at; Type: INDEX; Schema: public; Owner: admindb
+--
+
+CREATE INDEX idx_unauth_logs_created_at ON public.unauthorized_access_logs USING btree (created_at);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 \unrestrict jte3U9LADiUnICjGFBfEq3JlwiimhtemEGBntR9boFhCR2jav4brGp8n1RlwuPX
-

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Form, Input, Button, Card, Typography, Tabs, Alert, App } from 'antd'
+import { Form, Input, Button, Card, Typography, Tabs, App } from 'antd'
 import { UserOutlined, LockOutlined, LoginOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 import { forbiddenPasswordValidator } from '@/utils/forbiddenPasswords'

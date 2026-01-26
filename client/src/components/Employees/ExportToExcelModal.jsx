@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Select, Radio, Table, Checkbox, Space, Button, App } from 'antd';
+import { Modal, Select, Radio, Table, Space, Button, App } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { employeeStatusService } from '../../services/employeeStatusService';

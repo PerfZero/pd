@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '@/entities/employee';
 import { useSettings } from '@/entities/settings';
 import { useAuthStore } from '@/store/authStore';
-import { useExcelColumns, AVAILABLE_COLUMNS } from '@/hooks/useExcelColumns';
+import { useExcelColumns } from '@/hooks/useExcelColumns';
 import { applicationService } from '@/services/applicationService';
 import { constructionSiteService } from '@/services/constructionSiteService';
 import { counterpartyService } from '@/services/counterpartyService';

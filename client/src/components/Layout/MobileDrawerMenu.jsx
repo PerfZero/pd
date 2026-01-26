@@ -5,8 +5,11 @@ import {
   LogoutOutlined,
   SettingOutlined,
   TeamOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
+import settingsService from "@/services/settingsService";
+import { useEffect, useState } from "react";
 
 /**
  * Мобильное выдвижное меню (Drawer)
@@ -16,6 +19,22 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuthStore();
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+
+  useEffect(() => {
+    const loadDefaultCounterpartyId = async () => {
+      try {
+        const response = await settingsService.getPublicSettings();
+        if (response.success && response.data.defaultCounterpartyId) {
+          setDefaultCounterpartyId(response.data.defaultCounterpartyId);
+        }
+      } catch (error) {
+        console.error("Error loading default counterparty ID:", error);
+      }
+    };
+
+    loadDefaultCounterpartyId();
+  }, []);
 
   // Верхняя часть меню (для админов и пользователей)
   const topMenuItems = [];
@@ -26,6 +45,20 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       key: "/employees",
       icon: <TeamOutlined />,
       label: "Сотрудники",
+    });
+  }
+
+  const showOtMenu =
+    user?.role === "admin" ||
+    (user?.role === "user" &&
+      user?.counterpartyId &&
+      user?.counterpartyId !== defaultCounterpartyId);
+
+  if (showOtMenu) {
+    topMenuItems.push({
+      key: "/ot",
+      icon: <SafetyCertificateOutlined />,
+      label: "Охрана труда",
     });
   }
 
