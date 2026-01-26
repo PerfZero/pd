@@ -1,7 +1,7 @@
-import { Table } from 'antd';
-import { useState, useEffect, useRef } from 'react';
-import { useEmployeeColumns } from './EmployeeColumns';
-import { useTableFilters } from './useTableFilters';
+import { Table } from "antd";
+import { useState, useEffect, useRef } from "react";
+import { useEmployeeColumns } from "./EmployeeColumns";
+import { useTableFilters } from "./useTableFilters";
 
 // CSS для чередующихся цветов строк и переноса текста в Select
 const tableStyles = `
@@ -9,15 +9,15 @@ const tableStyles = `
   .ant-table {
     font-size: 13px !important;
   }
-  
+
   .ant-table td {
     padding: 8px 12px !important;
   }
-  
+
   .ant-table th {
     padding: 8px 12px !important;
   }
-  
+
   .table-row-light {
     background-color: #ffffff;
   }
@@ -28,7 +28,7 @@ const tableStyles = `
   .table-row-dark:hover {
     background-color: #e6f7ff !important;
   }
-  
+
   /* Перенос текста в Select для столбца Подразделение */
   .department-select .ant-select-selection-item {
     white-space: normal !important;
@@ -37,12 +37,12 @@ const tableStyles = `
     line-height: 1.4 !important;
     height: auto !important;
   }
-  
+
   .department-select .ant-select-selector {
     height: auto !important;
     padding: 4px 11px !important;
   }
-  
+
   /* Контейнер таблицы занимает всю доступную высоту */
   .employee-table-container {
     display: flex;
@@ -50,7 +50,7 @@ const tableStyles = `
     height: 100%;
     overflow: hidden;
   }
-  
+
   .employee-table-container .ant-table-wrapper {
     flex: 1;
     display: flex;
@@ -58,41 +58,41 @@ const tableStyles = `
     min-height: 0;
     margin-top: 0 !important;
   }
-  
+
   .employee-table-container .ant-spin-nested-loading {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
-  
+
   .employee-table-container .ant-spin-container {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
-  
+
   .employee-table-container .ant-table {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
-  
+
   .employee-table-container .ant-table-container {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
-  
+
   .employee-table-container .ant-table-body {
     flex: 1;
     min-height: 0;
     overflow: auto !important;
   }
-  
+
   /* Пагинация всегда внизу */
   .employee-table-container .ant-table-pagination {
     flex-shrink: 0;
@@ -107,7 +107,7 @@ const tableStyles = `
  * Сохраняет состояние фильтров в localStorage
  */
 // Ключ для localStorage
-const PAGE_SIZE_KEY = 'employees_table_page_size';
+const PAGE_SIZE_KEY = "employees_table_page_size";
 
 export const EmployeeTable = ({
   employees,
@@ -127,10 +127,15 @@ export const EmployeeTable = ({
   userCounterpartyId,
   onConstructionSitesEdit, // Новый prop для редактирования объектов
   resetTrigger, // Триггер для сброса фильтров
+  hiddenColumnKeys = [],
 }) => {
-  const { filters, onFiltersChange: handleLocalFiltersChange, clearFilters } = useTableFilters();
+  const {
+    filters,
+    onFiltersChange: handleLocalFiltersChange,
+    clearFilters,
+  } = useTableFilters();
   const [sortOrder, setSortOrder] = useState({});
-  
+
   // Состояние для количества строк на странице с сохранением в localStorage
   const [pageSize, setPageSize] = useState(() => {
     const saved = localStorage.getItem(PAGE_SIZE_KEY);
@@ -156,12 +161,20 @@ export const EmployeeTable = ({
     resetTrigger, // Передаем триггер сброса
   });
 
+  const visibleColumns = columns.filter(
+    (column) => !hiddenColumnKeys.includes(column.key),
+  );
+
   // При загрузке фильтров из localStorage передаем их на верхний уровень
   // Используем ref чтобы отследить первую загрузку
   const filtersInitializedRef = useRef(false);
   useEffect(() => {
     // Передаем фильтры наверх когда они загружены из localStorage (при первом рендере после инициализации)
-    if (onFiltersChange && !filtersInitializedRef.current && Object.keys(filters).length > 0) {
+    if (
+      onFiltersChange &&
+      !filtersInitializedRef.current &&
+      Object.keys(filters).length > 0
+    ) {
       filtersInitializedRef.current = true;
       onFiltersChange(filters);
     }
@@ -177,12 +190,12 @@ export const EmployeeTable = ({
   // Обработчик изменения таблицы (фильтры, сортировка, пагинация)
   const handleTableChange = (pagination, filters, sorter) => {
     handleLocalFiltersChange(filters);
-    
+
     // Передаем фильтры на верхний уровень если callback передан
     if (onFiltersChange) {
       onFiltersChange(filters);
     }
-    
+
     // Сохраняем сортировку
     if (sorter.field) {
       setSortOrder({
@@ -190,13 +203,13 @@ export const EmployeeTable = ({
         order: sorter.order,
       });
     }
-    
+
     // Сохраняем pageSize в localStorage при изменении
     if (pagination.pageSize !== pageSize) {
       setPageSize(pagination.pageSize);
       localStorage.setItem(PAGE_SIZE_KEY, pagination.pageSize.toString());
     }
-    
+
     // Обновляем текущую страницу
     setCurrentPage(pagination.current);
   };
@@ -205,7 +218,7 @@ export const EmployeeTable = ({
     <div className="employee-table-container">
       <style>{tableStyles}</style>
       <Table
-        columns={columns}
+        columns={visibleColumns}
         dataSource={employees}
         rowKey="id"
         loading={loading}
@@ -214,19 +227,18 @@ export const EmployeeTable = ({
           current: currentPage,
           pageSize: pageSize,
           showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
+          pageSizeOptions: ["10", "20", "50", "100"],
           showTotal: (total) => `Всего: ${total}`,
         }}
         rowClassName={(record, index) =>
-          index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+          index % 2 === 0 ? "table-row-light" : "table-row-dark"
         }
-        scroll={{ 
+        scroll={{
           x: 1300,
-          y: 'calc(100vh - 220px)'
+          y: "calc(100vh - 220px)",
         }}
         onChange={handleTableChange}
       />
     </div>
   );
 };
-

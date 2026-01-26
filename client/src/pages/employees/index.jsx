@@ -1,5 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
-import { Typography, App, Grid, Button, Tooltip } from "antd";
+import {
+  Typography,
+  App,
+  Grid,
+  Button,
+  Tooltip,
+  Dropdown,
+  Checkbox,
+  Space,
+} from "antd";
 import {
   PlusOutlined,
   FileExcelOutlined,
@@ -37,6 +46,7 @@ const { useBreakpoint } = Grid;
 
 // Ключ для сохранения фильтров таблицы (должен совпадать с useTableFilters)
 const TABLE_FILTERS_STORAGE_KEY = "employee_table_filters";
+const TABLE_COLUMNS_STORAGE_KEY = "employee_table_columns";
 
 // Функция для получения начальных фильтров из localStorage
 const getInitialFilters = () => {
@@ -46,6 +56,16 @@ const getInitialFilters = () => {
   } catch (error) {
     console.warn("Ошибка при загрузке фильтров таблицы:", error);
     return {};
+  }
+};
+
+const getInitialHiddenColumns = () => {
+  try {
+    const saved = localStorage.getItem(TABLE_COLUMNS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch (error) {
+    console.warn("Ошибка при загрузке колонок таблицы:", error);
+    return [];
   }
 };
 
@@ -71,6 +91,7 @@ const EmployeesPage = () => {
   // Инициализируем фильтры из localStorage
   const [tableFilters, setTableFilters] = useState(getInitialFilters);
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [hiddenColumns, setHiddenColumns] = useState(getInitialHiddenColumns);
   // Маппинг имен контрагентов в ID для фильтрации на сервере
   const [counterpartyMap, setCounterpartyMap] = useState({});
   const [hasSubcontractors, setHasSubcontractors] = useState(false); // Есть ли у пользователя субподрядчики
@@ -167,6 +188,8 @@ const EmployeesPage = () => {
   // Определяем, должен ли быть виден столбец "Контрагент"
   // Видно для: 1) пользователей с правом экспорта, 2) пользователей с субподрядчиками
   const showCounterpartyColumn = canExport || hasSubcontractors;
+  const showDepartmentColumn =
+    defaultCounterpartyId && user?.counterpartyId === defaultCounterpartyId;
 
   // Определяем, может ли пользователь удалять сотрудника
   // Удаление доступно только администраторам
@@ -427,6 +450,45 @@ const EmployeesPage = () => {
     setResetTrigger((prev) => prev + 1);
   };
 
+  const availableColumns = useMemo(() => {
+    const columns = [
+      { key: "index", label: "№" },
+      { key: "fullName", label: "ФИО" },
+      { key: "position", label: "Должность" },
+      ...(showDepartmentColumn
+        ? [{ key: "department", label: "Подразделение" }]
+        : []),
+      ...(showCounterpartyColumn
+        ? [{ key: "counterparty", label: "Контрагент" }]
+        : []),
+      { key: "constructionSite", label: "Объект" },
+      { key: "citizenship", label: "Гражданство" },
+      { key: "statusCard", label: "Заполнен" },
+      { key: "createdAt", label: "Дата создания" },
+      { key: "files", label: "Файлы" },
+      { key: "documentExpiry", label: "Срок действия док." },
+      { key: "status", label: "Статус" },
+      { key: "actions", label: "Действия" },
+    ];
+
+    return columns;
+  }, [showCounterpartyColumn, showDepartmentColumn]);
+
+  const handleToggleColumn = (key) => {
+    setHiddenColumns((prev) => {
+      const next = prev.includes(key)
+        ? prev.filter((col) => col !== key)
+        : [...prev, key];
+      localStorage.setItem(TABLE_COLUMNS_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleResetColumns = () => {
+    setHiddenColumns([]);
+    localStorage.setItem(TABLE_COLUMNS_STORAGE_KEY, JSON.stringify([]));
+  };
+
   return (
     <div
       style={{
@@ -521,13 +583,50 @@ const EmployeesPage = () => {
 
         {/* На десктопе показываем действия справа */}
         {!isMobile && (
-          <EmployeeActions
-            onAdd={handleAdd}
-            onRequest={handleRequest}
-            onImport={() => setIsImportModalOpen(true)}
-            onSecurity={() => setIsSecurityModalOpen(true)}
-            canExport={canExport}
-          />
+          <Space size="middle">
+            <Dropdown
+              trigger={["click"]}
+              dropdownRender={() => (
+                <div
+                  style={{
+                    padding: 12,
+                    background: "#fff",
+                    borderRadius: 6,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                    minWidth: 220,
+                  }}
+                >
+                  <Space
+                    direction="vertical"
+                    size={8}
+                    style={{ width: "100%" }}
+                  >
+                    {availableColumns.map((col) => (
+                      <Checkbox
+                        key={col.key}
+                        checked={!hiddenColumns.includes(col.key)}
+                        onChange={() => handleToggleColumn(col.key)}
+                      >
+                        {col.label}
+                      </Checkbox>
+                    ))}
+                    <Button size="small" onClick={handleResetColumns}>
+                      Сбросить
+                    </Button>
+                  </Space>
+                </div>
+              )}
+            >
+              <Button type="default">Колонки</Button>
+            </Dropdown>
+            <EmployeeActions
+              onAdd={handleAdd}
+              onRequest={handleRequest}
+              onImport={() => setIsImportModalOpen(true)}
+              onSecurity={() => setIsSecurityModalOpen(true)}
+              canExport={canExport}
+            />
+          </Space>
         )}
       </div>
 
@@ -613,6 +712,7 @@ const EmployeesPage = () => {
             userCounterpartyId={user?.counterpartyId}
             onConstructionSitesEdit={handleConstructionSitesEdit}
             resetTrigger={resetTrigger}
+            hiddenColumnKeys={hiddenColumns}
           />
         </div>
       )}

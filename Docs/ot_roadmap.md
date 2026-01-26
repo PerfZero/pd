@@ -110,7 +110,7 @@
 ## 3. API: эндпоинты
 
 ### 3.1. Категории
-- `GET /api/v1/ot/categories` — список (дерево)
+- `GET /api/v1/ot/categories` — список (дерево1)
 - `POST /api/v1/ot/categories` — создать
 - `PATCH /api/v1/ot/categories/:id` — обновить
 - `DELETE /api/v1/ot/categories/:id` — soft delete
