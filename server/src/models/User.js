@@ -46,7 +46,13 @@ User.init(
       field: "last_name",
     },
     role: {
-      type: DataTypes.ENUM("admin", "user"),
+      type: DataTypes.ENUM(
+        "admin",
+        "user",
+        "manager",
+        "ot_engineer",
+        "ot_admin",
+      ),
       defaultValue: "user",
       allowNull: false,
     },

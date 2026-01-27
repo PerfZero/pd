@@ -25,6 +25,15 @@ import CounterpartyTypeMapping from "./CounterpartyTypeMapping.js";
 import RefreshToken from "./RefreshToken.js";
 import AuditLog from "./AuditLog.js";
 import UnauthorizedAccessLog from "./UnauthorizedAccessLog.js";
+import OtCategory from "./OtCategory.js";
+import OtDocument from "./OtDocument.js";
+import OtTemplate from "./OtTemplate.js";
+import OtInstruction from "./OtInstruction.js";
+import OtContractorDocument from "./OtContractorDocument.js";
+import OtContractorDocumentHistory from "./OtContractorDocumentHistory.js";
+import OtContractorStatus from "./OtContractorStatus.js";
+import OtContractorStatusHistory from "./OtContractorStatusHistory.js";
+import OtComment from "./OtComment.js";
 
 // Define associations
 
@@ -540,6 +549,123 @@ Counterparty.hasMany(CounterpartySubcounterpartyMapping, {
   as: "parentMappings",
 });
 
+// ===== OT Module Associations =====
+
+// Categories (self hierarchy)
+OtCategory.hasMany(OtCategory, {
+  foreignKey: "parent_id",
+  as: "children",
+});
+OtCategory.belongsTo(OtCategory, {
+  foreignKey: "parent_id",
+  as: "parent",
+});
+
+// Categories -> Documents
+OtCategory.hasMany(OtDocument, {
+  foreignKey: "category_id",
+  as: "documents",
+});
+OtDocument.belongsTo(OtCategory, {
+  foreignKey: "category_id",
+  as: "category",
+});
+
+// Documents -> Template file
+OtDocument.belongsTo(File, {
+  foreignKey: "template_file_id",
+  as: "templateFile",
+});
+File.hasMany(OtDocument, {
+  foreignKey: "template_file_id",
+  as: "otDocuments",
+});
+
+// Templates -> File
+OtTemplate.belongsTo(File, { foreignKey: "file_id", as: "file" });
+File.hasMany(OtTemplate, { foreignKey: "file_id", as: "otTemplates" });
+
+// Instructions -> File
+OtInstruction.belongsTo(File, { foreignKey: "file_id", as: "file" });
+File.hasMany(OtInstruction, { foreignKey: "file_id", as: "otInstructions" });
+
+// Contractor documents
+OtContractorDocument.belongsTo(OtDocument, {
+  foreignKey: "document_id",
+  as: "document",
+});
+OtContractorDocument.belongsTo(Counterparty, {
+  foreignKey: "counterparty_id",
+  as: "counterparty",
+});
+OtContractorDocument.belongsTo(ConstructionSite, {
+  foreignKey: "construction_site_id",
+  as: "constructionSite",
+});
+OtContractorDocument.belongsTo(File, {
+  foreignKey: "file_id",
+  as: "file",
+});
+OtContractorDocument.belongsTo(User, {
+  foreignKey: "uploaded_by",
+  as: "uploader",
+});
+OtContractorDocument.belongsTo(User, {
+  foreignKey: "checked_by",
+  as: "checker",
+});
+
+OtContractorDocument.hasMany(OtContractorDocumentHistory, {
+  foreignKey: "contractor_document_id",
+  as: "history",
+});
+OtContractorDocumentHistory.belongsTo(OtContractorDocument, {
+  foreignKey: "contractor_document_id",
+  as: "contractorDocument",
+});
+OtContractorDocumentHistory.belongsTo(User, {
+  foreignKey: "changed_by",
+  as: "changedByUser",
+});
+
+// Contractor status
+OtContractorStatus.belongsTo(Counterparty, {
+  foreignKey: "counterparty_id",
+  as: "counterparty",
+});
+OtContractorStatus.belongsTo(ConstructionSite, {
+  foreignKey: "construction_site_id",
+  as: "constructionSite",
+});
+
+OtContractorStatusHistory.belongsTo(Counterparty, {
+  foreignKey: "counterparty_id",
+  as: "counterparty",
+});
+OtContractorStatusHistory.belongsTo(ConstructionSite, {
+  foreignKey: "construction_site_id",
+  as: "constructionSite",
+});
+OtContractorStatusHistory.belongsTo(User, {
+  foreignKey: "changed_by",
+  as: "changedByUser",
+});
+
+// Comments
+OtComment.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+OtComment.belongsTo(Counterparty, {
+  foreignKey: "counterparty_id",
+  as: "counterparty",
+});
+OtComment.belongsTo(ConstructionSite, {
+  foreignKey: "construction_site_id",
+  as: "constructionSite",
+});
+OtComment.belongsTo(OtContractorDocument, {
+  foreignKey: "contractor_document_id",
+  as: "contractorDocument",
+});
+
 export {
   sequelize,
   User,
@@ -568,4 +694,13 @@ export {
   AuditLog,
   UnauthorizedAccessLog,
   RefreshToken,
+  OtCategory,
+  OtDocument,
+  OtTemplate,
+  OtInstruction,
+  OtContractorDocument,
+  OtContractorDocumentHistory,
+  OtContractorStatus,
+  OtContractorStatusHistory,
+  OtComment,
 };

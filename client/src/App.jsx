@@ -144,7 +144,9 @@ function App() {
             <Route
               path="ot"
               element={
-                <ProtectedRoute allowedRoles={["admin", "user"]}>
+                <ProtectedRoute
+                  allowedRoles={["admin", "user", "ot_engineer", "ot_admin"]}
+                >
                   <OccupationalSafetyPage />
                 </ProtectedRoute>
               }

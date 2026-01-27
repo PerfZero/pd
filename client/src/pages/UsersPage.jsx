@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Table,
   Button,
@@ -15,7 +15,7 @@ import {
   Switch,
   Popover,
   Checkbox,
-} from 'antd'
+} from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -26,100 +26,108 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   FilterOutlined,
-} from '@ant-design/icons'
-import { userService } from '@/services/userService'
-import { counterpartyService } from '@/services/counterpartyService'
-import settingsService from '@/services/settingsService'
-import { useAuthStore } from '@/store/authStore'
+} from "@ant-design/icons";
+import { userService } from "@/services/userService";
+import { counterpartyService } from "@/services/counterpartyService";
+import settingsService from "@/services/settingsService";
+import { useAuthStore } from "@/store/authStore";
 
-const { Title } = Typography
+const { Title } = Typography;
 
 const UsersPage = () => {
-  const { message } = App.useApp()
-  const [users, setUsers] = useState([])
-  const [counterparties, setCounterparties] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [searchText, setSearchText] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
-  const [form] = Form.useForm()
-  const [passwordForm] = Form.useForm()
-  const [editingUser, setEditingUser] = useState(null)
-  const { user: currentUser } = useAuthStore()
-  const [statusFilter, setStatusFilter] = useState([])
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
-  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
+  const { message } = App.useApp();
+  const [users, setUsers] = useState([]);
+  const [counterparties, setCounterparties] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
+  const [editingUser, setEditingUser] = useState(null);
+  const { user: currentUser } = useAuthStore();
+  const [statusFilter, setStatusFilter] = useState([]);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
 
   useEffect(() => {
-    fetchUsers()
-    fetchCounterparties()
-    fetchDefaultCounterparty()
-  }, [])
+    fetchUsers();
+    fetchCounterparties();
+    fetchDefaultCounterparty();
+  }, []);
 
   const fetchUsers = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await userService.getAll({ limit: 10000 })
-      setUsers(response?.data?.users || [])
+      const response = await userService.getAll({ limit: 10000 });
+      setUsers(response?.data?.users || []);
     } catch (error) {
-      console.error('Error fetching users:', error)
-      setUsers([])
+      console.error("Error fetching users:", error);
+      setUsers([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchCounterparties = async () => {
     try {
       // Загружаем все контрагенты без ограничения для поиска в Select
-      const response = await counterpartyService.getAll({ limit: 10000, page: 1 })
-      const counterpartiesData = response?.data?.data?.counterparties || []
-      setCounterparties(counterpartiesData)
+      const response = await counterpartyService.getAll({
+        limit: 10000,
+        page: 1,
+      });
+      const counterpartiesData = response?.data?.data?.counterparties || [];
+      setCounterparties(counterpartiesData);
     } catch (error) {
-      console.error('Error loading counterparties:', error)
+      console.error("Error loading counterparties:", error);
     }
-  }
+  };
 
   const fetchDefaultCounterparty = async () => {
     try {
-      const response = await settingsService.getPublicSettings()
-      setDefaultCounterpartyId(response?.data?.defaultCounterpartyId)
+      const response = await settingsService.getPublicSettings();
+      setDefaultCounterpartyId(response?.data?.defaultCounterpartyId);
     } catch (error) {
-      console.error('Error loading default counterparty:', error)
+      console.error("Error loading default counterparty:", error);
     }
-  }
+  };
 
   // Восстановить пагинацию при смене поиска или фильтра
   useEffect(() => {
-    setPagination({ current: 1, pageSize: 20 })
-  }, [searchText, statusFilter])
+    setPagination({ current: 1, pageSize: 20 });
+  }, [searchText, statusFilter]);
 
   const roleLabels = {
-    admin: { text: 'Администратор', color: 'red' },
-    user: { text: 'Пользователь', color: 'default' },
-  }
+    admin: { text: "Администратор", color: "red" },
+    ot_admin: { text: "Администратор ОТ", color: "magenta" },
+    ot_engineer: { text: "Инженер ОТ", color: "blue" },
+    manager: { text: "Менеджер", color: "gold" },
+    user: { text: "Пользователь", color: "default" },
+  };
 
-  // Роли для селекта при создании/редактировании (исключаем админа и менеджера, оставляем только user)
+  // Роли для селекта при создании/редактировании (исключаем админа и менеджера)
   const selectableRoles = {
-    user: { text: 'Пользователь', color: 'default' },
-  }
+    ot_admin: { text: "Администратор ОТ", color: "magenta" },
+    ot_engineer: { text: "Инженер ОТ", color: "blue" },
+    user: { text: "Пользователь", color: "default" },
+  };
 
   const columns = [
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
       sorter: (a, b) => a.email.localeCompare(b.email),
       render: (email) => (
         <Space>
-          <UserOutlined style={{ color: '#2563eb' }} />
+          <UserOutlined style={{ color: "#2563eb" }} />
           <span>{email}</span>
         </Space>
       ),
     },
     {
-      title: 'ФИО',
-      key: 'fullName',
+      title: "ФИО",
+      key: "fullName",
       render: (_, record) => (
         <span>
           {record.lastName} {record.firstName}
@@ -128,9 +136,9 @@ const UsersPage = () => {
       sorter: (a, b) => a.lastName.localeCompare(b.lastName),
     },
     {
-      title: 'Роль',
-      dataIndex: 'role',
-      key: 'role',
+      title: "Роль",
+      dataIndex: "role",
+      key: "role",
       render: (role) => (
         <Tag color={roleLabels[role]?.color}>{roleLabels[role]?.text}</Tag>
       ),
@@ -141,21 +149,23 @@ const UsersPage = () => {
       onFilter: (value, record) => record.role === value,
     },
     {
-      title: 'Контрагент',
-      dataIndex: 'counterpartyId',
-      key: 'counterpartyId',
+      title: "Контрагент",
+      dataIndex: "counterpartyId",
+      key: "counterpartyId",
       render: (counterpartyId) => {
-        const counterparty = counterparties.find(c => c.id === counterpartyId);
-        return counterparty ? counterparty.name : '-';
+        const counterparty = counterparties.find(
+          (c) => c.id === counterpartyId,
+        );
+        return counterparty ? counterparty.name : "-";
       },
     },
     {
-      title: 'Статус',
-      dataIndex: 'isActive',
-      key: 'isActive',
+      title: "Статус",
+      dataIndex: "isActive",
+      key: "isActive",
       render: (isActive, record) => {
         // Для администраторов - Switch, для остальных - Tag
-        if (currentUser?.role === 'admin' && record.id !== currentUser?.id) {
+        if (currentUser?.role === "admin" && record.id !== currentUser?.id) {
           return (
             <Switch
               checked={isActive}
@@ -166,38 +176,43 @@ const UsersPage = () => {
           );
         }
         return (
-          <Tag icon={isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />} color={isActive ? 'success' : 'default'}>
-            {isActive ? 'Активен' : 'Неактивен'}
+          <Tag
+            icon={isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+            color={isActive ? "success" : "default"}
+          >
+            {isActive ? "Активен" : "Неактивен"}
           </Tag>
         );
       },
       filters: [
-        { text: 'Активен', value: true },
-        { text: 'Неактивен', value: false },
+        { text: "Активен", value: true },
+        { text: "Неактивен", value: false },
       ],
       onFilter: (value, record) => record.isActive === value,
     },
     {
-      title: 'Дата создания',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString('ru-RU'),
+      title: "Дата создания",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (date) => new Date(date).toLocaleDateString("ru-RU"),
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: 'УИН',
-      dataIndex: 'identificationNumber',
-      key: 'identificationNumber',
+      title: "УИН",
+      dataIndex: "identificationNumber",
+      key: "identificationNumber",
       render: (value) => {
-        if (!value) return '-';
+        if (!value) return "-";
         // Форматируем в маску XXX-XXX
-        const digits = value.toString().replace(/\D/g, '');
-        return digits.length >= 6 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}` : value;
+        const digits = value.toString().replace(/\D/g, "");
+        return digits.length >= 6
+          ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}`
+          : value;
       },
     },
     {
-      title: 'Действия',
-      key: 'actions',
+      title: "Действия",
+      key: "actions",
       width: 200,
       render: (_, record) => (
         <Space>
@@ -213,7 +228,9 @@ const UsersPage = () => {
               type="text"
               icon={<LockOutlined />}
               onClick={() => handleChangePassword(record)}
-              disabled={currentUser?.role !== 'admin' && record.id !== currentUser?.id}
+              disabled={
+                currentUser?.role !== "admin" && record.id !== currentUser?.id
+              }
             />
           </Tooltip>
           <Tooltip title="Удалить">
@@ -224,144 +241,168 @@ const UsersPage = () => {
               okText="Удалить"
               okType="danger"
               cancelText="Отмена"
-              disabled={record.id === currentUser?.id || currentUser?.role !== 'admin'}
+              disabled={
+                record.id === currentUser?.id || currentUser?.role !== "admin"
+              }
             >
               <Button
                 type="text"
                 danger
                 icon={<DeleteOutlined />}
-                disabled={record.id === currentUser?.id || currentUser?.role !== 'admin'}
+                disabled={
+                  record.id === currentUser?.id || currentUser?.role !== "admin"
+                }
               />
             </Popconfirm>
           </Tooltip>
         </Space>
       ),
     },
-  ]
+  ];
 
   const handleAdd = () => {
-    setEditingUser(null)
-    form.resetFields()
-    setIsModalOpen(true)
-  }
+    setEditingUser(null);
+    form.resetFields();
+    setIsModalOpen(true);
+  };
 
   const handleEdit = (user) => {
-    setEditingUser(user)
-    form.setFieldsValue(user)
-    setIsModalOpen(true)
-  }
+    setEditingUser(user);
+    form.setFieldsValue(user);
+    setIsModalOpen(true);
+  };
 
   const handleChangePassword = (user) => {
-    setEditingUser(user)
-    passwordForm.resetFields()
-    setIsPasswordModalOpen(true)
-  }
+    setEditingUser(user);
+    passwordForm.resetFields();
+    setIsPasswordModalOpen(true);
+  };
 
   const handleToggleStatus = async (id) => {
     try {
-      await userService.toggleStatus(id)
-      message.success('Статус пользователя изменен')
-      fetchUsers()
+      await userService.toggleStatus(id);
+      message.success("Статус пользователя изменен");
+      fetchUsers();
     } catch (error) {
-      message.error(error.response?.data?.message || 'Ошибка изменения статуса')
+      message.error(
+        error.response?.data?.message || "Ошибка изменения статуса",
+      );
     }
-  }
+  };
 
   const handleDelete = async (id) => {
     try {
-      await userService.delete(id)
-      message.success('Пользователь удален')
-      fetchUsers()
+      await userService.delete(id);
+      message.success("Пользователь удален");
+      fetchUsers();
     } catch (error) {
-      message.error(error.response?.data?.message || 'Ошибка удаления пользователя')
+      message.error(
+        error.response?.data?.message || "Ошибка удаления пользователя",
+      );
     }
-  }
+  };
 
   const handleModalOk = async () => {
     try {
-      const values = await form.validateFields()
-      
+      const values = await form.validateFields();
+
       if (editingUser) {
-        await userService.update(editingUser.id, values)
-        message.success('Пользователь обновлен')
+        await userService.update(editingUser.id, values);
+        message.success("Пользователь обновлен");
       } else {
-        await userService.create(values)
-        message.success('Пользователь создан')
+        await userService.create(values);
+        message.success("Пользователь создан");
       }
-      
-      setIsModalOpen(false)
-      fetchUsers()
+
+      setIsModalOpen(false);
+      fetchUsers();
     } catch (error) {
       if (error.errorFields) {
         // Validation error
-        return
+        return;
       }
-      message.error(error.response?.data?.message || 'Ошибка сохранения пользователя')
+      message.error(
+        error.response?.data?.message || "Ошибка сохранения пользователя",
+      );
     }
-  }
+  };
 
   const handlePasswordModalOk = async () => {
     try {
-      const values = await passwordForm.validateFields()
-      
-      await userService.updatePassword(editingUser.id, values)
-      message.success('Пароль обновлен')
-      
-      setIsPasswordModalOpen(false)
-      passwordForm.resetFields()
+      const values = await passwordForm.validateFields();
+
+      await userService.updatePassword(editingUser.id, values);
+      message.success("Пароль обновлен");
+
+      setIsPasswordModalOpen(false);
+      passwordForm.resetFields();
     } catch (error) {
       if (error.errorFields) {
-        return
+        return;
       }
-      message.error(error.response?.data?.message || 'Ошибка обновления пароля')
+      message.error(
+        error.response?.data?.message || "Ошибка обновления пароля",
+      );
     }
-  }
+  };
 
   const handleModalCancel = () => {
-    setIsModalOpen(false)
-    form.resetFields()
-  }
+    setIsModalOpen(false);
+    form.resetFields();
+  };
 
   const handlePasswordModalCancel = () => {
-    setIsPasswordModalOpen(false)
-    passwordForm.resetFields()
-  }
+    setIsPasswordModalOpen(false);
+    passwordForm.resetFields();
+  };
 
   const filteredUsers = users.filter((user) => {
-    const searchLower = searchText.toLowerCase()
+    const searchLower = searchText.toLowerCase();
     const searchMatch =
-      (user.email?.toLowerCase().includes(searchLower) || false) ||
-      (user.firstName?.toLowerCase().includes(searchLower) || false) ||
-      (user.lastName?.toLowerCase().includes(searchLower) || false) ||
-      (user.identificationNumber?.toLowerCase().includes(searchLower) || false)
+      user.email?.toLowerCase().includes(searchLower) ||
+      false ||
+      user.firstName?.toLowerCase().includes(searchLower) ||
+      false ||
+      user.lastName?.toLowerCase().includes(searchLower) ||
+      false ||
+      user.identificationNumber?.toLowerCase().includes(searchLower) ||
+      false;
 
     // Фильтрация по статусу
-    let statusMatch = true
+    let statusMatch = true;
     if (statusFilter.length > 0) {
-      const isActive = user.isActive
-      statusMatch = 
-        (statusFilter.includes('active') && isActive) ||
-        (statusFilter.includes('inactive') && !isActive)
+      const isActive = user.isActive;
+      statusMatch =
+        (statusFilter.includes("active") && isActive) ||
+        (statusFilter.includes("inactive") && !isActive);
     }
 
-    return searchMatch && statusMatch
-  })
+    return searchMatch && statusMatch;
+  });
 
   // Пагинация на клиенте
-  const start = (pagination.current - 1) * pagination.pageSize
-  const end = start + pagination.pageSize
-  const paginatedUsers = filteredUsers.slice(start, end)
+  const start = (pagination.current - 1) * pagination.pageSize;
+  const end = start + pagination.pageSize;
+  const paginatedUsers = filteredUsers.slice(start, end);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
+      }}
+    >
       {/* Заголовок, поиск, фильтр и кнопка на одной строке */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: 16,
-          padding: '24px 24px 0 24px',
+          padding: "24px 24px 0 24px",
           gap: 16,
           flexShrink: 0,
         }}
@@ -370,7 +411,9 @@ const UsersPage = () => {
           Пользователи
         </Title>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+        <div
+          style={{ display: "flex", gap: 12, alignItems: "center", flex: 1 }}
+        >
           <Input
             placeholder="Поиск по email или ФИО..."
             prefix={<SearchOutlined />}
@@ -381,12 +424,20 @@ const UsersPage = () => {
           />
           <Popover
             content={
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200 }}>
-                <div style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Статус</div>
-                <Checkbox.Group
-                  value={statusFilter}
-                  onChange={setStatusFilter}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  minWidth: 200,
+                }}
+              >
+                <div
+                  style={{ fontSize: 12, fontWeight: "bold", color: "#666" }}
                 >
+                  Статус
+                </div>
+                <Checkbox.Group value={statusFilter} onChange={setStatusFilter}>
                   <Checkbox value="active">Активен</Checkbox>
                   <Checkbox value="inactive">Неактивен</Checkbox>
                 </Checkbox.Group>
@@ -396,7 +447,7 @@ const UsersPage = () => {
             placement="bottomLeft"
           >
             <Button
-              type={statusFilter.length > 0 ? 'primary' : 'default'}
+              type={statusFilter.length > 0 ? "primary" : "default"}
               icon={<FilterOutlined />}
             >
               Фильтр
@@ -404,7 +455,12 @@ const UsersPage = () => {
           </Popover>
         </div>
 
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ flexShrink: 0 }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+          style={{ flexShrink: 0 }}
+        >
           Добавить
         </Button>
       </div>
@@ -412,7 +468,16 @@ const UsersPage = () => {
       {/* Отступ под заголовок */}
       <div style={{ marginBottom: 16, flexShrink: 0 }} />
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingBottom: 24,
+        }}
+      >
         <Table
           columns={columns}
           dataSource={paginatedUsers}
@@ -426,25 +491,27 @@ const UsersPage = () => {
             showSizeChanger: true,
             showTotal: (total) => `Всего: ${total}`,
             onChange: (page, pageSize) => {
-              setPagination({ current: page, pageSize })
+              setPagination({ current: page, pageSize });
             },
             onShowSizeChange: (current, pageSize) => {
-              setPagination({ current: 1, pageSize })
+              setPagination({ current: 1, pageSize });
             },
           }}
-          scroll={{ x: 'max-content', y: 510 }}
-          style={{ width: '100%' }}
+          scroll={{ x: "max-content", y: 510 }}
+          style={{ width: "100%" }}
         />
       </div>
 
       {/* Modal для создания/редактирования пользователя */}
       <Modal
-        title={editingUser ? 'Редактировать пользователя' : 'Добавить пользователя'}
+        title={
+          editingUser ? "Редактировать пользователя" : "Добавить пользователя"
+        }
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={600}
-        okText={editingUser ? 'Сохранить' : 'Добавить'}
+        okText={editingUser ? "Сохранить" : "Добавить"}
         cancelText="Отмена"
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
@@ -452,8 +519,8 @@ const UsersPage = () => {
             name="email"
             label="Email"
             rules={[
-              { required: true, message: 'Введите email' },
-              { type: 'email', message: 'Введите корректный email' },
+              { required: true, message: "Введите email" },
+              { type: "email", message: "Введите корректный email" },
             ]}
           >
             <Input prefix={<UserOutlined />} placeholder="user@example.com" />
@@ -464,18 +531,24 @@ const UsersPage = () => {
               name="password"
               label="Пароль"
               rules={[
-                { required: true, message: 'Введите пароль' },
-                { min: 6, message: 'Пароль должен содержать минимум 6 символов' },
+                { required: true, message: "Введите пароль" },
+                {
+                  min: 6,
+                  message: "Пароль должен содержать минимум 6 символов",
+                },
               ]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="••••••••"
+              />
             </Form.Item>
           )}
 
           <Form.Item
             name="firstName"
             label="ФИО"
-            rules={[{ required: true, message: 'Введите ФИО' }]}
+            rules={[{ required: true, message: "Введите ФИО" }]}
           >
             <Input />
           </Form.Item>
@@ -483,8 +556,8 @@ const UsersPage = () => {
           <Form.Item
             name="role"
             label="Роль"
-            rules={[{ required: true, message: 'Выберите роль' }]}
-            initialValue={editingUser?.role || 'user'}
+            rules={[{ required: true, message: "Выберите роль" }]}
+            initialValue={editingUser?.role || "user"}
           >
             <Select>
               {Object.entries(selectableRoles).map(([key, value]) => (
@@ -512,15 +585,20 @@ const UsersPage = () => {
               filterOption={(input, option) => {
                 // Безопасное преобразование: проверяем тип данных перед вызовом toLowerCase
                 const label = option?.label;
-                const searchText = typeof label === 'string' ? label : String(label || '');
+                const searchText =
+                  typeof label === "string" ? label : String(label || "");
                 return searchText.toLowerCase().includes(input.toLowerCase());
               }}
               popupMatchSelectWidth={false}
               maxTagCount="responsive"
               virtual={true}
             >
-              {counterparties.map(c => (
-                <Select.Option key={c.id} value={c.id} label={`${c.name} (${c.inn})`}>
+              {counterparties.map((c) => (
+                <Select.Option
+                  key={c.id}
+                  value={c.id}
+                  label={`${c.name} (${c.inn})`}
+                >
                   {c.name} ({c.inn})
                 </Select.Option>
               ))}
@@ -543,8 +621,8 @@ const UsersPage = () => {
             name="newPassword"
             label="Новый пароль"
             rules={[
-              { required: true, message: 'Введите новый пароль' },
-              { min: 6, message: 'Пароль должен содержать минимум 6 символов' },
+              { required: true, message: "Введите новый пароль" },
+              { min: 6, message: "Пароль должен содержать минимум 6 символов" },
             ]}
           >
             <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
@@ -553,15 +631,15 @@ const UsersPage = () => {
           <Form.Item
             name="confirmPassword"
             label="Подтвердите пароль"
-            dependencies={['newPassword']}
+            dependencies={["newPassword"]}
             rules={[
-              { required: true, message: 'Подтвердите пароль' },
+              { required: true, message: "Подтвердите пароль" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve()
+                  if (!value || getFieldValue("newPassword") === value) {
+                    return Promise.resolve();
                   }
-                  return Promise.reject(new Error('Пароли не совпадают'))
+                  return Promise.reject(new Error("Пароли не совпадают"));
                 },
               }),
             ]}
@@ -571,8 +649,7 @@ const UsersPage = () => {
         </Form>
       </Modal>
     </div>
-  )
-}
+  );
+};
 
-export default UsersPage
-
+export default UsersPage;

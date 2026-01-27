@@ -20,6 +20,8 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const location = useLocation();
   const { logout, user } = useAuthStore();
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+  const isOtEngineer = user?.role === "ot_engineer";
+  const isOtAdmin = user?.role === "ot_admin";
 
   useEffect(() => {
     const loadDefaultCounterpartyId = async () => {
@@ -49,6 +51,8 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   }
 
   const showOtMenu =
+    isOtEngineer ||
+    isOtAdmin ||
     user?.role === "admin" ||
     (user?.role === "user" &&
       user?.counterpartyId &&

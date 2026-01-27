@@ -31,6 +31,8 @@ const Sidebar = () => {
   const { logout, user } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+  const isOtEngineer = user?.role === "ot_engineer";
+  const isOtAdmin = user?.role === "ot_admin";
 
   // Загрузить defaultCounterpartyId при монтировании
   useEffect(() => {
@@ -55,6 +57,8 @@ const Sidebar = () => {
       user?.counterpartyId &&
       user?.counterpartyId !== defaultCounterpartyId);
 
+  const showOtMenu = isOtEngineer || isOtAdmin || showCounterpartiesMenu;
+
   // Меню для обычных пользователей (role: user)
   const userMenuItems = [
     {
@@ -64,7 +68,7 @@ const Sidebar = () => {
     },
   ];
 
-  if (showCounterpartiesMenu) {
+  if (showOtMenu) {
     userMenuItems.push({
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
@@ -134,12 +138,26 @@ const Sidebar = () => {
     },
   ];
 
+  const engineerMenuItems = [
+    {
+      key: "/ot",
+      icon: <SafetyCertificateOutlined />,
+      label: "Охрана труда",
+    },
+  ];
+
+  const otAdminMenuItems = [...engineerMenuItems];
+
   // Выбираем меню на основе роли пользователя
   let menuItems = [];
   if (user?.role === "user") {
     menuItems = [...userMenuItems];
   } else if (user?.role === "admin") {
     menuItems = [...adminMenuItems];
+  } else if (user?.role === "ot_engineer") {
+    menuItems = [...engineerMenuItems];
+  } else if (user?.role === "ot_admin") {
+    menuItems = [...otAdminMenuItems];
   }
 
   const handleMenuClick = ({ key }) => {

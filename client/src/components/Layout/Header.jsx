@@ -84,6 +84,9 @@ const Header = () => {
   const getRoleLabel = (role) => {
     const roles = {
       admin: "Администратор",
+      ot_admin: "Администратор ОТ",
+      ot_engineer: "Инженер ОТ",
+      manager: "Менеджер",
       user: "Пользователь",
     };
     return roles[role] || role;
