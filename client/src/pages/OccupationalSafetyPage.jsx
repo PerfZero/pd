@@ -98,6 +98,7 @@ const OccupationalSafetyPage = () => {
   const [objectStatusLoading, setObjectStatusLoading] = useState(false);
   const [allSiteSummaries, setAllSiteSummaries] = useState([]);
   const [allSiteLoading, setAllSiteLoading] = useState(false);
+  const allSiteRequestRef = useRef(0);
   const [categoryForm] = Form.useForm();
   const [documentForm] = Form.useForm();
   const [templateForm] = Form.useForm();
@@ -364,30 +365,89 @@ const OccupationalSafetyPage = () => {
   const loadAllSiteSummaries = async () => {
     if (!constructionSites.length) return;
 
+    const requestId = (allSiteRequestRef.current += 1);
+    const initialSummaries = constructionSites.map((site) => ({
+      site,
+      counts: null,
+      loading: true,
+      error: false,
+    }));
+
     try {
       setAllSiteLoading(true);
-      const summaries = await Promise.all(
-        constructionSites.map(async (site) => {
-          const response = await otService.getContractorStatuses({
-            constructionSiteId: site.id,
-          });
-          const statuses = response.data?.data || [];
-          const counts = statuses.reduce(
-            (acc, item) => {
-              acc[item.status] += 1;
-              return acc;
-            },
-            { admitted: 0, not_admitted: 0, temp_admitted: 0 },
-          );
-          return { site, counts };
-        }),
+      setAllSiteSummaries((prev) => {
+        if (!prev.length) return initialSummaries;
+        return constructionSites.map((site) => {
+          const existing = prev.find((entry) => entry.site.id === site.id);
+          return {
+            site,
+            counts: existing?.counts ?? null,
+            loading: true,
+            error: false,
+          };
+        });
+      });
+
+      const sites = [...constructionSites];
+      const concurrency = 4;
+      let cursor = 0;
+
+      const runNext = async () => {
+        while (cursor < sites.length) {
+          const index = cursor;
+          const site = sites[index];
+          cursor += 1;
+
+          try {
+            const response = await otService.getContractorStatuses({
+              constructionSiteId: site.id,
+            });
+            const statuses = response.data?.data || [];
+            const counts = statuses.reduce(
+              (acc, item) => {
+                acc[item.status] += 1;
+                return acc;
+              },
+              { admitted: 0, not_admitted: 0, temp_admitted: 0 },
+            );
+
+            if (allSiteRequestRef.current !== requestId) return;
+
+            setAllSiteSummaries((prev) =>
+              prev.map((entry) =>
+                entry.site.id === site.id
+                  ? { ...entry, counts, loading: false, error: false }
+                  : entry,
+              ),
+            );
+          } catch (error) {
+            console.error("Error loading OT summaries:", error);
+
+            if (allSiteRequestRef.current !== requestId) return;
+
+            setAllSiteSummaries((prev) =>
+              prev.map((entry) =>
+                entry.site.id === site.id
+                  ? { ...entry, loading: false, error: true }
+                  : entry,
+              ),
+            );
+          }
+        }
+      };
+
+      await Promise.all(
+        Array.from({ length: Math.min(concurrency, sites.length) }).map(() =>
+          runNext(),
+        ),
       );
-      setAllSiteSummaries(summaries);
     } catch (error) {
       console.error("Error loading OT summaries:", error);
       message.error("Ошибка при загрузке сводки по объектам");
     } finally {
-      setAllSiteLoading(false);
+      if (allSiteRequestRef.current === requestId) {
+        setAllSiteLoading(false);
+      }
     }
   };
 
@@ -1162,16 +1222,16 @@ const OccupationalSafetyPage = () => {
                   подрядчиков по каждому объекту.
                 </Text>
                 <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                  {allSiteLoading && (
+                  {allSiteSummaries.length === 0 && allSiteLoading && (
                     <Card size="small" styles={{ body: { padding: 12 } }}>
                       <Text type="secondary">Загрузка...</Text>
                     </Card>
                   )}
-                  {!allSiteLoading && allSiteSummaries.length === 0 && (
+                  {allSiteSummaries.length === 0 && !allSiteLoading && (
                     <Empty description="Нет данных по объектам" />
                   )}
-                  {!allSiteLoading &&
-                    allSiteSummaries.map(({ site, counts }) => (
+                  {allSiteSummaries.length > 0 &&
+                    allSiteSummaries.map(({ site, counts, loading, error }) => (
                       <Card
                         size="small"
                         key={site.id}
@@ -1199,13 +1259,22 @@ const OccupationalSafetyPage = () => {
                             </Button>
                           </Space>
                           <Space wrap>
-                            <Tag color="green">Допущены: {counts.admitted}</Tag>
-                            <Tag color="red">
-                              Не допущены: {counts.not_admitted}
-                            </Tag>
-                            <Tag color="gold">
-                              Временно: {counts.temp_admitted}
-                            </Tag>
+                            {counts ? (
+                              <>
+                                <Tag color="green">
+                                  Допущены: {counts.admitted}
+                                </Tag>
+                                <Tag color="red">
+                                  Не допущены: {counts.not_admitted}
+                                </Tag>
+                                <Tag color="gold">
+                                  Временно: {counts.temp_admitted}
+                                </Tag>
+                              </>
+                            ) : loading ? (
+                              <Tag color="default">Загрузка...</Tag>
+                            ) : null}
+                            {error && <Tag color="red">Ошибка загрузки</Tag>}
                           </Space>
                         </Space>
                       </Card>
