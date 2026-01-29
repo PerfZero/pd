@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
-import api from '@/services/api';
+import { useEffect } from "react";
+import { useAuthStore } from "@/store/authStore";
+import api from "@/services/api";
 
 export const useAuthBootstrap = () => {
   useEffect(() => {
@@ -11,7 +11,10 @@ export const useAuthBootstrap = () => {
       authStore.setBootstrapping(true);
 
       try {
-        const response = await api.post('/auth/refresh');
+        if (window.location.pathname === "/login") {
+          return;
+        }
+        const response = await api.post("/auth/refresh");
         const { token } = response.data.data || {};
 
         if (token && isMounted) {

@@ -227,6 +227,10 @@ api.interceptors.response.use(
         // Разлогиниваем пользователя локально
         resetAuthState();
 
+        if (window.location.pathname === "/login") {
+          isRedirecting = false;
+          return Promise.reject(error);
+        }
         // Небольшая задержка перед редиректом, чтобы пользователь увидел сообщение
         setTimeout(() => {
           isRedirecting = false;
@@ -238,6 +242,10 @@ api.interceptors.response.use(
       if (!isRedirecting) {
         isRedirecting = true;
         resetAuthState();
+        if (window.location.pathname === "/login") {
+          isRedirecting = false;
+          return Promise.reject(error);
+        }
         setTimeout(() => {
           isRedirecting = false;
           window.location.href = "/login";
