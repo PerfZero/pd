@@ -9,7 +9,7 @@ import {
   assertCounterpartySiteAccess,
 } from "../utils/otAccess.js";
 import {
-  getEffectiveStatus,
+  getEffectiveStatusesBulk,
   recalculateStatus,
   overrideStatus,
 } from "../services/otStatusService.js";
@@ -58,29 +58,25 @@ export const getOtContractorStatuses = async (req, res, next) => {
       attributes: ["id", "name", "inn"],
     });
 
-    const statuses = await Promise.all(
-      counterparties.map(async (counterparty) => {
-        const effective = await getEffectiveStatus(
-          counterparty.id,
-          constructionSiteId,
-        );
-        const existing = await OtContractorStatus.findOne({
-          where: {
-            counterpartyId: counterparty.id,
-            constructionSiteId,
-          },
-        });
-
-        return {
-          counterparty,
-          status: effective.status,
-          isManual: effective.isManual || existing?.isManual || false,
-          missingRequired: effective.missingDocuments?.length || 0,
-          totalRequired: effective.totalRequired || 0,
-          approvedRequired: effective.approvedRequired || 0,
-        };
-      }),
+    const effectiveStatuses = await getEffectiveStatusesBulk(
+      counterpartyIds,
+      constructionSiteId,
     );
+    const effectiveMap = new Map(
+      effectiveStatuses.map((item) => [item.counterpartyId, item]),
+    );
+
+    const statuses = counterparties.map((counterparty) => {
+      const effective = effectiveMap.get(counterparty.id);
+      return {
+        counterparty,
+        status: effective?.status || "not_admitted",
+        isManual: effective?.isManual || false,
+        missingRequired: effective?.missingRequired ?? 0,
+        totalRequired: effective?.totalRequired ?? 0,
+        approvedRequired: effective?.approvedRequired ?? 0,
+      };
+    });
 
     res.json({
       success: true,

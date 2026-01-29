@@ -85,6 +85,83 @@ export const getEffectiveStatus = async (
   };
 };
 
+export const getEffectiveStatusesBulk = async (
+  counterpartyIds,
+  constructionSiteId,
+) => {
+  if (!counterpartyIds.length) return [];
+
+  const requiredDocs = await getRequiredDocuments();
+  const totalRequired = requiredDocs.length;
+  const requiredIds = requiredDocs.map((doc) => doc.id);
+
+  const existingManualStatuses = await OtContractorStatus.findAll({
+    where: { counterpartyId: counterpartyIds, constructionSiteId },
+  });
+  const manualMap = new Map(
+    existingManualStatuses.map((record) => [record.counterpartyId, record]),
+  );
+
+  if (totalRequired === 0) {
+    return counterpartyIds.map((counterpartyId) => ({
+      counterpartyId,
+      status: "admitted",
+      isManual: false,
+      missingRequired: 0,
+      totalRequired: 0,
+      approvedRequired: 0,
+    }));
+  }
+
+  const contractorDocs = await OtContractorDocument.findAll({
+    where: {
+      counterpartyId: counterpartyIds,
+      constructionSiteId,
+      documentId: requiredIds,
+    },
+    attributes: ["counterpartyId", "documentId", "status"],
+  });
+
+  const approvedByCounterparty = new Map();
+  contractorDocs.forEach((doc) => {
+    if (doc.status !== "approved") return;
+    const existing = approvedByCounterparty.get(doc.counterpartyId);
+    if (existing) {
+      existing.add(doc.documentId);
+    } else {
+      approvedByCounterparty.set(doc.counterpartyId, new Set([doc.documentId]));
+    }
+  });
+
+  return counterpartyIds.map((counterpartyId) => {
+    const manualRecord = manualMap.get(counterpartyId);
+    if (manualRecord?.isManual && manualRecord.status === "temp_admitted") {
+      return {
+        counterpartyId,
+        status: manualRecord.status,
+        isManual: true,
+        missingRequired: 0,
+        totalRequired: 0,
+        approvedRequired: 0,
+      };
+    }
+
+    const approvedSet = approvedByCounterparty.get(counterpartyId);
+    const approvedRequired = approvedSet ? approvedSet.size : 0;
+    const missingRequired = totalRequired - approvedRequired;
+    const status = missingRequired === 0 ? "admitted" : "not_admitted";
+
+    return {
+      counterpartyId,
+      status,
+      isManual: false,
+      missingRequired,
+      totalRequired,
+      approvedRequired,
+    };
+  });
+};
+
 export const recalculateStatus = async (
   counterpartyId,
   constructionSiteId,
