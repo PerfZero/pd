@@ -1172,7 +1172,7 @@ const OccupationalSafetyPage = () => {
     );
   };
 
-  const tabs = useMemo(() => {
+  const tabs = (() => {
     const items = [];
 
     if (isStaff) {
@@ -1461,6 +1461,9 @@ const OccupationalSafetyPage = () => {
                   options={constructionSiteOptions}
                   value={selectedConstructionSiteId}
                   onChange={(value) => setSelectedConstructionSiteId(value)}
+                  style={{ width: 100 }}
+                  dropdownMatchSelectWidth={false}
+                  dropdownStyle={{ minWidth: 500 }}
                 />
               </Space>
             </Card>
@@ -1480,6 +1483,9 @@ const OccupationalSafetyPage = () => {
                     options={constructionSiteOptions}
                     value={selectedConstructionSiteId}
                     onChange={(value) => setSelectedConstructionSiteId(value)}
+                    style={{ width: 150 }}
+                    dropdownMatchSelectWidth={false}
+                    dropdownStyle={{ minWidth: 150 }}
                   />
                   <Select
                     placeholder="Подрядчик"
@@ -1487,6 +1493,9 @@ const OccupationalSafetyPage = () => {
                     options={counterpartyOptions}
                     value={selectedCounterpartyId}
                     onChange={(value) => setSelectedCounterpartyId(value)}
+                    style={{ width: 150 }}
+                    dropdownMatchSelectWidth={false}
+                    dropdownStyle={{ minWidth: 150 }}
                   />
                 </Space>
               </Space>
@@ -1812,23 +1821,7 @@ const OccupationalSafetyPage = () => {
     }
 
     return items;
-  }, [
-    isAdmin,
-    canManageSettings,
-    isStaff,
-    isContractorUser,
-    normalizedStats,
-    contractorTree,
-    contractorLoading,
-    contractorComments,
-    contractorCommentsLoading,
-    contractorCommentText,
-    contractorCommentEnabled,
-    constructionSiteOptions,
-    counterpartyOptions,
-    selectedConstructionSiteId,
-    selectedCounterpartyId,
-  ]);
+  })();
 
   if (!isAllowed) {
     return (
