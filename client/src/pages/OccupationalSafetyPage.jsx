@@ -223,23 +223,12 @@ const OccupationalSafetyPage = () => {
 
           setConstructionSites(sites);
           setCounterparties(counterpartyList);
-
-          if (!selectedConstructionSiteId && sites.length > 0) {
-            setSelectedConstructionSiteId(sites[0].id);
-          }
-          if (!selectedCounterpartyId && counterpartyList.length > 0) {
-            setSelectedCounterpartyId(counterpartyList[0].id);
-          }
         } else if (isContractorUser && user?.counterpartyId) {
           const response = await counterpartyService.getConstructionSites(
             user.counterpartyId,
           );
           const sites = response.data?.data || [];
           setConstructionSites(sites);
-
-          if (!selectedConstructionSiteId && sites.length > 0) {
-            setSelectedConstructionSiteId(sites[0].id);
-          }
         }
       } catch (error) {
         console.error("Error loading OT initial data:", error);
@@ -982,6 +971,10 @@ const OccupationalSafetyPage = () => {
     [contractorStats],
   );
 
+  const hasContractorSelection = isStaff
+    ? Boolean(selectedConstructionSiteId && selectedCounterpartyId)
+    : Boolean(selectedConstructionSiteId);
+
   const contractorCommentEnabled = useMemo(() => {
     const counterpartyId = isStaff
       ? selectedCounterpartyId
@@ -1423,34 +1416,6 @@ const OccupationalSafetyPage = () => {
             style={{ display: "none" }}
             onChange={handleTemplateFileChange}
           />
-          <Card size="small" loading={contractorLoading}>
-            <Row gutter={[12, 12]}>
-              <Col xs={12} sm={8}>
-                <Statistic
-                  title="Всего документов"
-                  value={normalizedStats.total}
-                />
-              </Col>
-              <Col xs={12} sm={8}>
-                <Statistic title="Загружены" value={normalizedStats.uploaded} />
-              </Col>
-              <Col xs={12} sm={8}>
-                <Statistic
-                  title="Подтверждены"
-                  value={normalizedStats.approved}
-                />
-              </Col>
-              <Col xs={12} sm={8}>
-                <Statistic title="Отклонены" value={normalizedStats.rejected} />
-              </Col>
-              <Col xs={12} sm={8}>
-                <Statistic
-                  title="Не загружены"
-                  value={normalizedStats.missing}
-                />
-              </Col>
-            </Row>
-          </Card>
           {!isStaff && (
             <Card size="small">
               <Space direction="vertical" size={8} style={{ width: "100%" }}>
@@ -1463,7 +1428,7 @@ const OccupationalSafetyPage = () => {
                   onChange={(value) => setSelectedConstructionSiteId(value)}
                   style={{ width: 100 }}
                   dropdownMatchSelectWidth={false}
-                  dropdownStyle={{ minWidth: 500 }}
+                  dropdownStyle={{ minWidth: 200 }}
                 />
               </Space>
             </Card>
@@ -1483,9 +1448,9 @@ const OccupationalSafetyPage = () => {
                     options={constructionSiteOptions}
                     value={selectedConstructionSiteId}
                     onChange={(value) => setSelectedConstructionSiteId(value)}
-                    style={{ width: 150 }}
+                    style={{ width: 100 }}
                     dropdownMatchSelectWidth={false}
-                    dropdownStyle={{ minWidth: 150 }}
+                    dropdownStyle={{ minWidth: 200 }}
                   />
                   <Select
                     placeholder="Подрядчик"
@@ -1493,83 +1458,124 @@ const OccupationalSafetyPage = () => {
                     options={counterpartyOptions}
                     value={selectedCounterpartyId}
                     onChange={(value) => setSelectedCounterpartyId(value)}
-                    style={{ width: 150 }}
+                    style={{ width: 100 }}
                     dropdownMatchSelectWidth={false}
-                    dropdownStyle={{ minWidth: 150 }}
+                    dropdownStyle={{ minWidth: 200 }}
                   />
                 </Space>
               </Space>
             </Card>
           )}
-          <Card size="small">
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Title level={5} style={{ margin: 0 }}>
-                Комментарии по подрядчику
-              </Title>
-              <List
-                loading={contractorCommentsLoading}
-                dataSource={contractorComments}
-                locale={{ emptyText: "Комментариев пока нет" }}
-                renderItem={(item) => {
-                  const creatorName = [
-                    item.creator?.lastName,
-                    item.creator?.firstName,
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
-                  const title = creatorName
-                    ? `${creatorName} • ${dayjs(item.createdAt).format(
-                        "DD.MM.YYYY HH:mm",
-                      )}`
-                    : dayjs(item.createdAt).format("DD.MM.YYYY HH:mm");
+          {hasContractorSelection && (
+            <>
+              <Card size="small" loading={contractorLoading}>
+                <Row gutter={[12, 12]}>
+                  <Col xs={12} sm={8}>
+                    <Statistic
+                      title="Всего документов"
+                      value={normalizedStats.total}
+                    />
+                  </Col>
+                  <Col xs={12} sm={8}>
+                    <Statistic
+                      title="Загружены"
+                      value={normalizedStats.uploaded}
+                    />
+                  </Col>
+                  <Col xs={12} sm={8}>
+                    <Statistic
+                      title="Подтверждены"
+                      value={normalizedStats.approved}
+                    />
+                  </Col>
+                  <Col xs={12} sm={8}>
+                    <Statistic
+                      title="Отклонены"
+                      value={normalizedStats.rejected}
+                    />
+                  </Col>
+                  <Col xs={12} sm={8}>
+                    <Statistic
+                      title="Не загружены"
+                      value={normalizedStats.missing}
+                    />
+                  </Col>
+                </Row>
+              </Card>
+              <Card size="small">
+                <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                  <Title level={5} style={{ margin: 0 }}>
+                    Комментарии по подрядчику
+                  </Title>
+                  <List
+                    loading={contractorCommentsLoading}
+                    dataSource={contractorComments}
+                    locale={{ emptyText: "Комментариев пока нет" }}
+                    renderItem={(item) => {
+                      const creatorName = [
+                        item.creator?.lastName,
+                        item.creator?.firstName,
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      const title = creatorName
+                        ? `${creatorName} • ${dayjs(item.createdAt).format(
+                            "DD.MM.YYYY HH:mm",
+                          )}`
+                        : dayjs(item.createdAt).format("DD.MM.YYYY HH:mm");
 
-                  return (
-                    <List.Item>
-                      <List.Item.Meta title={title} description={item.text} />
-                    </List.Item>
-                  );
-                }}
-              />
-              <Input.TextArea
-                rows={3}
-                placeholder="Добавить комментарий"
-                value={contractorCommentText}
-                onChange={(event) =>
-                  setContractorCommentText(event.target.value)
-                }
-                disabled={!contractorCommentEnabled}
-              />
-              <Button
-                type="primary"
-                onClick={handleAddContractorComment}
-                disabled={
-                  !contractorCommentEnabled || !contractorCommentText.trim()
-                }
-              >
-                Добавить комментарий
-              </Button>
-            </Space>
-          </Card>
-          <Card size="small">
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Title level={5} style={{ margin: 0 }}>
-                Документы подрядчика
-              </Title>
-              <Tree
-                blockNode
-                showLine
-                defaultExpandAll
-                treeData={(contractorTree || []).map((node) => {
-                  const mapNode = (item) => ({
-                    key: item.key,
-                    title: renderTreeTitle(item),
-                    children: item.children?.map(mapNode),
-                  });
-                  return mapNode(node);
-                })}
-              />
-            </Space>
-          </Card>
+                      return (
+                        <List.Item>
+                          <List.Item.Meta
+                            title={title}
+                            description={item.text}
+                          />
+                        </List.Item>
+                      );
+                    }}
+                  />
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="Добавить комментарий"
+                    value={contractorCommentText}
+                    onChange={(event) =>
+                      setContractorCommentText(event.target.value)
+                    }
+                    disabled={!contractorCommentEnabled}
+                  />
+                  <Button
+                    type="primary"
+                    onClick={handleAddContractorComment}
+                    disabled={
+                      !contractorCommentEnabled || !contractorCommentText.trim()
+                    }
+                  >
+                    Добавить комментарий
+                  </Button>
+                </Space>
+              </Card>
+              <Card size="small">
+                <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                  <Title level={5} style={{ margin: 0 }}>
+                    Документы подрядчика
+                  </Title>
+                  <Tree
+                    blockNode
+                    showLine
+                    defaultExpandAll
+                    treeData={(contractorTree || []).map((node) => {
+                      const mapNode = (item) => ({
+                        key: item.key,
+                        title: renderTreeTitle(item),
+                        children: item.children?.map(mapNode),
+                      });
+                      return mapNode(node);
+                    })}
+                  />
+                </Space>
+              </Card>
+            </>
+          )}
         </Space>
       ),
     });
