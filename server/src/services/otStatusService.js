@@ -6,6 +6,7 @@ import {
   Counterparty,
   ConstructionSite,
 } from "../models/index.js";
+import { sequelize } from "../config/database.js";
 import { notifyNotAdmitted } from "./otNotificationService.js";
 
 const getRequiredDocuments = async () => {
@@ -160,6 +161,112 @@ export const getEffectiveStatusesBulk = async (
       approvedRequired,
     };
   });
+};
+
+export const getStatusSummaryForSites = async (
+  constructionSiteIds,
+  mappings,
+) => {
+  const countsBySite = new Map(
+    constructionSiteIds.map((siteId) => [
+      siteId,
+      { admitted: 0, not_admitted: 0, temp_admitted: 0 },
+    ]),
+  );
+
+  if (!mappings.length) {
+    return constructionSiteIds.map((constructionSiteId) => ({
+      constructionSiteId,
+      counts: countsBySite.get(constructionSiteId),
+    }));
+  }
+
+  const counterpartyIds = [
+    ...new Set(mappings.map((mapping) => mapping.counterpartyId)),
+  ];
+
+  const requiredDocs = await getRequiredDocuments();
+  const totalRequired = requiredDocs.length;
+  const requiredIds = requiredDocs.map((doc) => doc.id);
+
+  const manualStatuses = await OtContractorStatus.findAll({
+    where: {
+      constructionSiteId: constructionSiteIds,
+      counterpartyId: counterpartyIds,
+      isManual: true,
+      status: "temp_admitted",
+    },
+    attributes: ["constructionSiteId", "counterpartyId"],
+  });
+  const manualSet = new Set(
+    manualStatuses.map(
+      (record) => `${record.constructionSiteId}:${record.counterpartyId}`,
+    ),
+  );
+
+  if (totalRequired === 0) {
+    mappings.forEach((mapping) => {
+      const key = `${mapping.constructionSiteId}:${mapping.counterpartyId}`;
+      const counts = countsBySite.get(mapping.constructionSiteId);
+      if (!counts) return;
+      if (manualSet.has(key)) {
+        counts.temp_admitted += 1;
+      } else {
+        counts.admitted += 1;
+      }
+    });
+
+    return constructionSiteIds.map((constructionSiteId) => ({
+      constructionSiteId,
+      counts: countsBySite.get(constructionSiteId),
+    }));
+  }
+
+  const approvedCounts = await OtContractorDocument.findAll({
+    where: {
+      constructionSiteId: constructionSiteIds,
+      counterpartyId: counterpartyIds,
+      documentId: requiredIds,
+      status: "approved",
+    },
+    attributes: [
+      "constructionSiteId",
+      "counterpartyId",
+      [sequelize.fn("COUNT", sequelize.col("document_id")), "approvedRequired"],
+    ],
+    group: ["constructionSiteId", "counterpartyId"],
+    raw: true,
+  });
+
+  const approvedMap = new Map(
+    approvedCounts.map((row) => [
+      `${row.constructionSiteId}:${row.counterpartyId}`,
+      Number(row.approvedRequired || 0),
+    ]),
+  );
+
+  mappings.forEach((mapping) => {
+    const key = `${mapping.constructionSiteId}:${mapping.counterpartyId}`;
+    const counts = countsBySite.get(mapping.constructionSiteId);
+    if (!counts) return;
+
+    if (manualSet.has(key)) {
+      counts.temp_admitted += 1;
+      return;
+    }
+
+    const approvedRequired = approvedMap.get(key) || 0;
+    if (approvedRequired >= totalRequired) {
+      counts.admitted += 1;
+    } else {
+      counts.not_admitted += 1;
+    }
+  });
+
+  return constructionSiteIds.map((constructionSiteId) => ({
+    constructionSiteId,
+    counts: countsBySite.get(constructionSiteId),
+  }));
 };
 
 export const recalculateStatus = async (

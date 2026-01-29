@@ -375,75 +375,44 @@ const OccupationalSafetyPage = () => {
 
     try {
       setAllSiteLoading(true);
-      setAllSiteSummaries((prev) => {
-        if (!prev.length) return initialSummaries;
-        return constructionSites.map((site) => {
-          const existing = prev.find((entry) => entry.site.id === site.id);
-          return {
-            site,
-            counts: existing?.counts ?? null,
-            loading: true,
-            error: false,
-          };
-        });
+      setAllSiteSummaries(initialSummaries);
+
+      const siteIds = constructionSites.map((site) => site.id);
+      const response = await otService.getContractorStatusSummary({
+        constructionSiteIds: siteIds.join(","),
       });
+      const summaries = response.data?.data || [];
+      const summaryMap = new Map(
+        summaries.map((item) => [item.constructionSiteId, item.counts]),
+      );
 
-      const sites = [...constructionSites];
-      const concurrency = 4;
-      let cursor = 0;
+      if (allSiteRequestRef.current !== requestId) return;
 
-      const runNext = async () => {
-        while (cursor < sites.length) {
-          const index = cursor;
-          const site = sites[index];
-          cursor += 1;
-
-          try {
-            const response = await otService.getContractorStatuses({
-              constructionSiteId: site.id,
-            });
-            const statuses = response.data?.data || [];
-            const counts = statuses.reduce(
-              (acc, item) => {
-                acc[item.status] += 1;
-                return acc;
-              },
-              { admitted: 0, not_admitted: 0, temp_admitted: 0 },
-            );
-
-            if (allSiteRequestRef.current !== requestId) return;
-
-            setAllSiteSummaries((prev) =>
-              prev.map((entry) =>
-                entry.site.id === site.id
-                  ? { ...entry, counts, loading: false, error: false }
-                  : entry,
-              ),
-            );
-          } catch (error) {
-            console.error("Error loading OT summaries:", error);
-
-            if (allSiteRequestRef.current !== requestId) return;
-
-            setAllSiteSummaries((prev) =>
-              prev.map((entry) =>
-                entry.site.id === site.id
-                  ? { ...entry, loading: false, error: true }
-                  : entry,
-              ),
-            );
-          }
-        }
-      };
-
-      await Promise.all(
-        Array.from({ length: Math.min(concurrency, sites.length) }).map(() =>
-          runNext(),
-        ),
+      setAllSiteSummaries(
+        constructionSites.map((site) => ({
+          site,
+          counts: summaryMap.get(site.id) || {
+            admitted: 0,
+            not_admitted: 0,
+            temp_admitted: 0,
+          },
+          loading: false,
+          error: false,
+        })),
       );
     } catch (error) {
       console.error("Error loading OT summaries:", error);
       message.error("Ошибка при загрузке сводки по объектам");
+      if (allSiteRequestRef.current === requestId) {
+        setAllSiteSummaries(
+          constructionSites.map((site) => ({
+            site,
+            counts: null,
+            loading: false,
+            error: true,
+          })),
+        );
+      }
     } finally {
       if (allSiteRequestRef.current === requestId) {
         setAllSiteLoading(false);

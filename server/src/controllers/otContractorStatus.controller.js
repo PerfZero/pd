@@ -10,6 +10,7 @@ import {
 } from "../utils/otAccess.js";
 import {
   getEffectiveStatusesBulk,
+  getStatusSummaryForSites,
   recalculateStatus,
   overrideStatus,
 } from "../services/otStatusService.js";
@@ -84,6 +85,41 @@ export const getOtContractorStatuses = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Error fetching OT contractor statuses:", error);
+    next(error);
+  }
+};
+
+export const getOtContractorStatusSummary = async (req, res, next) => {
+  try {
+    const { isStaff } = await assertOtAccess(req.user, { requireStaff: true });
+
+    if (!isStaff) {
+      throw new AppError("Доступ запрещен", 403);
+    }
+
+    const { constructionSiteIds } = req.query;
+    const siteIds = (constructionSiteIds || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (!siteIds.length) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const mappings = await CounterpartyConstructionSiteMapping.findAll({
+      where: { constructionSiteId: siteIds },
+      attributes: ["counterpartyId", "constructionSiteId"],
+    });
+
+    const summaries = await getStatusSummaryForSites(siteIds, mappings);
+
+    res.json({
+      success: true,
+      data: summaries,
+    });
+  } catch (error) {
+    console.error("Error fetching OT contractor status summary:", error);
     next(error);
   }
 };
