@@ -14,6 +14,16 @@ let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
 const REFRESH_TIMEOUT = 5000; // 5 секунд между попытками
 
+const resetAuthState = () => {
+  useAuthStore.setState({
+    user: null,
+    token: null,
+    refreshToken: null,
+    isAuthenticated: false,
+  });
+  localStorage.removeItem("auth-storage");
+};
+
 // Очередь для обработки запросов, пока идет refresh
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
@@ -65,7 +75,6 @@ const refreshAccessToken = async () => {
       return null;
     }
 
-    const authStore = useAuthStore.getState();
     refreshAttempts++;
 
     // Вызываем refresh endpoint
@@ -78,7 +87,7 @@ const refreshAccessToken = async () => {
     const { token: newToken } = response.data.data;
 
     // Обновляем токены в store
-    authStore.updateTokens(newToken);
+    useAuthStore.getState().updateTokens(newToken);
 
     // Сбрасываем счетчик попыток при успехе
     refreshAttempts = 0;
@@ -93,12 +102,7 @@ const refreshAccessToken = async () => {
     );
 
     // Если это 429 (rate limit) или другая ошибка - логируем пользователя
-    const authStore = useAuthStore.getState();
-    authStore.user = null;
-    authStore.token = null;
-    authStore.refreshToken = null;
-    authStore.isAuthenticated = false;
-    localStorage.removeItem("auth-storage");
+    resetAuthState();
 
     refreshAttempts = 0;
     return null;
@@ -124,6 +128,7 @@ api.interceptors.request.use(
     const token = authStore.token;
 
     if (token) {
+      let authToken = token;
       // Проверяем, истекает ли токен в течение 1 минуты
       if (isTokenExpiringSoon(token, 1)) {
         console.log("⏱️ Token expiring soon. Attempting to refresh...");
@@ -131,12 +136,15 @@ api.interceptors.request.use(
         // Пытаемся обновить токен
         const newToken = await refreshAccessToken();
         if (newToken) {
-          config.headers.Authorization = `Bearer ${newToken}`;
-          return config;
+          authToken = newToken;
+        } else {
+          authToken = null;
         }
       }
 
-      config.headers.Authorization = `Bearer ${token}`;
+      if (authToken) {
+        config.headers.Authorization = `Bearer ${authToken}`;
+      }
     }
 
     return config;
@@ -154,6 +162,8 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const isAuthRefreshRequest =
+      originalRequest?.url?.includes("/auth/refresh");
 
     // Логируем ошибку для отладки (кроме 404 для check-inn, это нормально)
     const isCheckInnNotFound =
@@ -174,7 +184,8 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/auth/logout")
+      !originalRequest.url?.includes("/auth/logout") &&
+      !isAuthRefreshRequest
     ) {
       originalRequest._retry = true;
 
@@ -214,20 +225,23 @@ api.interceptors.response.use(
         // Сообщения отображаются в компонентах через App.useApp() hook
 
         // Разлогиниваем пользователя локально
-        const authStore = useAuthStore.getState();
-        authStore.user = null;
-        authStore.token = null;
-        authStore.refreshToken = null;
-        authStore.isAuthenticated = false;
-
-        // Очищаем localStorage
-        localStorage.removeItem("auth-storage");
+        resetAuthState();
 
         // Небольшая задержка перед редиректом, чтобы пользователь увидел сообщение
         setTimeout(() => {
           isRedirecting = false;
           window.location.href = "/login";
         }, 1000);
+      }
+    }
+    if (error.response?.status === 401 && isAuthRefreshRequest) {
+      if (!isRedirecting) {
+        isRedirecting = true;
+        resetAuthState();
+        setTimeout(() => {
+          isRedirecting = false;
+          window.location.href = "/login";
+        }, 100);
       }
     }
 
