@@ -105,6 +105,14 @@ const OccupationalSafetyPage = () => {
   const [instructionForm] = Form.useForm();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const selectMinWidth = 100;
+  const selectMaxWidth = 250;
+  const selectCollapsedStyle = { width: selectMinWidth };
+  const selectFullStyle = { width: "100%", minWidth: selectMinWidth };
+  const selectDropdownStyle = {
+    minWidth: selectMinWidth,
+    maxWidth: selectMaxWidth,
+  };
 
   usePageTitle("Охрана труда", isMobile);
 
@@ -1260,6 +1268,9 @@ const OccupationalSafetyPage = () => {
                     options={constructionSiteOptions}
                     value={selectedConstructionSiteId}
                     onChange={(value) => setSelectedConstructionSiteId(value)}
+                    style={selectCollapsedStyle}
+                    dropdownMatchSelectWidth={false}
+                    dropdownStyle={selectDropdownStyle}
                   />
                 </Space>
               </Card>
@@ -1426,9 +1437,9 @@ const OccupationalSafetyPage = () => {
                   options={constructionSiteOptions}
                   value={selectedConstructionSiteId}
                   onChange={(value) => setSelectedConstructionSiteId(value)}
-                  style={{ width: 100 }}
+                  style={selectCollapsedStyle}
                   dropdownMatchSelectWidth={false}
-                  dropdownStyle={{ minWidth: 200 }}
+                  dropdownStyle={selectDropdownStyle}
                 />
               </Space>
             </Card>
@@ -1448,9 +1459,9 @@ const OccupationalSafetyPage = () => {
                     options={constructionSiteOptions}
                     value={selectedConstructionSiteId}
                     onChange={(value) => setSelectedConstructionSiteId(value)}
-                    style={{ width: 100 }}
+                    style={selectCollapsedStyle}
                     dropdownMatchSelectWidth={false}
-                    dropdownStyle={{ minWidth: 200 }}
+                    dropdownStyle={selectDropdownStyle}
                   />
                   <Select
                     placeholder="Подрядчик"
@@ -1458,9 +1469,9 @@ const OccupationalSafetyPage = () => {
                     options={counterpartyOptions}
                     value={selectedCounterpartyId}
                     onChange={(value) => setSelectedCounterpartyId(value)}
-                    style={{ width: 100 }}
+                    style={selectCollapsedStyle}
                     dropdownMatchSelectWidth={false}
-                    dropdownStyle={{ minWidth: 200 }}
+                    dropdownStyle={selectDropdownStyle}
                   />
                 </Space>
               </Space>
@@ -1642,7 +1653,9 @@ const OccupationalSafetyPage = () => {
                   ]}
                   value={selectedCategoryId}
                   onChange={(value) => setSelectedCategoryId(value)}
-                  style={{ maxWidth: 320 }}
+                  style={{ width: selectMinWidth, maxWidth: 320 }}
+                  dropdownMatchSelectWidth={false}
+                  dropdownStyle={selectDropdownStyle}
                   allowClear
                 />
                 <List
@@ -1882,6 +1895,9 @@ const OccupationalSafetyPage = () => {
               options={categoryOptions.filter(
                 (option) => option.value !== editingCategory?.id,
               )}
+              style={selectFullStyle}
+              dropdownMatchSelectWidth={false}
+              dropdownStyle={selectDropdownStyle}
             />
           </Form.Item>
           <Form.Item name="sortOrder" label="Порядок">
@@ -1913,7 +1929,12 @@ const OccupationalSafetyPage = () => {
             label="Категория"
             rules={[{ required: true, message: "Выберите категорию" }]}
           >
-            <Select options={categoryOptions} />
+            <Select
+              options={categoryOptions}
+              style={selectFullStyle}
+              dropdownMatchSelectWidth={false}
+              dropdownStyle={selectDropdownStyle}
+            />
           </Form.Item>
           <Form.Item
             name="isRequired"
