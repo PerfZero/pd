@@ -147,11 +147,26 @@ const OccupationalSafetyPage = () => {
 
   const isAllowed = isStaff || isContractorUser;
 
-  useEffect(() => {
-    if (!activeTab || activeTab === "contractor") {
-      setActiveTab(isStaff ? "all" : "contractor");
+  const allowedTabs = useMemo(() => {
+    if (!isAllowed) {
+      return [];
     }
-  }, [activeTab, isStaff]);
+    if (isStaff) {
+      const staffTabs = ["all", "object", "contractor"];
+      if (canManageSettings) {
+        staffTabs.push("settings");
+      }
+      return staffTabs;
+    }
+    return ["contractor"];
+  }, [isAllowed, isStaff, canManageSettings]);
+
+  useEffect(() => {
+    if (!allowedTabs.length) return;
+    if (!activeTab || !allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs[0]);
+    }
+  }, [activeTab, allowedTabs]);
 
   const loadContractorDocs = async ({
     constructionSiteId,

@@ -101,27 +101,36 @@ const CounterpartiesPage = () => {
     };
   }, [filters]);
 
+  const { current: paginationCurrent, pageSize: paginationPageSize } =
+    pagination;
+
   // Загрузка данных при изменении debounced фильтров или пагинации
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: response } = await counterpartyService.getAll({
-        page: pagination.current,
-        limit: pagination.pageSize,
+        page: paginationCurrent,
+        limit: paginationPageSize,
         include: "construction_sites", // Включаем construction sites в один запрос
         ...debouncedFilters,
       });
       setData(response.data.counterparties);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.data.pagination.total,
-      }));
+      const nextTotal = response.data.pagination.total;
+      setPagination((prev) => {
+        if (prev.total === nextTotal) {
+          return prev;
+        }
+        return {
+          ...prev,
+          total: nextTotal,
+        };
+      });
     } catch (error) {
       message.error("Ошибка при загрузке данных");
     } finally {
       setLoading(false);
     }
-  }, [debouncedFilters, message, pagination]);
+  }, [debouncedFilters, message, paginationCurrent, paginationPageSize]);
 
   useEffect(() => {
     fetchData();

@@ -35,25 +35,34 @@ const ConstructionSitesPage = () => {
   const [search, setSearch] = useState("");
   const [form] = Form.useForm();
 
+  const { current: paginationCurrent, pageSize: paginationPageSize } =
+    pagination;
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: response } = await constructionSiteService.getAll({
-        page: pagination.current,
-        limit: pagination.pageSize,
+        page: paginationCurrent,
+        limit: paginationPageSize,
         search,
       });
       setData(response.data.constructionSites);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.data.pagination.total,
-      }));
+      const nextTotal = response.data.pagination.total;
+      setPagination((prev) => {
+        if (prev.total === nextTotal) {
+          return prev;
+        }
+        return {
+          ...prev,
+          total: nextTotal,
+        };
+      });
     } catch (error) {
       message.error("Ошибка при загрузке данных");
     } finally {
       setLoading(false);
     }
-  }, [message, pagination, search]);
+  }, [message, paginationCurrent, paginationPageSize, search]);
 
   useEffect(() => {
     fetchData();
