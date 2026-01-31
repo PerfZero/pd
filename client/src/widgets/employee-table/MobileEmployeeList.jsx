@@ -32,6 +32,8 @@ const MobileEmployeeList = ({
   onDelete,
   onViewFiles,
   canDeleteEmployee,
+  canMarkForDeletion,
+  onMarkForDeletion,
 }) => {
   if (loading) {
     return (
@@ -73,6 +75,23 @@ const MobileEmployeeList = ({
         icon: <DeleteOutlined />,
         danger: true,
         onClick: () => showDeleteConfirm(employee),
+      });
+    }
+
+    if (
+      canMarkForDeletion &&
+      canMarkForDeletion(employee) &&
+      !employee.markedForDeletion
+    ) {
+      items.push({
+        type: "divider",
+      });
+      items.push({
+        key: "markForDeletion",
+        label: "На удаление",
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => onMarkForDeletion(employee),
       });
     }
 
@@ -149,6 +168,14 @@ const MobileEmployeeList = ({
                 {/* ФИО */}
                 <Text strong style={{ fontSize: 13 }}>
                   {employee.lastName} {employee.firstName}
+                  {employee.markedForDeletion && (
+                    <Tag
+                      color="red"
+                      style={{ fontSize: 10, marginLeft: 6, marginRight: 0 }}
+                    >
+                      🗑️
+                    </Tag>
+                  )}
                 </Text>
 
                 {/* Телефон и статус */}

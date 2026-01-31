@@ -1,0 +1,37 @@
+План рефакторинга EmployeeFormModal (2026-01-30)
+
+Цель
+- Уменьшить размер файла, убрать неиспользуемый код и снизить лишние перерисовки без изменения поведения.
+
+Область
+- client/src/components/Employees/EmployeeFormModal.jsx
+
+План
+1) Вынести утилиты
+   - Маски/нормализация/anti‑autofill в отдельный файл:
+     client/src/components/Employees/employeeFormUtils.js
+   - Обновить импорты в EmployeeFormModal.
+
+2) Разделить UI на секции
+   - Подкомпоненты по вкладкам/секциям:
+     - EmployeeBasicInfoSection
+     - EmployeePassportSection
+     - EmployeePatentSection
+     - EmployeeWorkInfoSection
+     - EmployeeDocumentsSection
+
+3) Разделить логику загрузки
+   - Вынести загрузки/подготовку данных в хук (например, useEmployeeFormData), если это уменьшит пропсы и ререндеры.
+
+4) Оптимизировать рендеринг
+   - useMemo для опций/вычислений.
+   - useCallback для обработчиков.
+   - React.memo для тяжёлых секций при необходимости.
+
+5) Очистка
+   - Удалить неиспользуемые импорты/функции/закомментированные блоки.
+   - Убедиться, что линт проходит для затронутых файлов.
+
+Критерии готовности
+- EmployeeFormModal заметно меньше и проще для навигации.
+- Нет регрессий; линт проходит.

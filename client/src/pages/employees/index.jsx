@@ -27,6 +27,7 @@ import { useDepartments } from "@/entities/department";
 import { useSettings } from "@/entities/settings";
 import { useAuthStore } from "@/store/authStore";
 import { counterpartyService } from "@/services/counterpartyService";
+import { employeeService } from "@/services/employeeService";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { EmployeeTable, MobileEmployeeList } from "@/widgets/employee-table";
 import { EmployeeSearchFilter } from "@/features/employee-search";
@@ -40,6 +41,7 @@ import ApplicationRequestModal from "@/components/Employees/ApplicationRequestMo
 import ExportToExcelModal from "@/components/Employees/ExportToExcelModal";
 import EmployeeImportModal from "@/components/Employees/EmployeeImportModal";
 import SecurityModal from "@/components/Employees/SecurityModal";
+import { useTranslation } from "react-i18next";
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
@@ -79,6 +81,7 @@ const EmployeesPage = () => {
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const { t } = useTranslation();
 
   // Получаем данные пользователя в самом начале
   const { user } = useAuthStore();
@@ -147,7 +150,7 @@ const EmployeesPage = () => {
   const [sitesEmployee, setSitesEmployee] = useState(null);
 
   // Устанавливаем заголовок страницы для мобильной версии
-  usePageTitle("Сотрудники", isMobile);
+  usePageTitle(t("employees.title"), isMobile);
 
   // Загружаем ВСЕ сотрудников без фильтрации по статусам (activeOnly = false)
   // Прогрессивная загрузка: сначала первые 100, потом остальные в фоне
@@ -195,6 +198,10 @@ const EmployeesPage = () => {
   // Удаление доступно только администраторам
   const canDeleteEmployee = () => {
     return user?.role === "admin";
+  };
+
+  const canMarkForDeletion = () => {
+    return user?.role === "user";
   };
 
   // Actions для работы с сотрудниками
@@ -397,6 +404,20 @@ const EmployeesPage = () => {
     refetchEmployees();
   };
 
+  const handleMarkForDeletion = async (employee) => {
+    modal.confirm({
+      title: "Пометить сотрудника на удаление?",
+      content: `${employee.lastName} ${employee.firstName} будет помечен на удаление.`,
+      okText: "Пометить",
+      okType: "danger",
+      cancelText: "Отмена",
+      onOk: async () => {
+        await employeeService.markForDeletion(employee.id);
+        refetchEmployees();
+      },
+    });
+  };
+
   const handleDepartmentChange = async (employeeId, departmentId) => {
     await updateDepartment(employeeId, departmentId);
     refetchEmployees();
@@ -529,7 +550,7 @@ const EmployeesPage = () => {
               }}
             >
               <Title level={2} style={{ margin: 0 }}>
-                Сотрудники
+                {t("employees.title")}
               </Title>
               {backgroundLoading && (
                 <Tooltip
@@ -568,9 +589,9 @@ const EmployeesPage = () => {
                 danger
                 icon={<ClearOutlined />}
                 onClick={handleResetFilters}
-                title="Сбросить все фильтры"
+                title={t("common.reset")}
               >
-                Сбросить
+                {t("common.reset")}
               </Button>
             </div>
           )}
@@ -612,7 +633,7 @@ const EmployeesPage = () => {
                 </div>
               )}
             >
-              <Button type="default">Колонки</Button>
+              <Button type="default">{t("common.columns")}</Button>
             </Dropdown>
             <EmployeeActions
               onAdd={handleAdd}
@@ -651,7 +672,7 @@ const EmployeesPage = () => {
               size="large"
               style={{ flex: 1 }}
             >
-              Добавить
+              {t("common.add")}
             </Button>
             <Button
               type="primary"
@@ -660,7 +681,7 @@ const EmployeesPage = () => {
               size="large"
               style={{ flex: 1, background: "#52c41a", borderColor: "#52c41a" }}
             >
-              Заявка
+              {t("employees.requestExcel")}
             </Button>
           </div>
         </div>
@@ -677,6 +698,8 @@ const EmployeesPage = () => {
           onViewFiles={handleViewFiles}
           canExport={canExport}
           canDeleteEmployee={canDeleteEmployee}
+          canMarkForDeletion={canMarkForDeletion}
+          onMarkForDeletion={handleMarkForDeletion}
         />
       ) : (
         <div
@@ -701,6 +724,8 @@ const EmployeesPage = () => {
             canExport={canExport}
             showCounterpartyColumn={showCounterpartyColumn}
             canDeleteEmployee={canDeleteEmployee}
+            canMarkForDeletion={canMarkForDeletion}
+            onMarkForDeletion={handleMarkForDeletion}
             uniqueFilters={uniqueFilters}
             onFiltersChange={setTableFilters}
             defaultCounterpartyId={defaultCounterpartyId}

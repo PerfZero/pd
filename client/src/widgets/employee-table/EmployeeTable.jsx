@@ -121,6 +121,8 @@ export const EmployeeTable = ({
   canExport,
   showCounterpartyColumn, // Новый prop для показа столбца "Контрагент"
   canDeleteEmployee,
+  canMarkForDeletion,
+  onMarkForDeletion,
   uniqueFilters,
   onFiltersChange,
   defaultCounterpartyId,
@@ -152,6 +154,8 @@ export const EmployeeTable = ({
     canExport,
     showCounterpartyColumn, // Передаем новый prop
     canDeleteEmployee,
+    canMarkForDeletion,
+    onMarkForDeletion,
     uniqueFilters,
     filters, // Передаем фильтры в хук колонок
     defaultCounterpartyId,

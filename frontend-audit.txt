@@ -1,0 +1,73 @@
+Frontend audit: largest client files by LOC
+Generated: 2026-01-30
+
+> 1000 LOC
+- client/src/components/Employees/EmployeeFormModal.jsx (2164)
+- client/src/pages/OccupationalSafetyPage.jsx (2075)
+- client/src/components/Employees/MobileEmployeeForm.jsx (1558)
+- client/src/pages/UserProfilePage.jsx (1120)
+- client/src/features/document-scanner/DocumentScannerModal.jsx (1098)
+
+700–999 LOC
+- client/src/components/Employees/EmployeeImportModal.jsx (983)
+- client/src/pages/employees/index.jsx (816)
+- client/src/components/Employees/ApplicationRequestModal.jsx (708)
+- client/src/widgets/employee-table/EmployeeColumns.jsx (700)
+
+600–699 LOC
+- client/src/pages/CounterpartiesPage.jsx (685)
+- client/src/pages/UsersPage.jsx (655)
+- client/src/pages/ExportPage.jsx (651)
+- client/src/pages/employees/ApplicationRequestPage.jsx (639)
+
+500–599 LOC
+- client/src/components/Employees/useEmployeeForm.js (510)
+
+450–499 LOC
+- client/src/components/Employees/ExportToExcelModal.jsx (478)
+- client/src/components/Applications/ApplicationFormModal.jsx (472)
+- client/src/pages/LoginPage.jsx (467)
+- client/src/components/Employees/DocumentTypeUploader.jsx (467)
+
+400–449 LOC
+- client/src/pages/MobileUsersPage.jsx (434)
+- client/src/components/Employees/EmployeeDocumentUpload.jsx (426)
+- client/src/components/Employees/EmployeeFileUpload.jsx (423)
+- client/src/entities/employee/model/hooks.js (413)
+
+350–399 LOC
+- client/src/pages/PassesPage.jsx (389)
+- client/src/components/Employees/SecurityModal.jsx (385)
+- client/src/pages/CitizenshipsPage.jsx (378)
+- client/src/pages/ProfilePage.jsx (377)
+- client/src/pages/PositionsPage.jsx (373)
+- client/src/components/Employees/ExcelColumnsModal.jsx (365)
+- client/src/components/Admin/MobileUsersList.jsx (365)
+
+300–349 LOC
+- client/src/store/referencesStore.js (341)
+- client/src/components/Employees/EmployeeViewDrawer.jsx (335)
+- client/src/pages/ContractsPage.jsx (325)
+
+250–299 LOC
+- client/src/components/Applications/ApplicationFileUpload.jsx (298)
+- client/src/components/Admin/MobileCounterpartiesList.jsx (284)
+- client/src/pages/employees/AddEmployeePage.jsx (273)
+- client/src/widgets/employee-table/MobileEmployeeList.jsx (270)
+- client/src/pages/DepartmentsPage.jsx (266)
+- client/src/components/Employees/ExcelExportModal.jsx (263)
+- client/src/services/api.js (260)
+- client/src/components/Employees/TransferEmployeeModal.jsx (249)
+- client/src/pages/ConstructionSitesPage.jsx (247)
+- client/src/pages/ApplicationsPage.jsx (247)
+- client/src/components/Layout/Sidebar.jsx (239)
+- client/src/widgets/employee-table/EmployeeTable.jsx (235)
+- client/src/components/Applications/ApplicationViewModal.jsx (228)
+- client/src/shared/ui/FileViewer/FileViewer.jsx (227)
+- client/src/pages/SettingsPage.jsx (217)
+- client/src/components/Employees/EmployeeFilesModal.jsx (216)
+- client/src/components/Admin/EmployeeFieldsSettingsModal.jsx (213)
+
+Notes
+- Source: find + wc -l on client/src (js/jsx only)
+- Next step: prioritize top 5 for splitting (EmployeeFormModal, OccupationalSafetyPage, MobileEmployeeForm, UserProfilePage, DocumentScannerModal).

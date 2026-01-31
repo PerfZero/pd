@@ -143,7 +143,7 @@ export const getAllEmployees = async (req, res, next) => {
     const userRole = req.user.role;
     const userCounterpartyId = req.user.counterpartyId;
 
-    const where = {};
+    const where = { isDeleted: false };
 
     // Фильтр по контрагенту (если выбран)
     if (counterpartyId) {
@@ -1639,8 +1639,6 @@ export const updateEmployeeDepartment = async (req, res, next) => {
 };
 
 export const deleteEmployee = async (req, res, next) => {
-  const transaction = await sequelize.transaction();
-
   try {
     const { id } = req.params;
 
@@ -1648,121 +1646,364 @@ export const deleteEmployee = async (req, res, next) => {
       include: employeeAccessInclude,
     });
 
-    if (!employee) {
-      await transaction.rollback();
+    if (!employee || employee.isDeleted) {
       return res.status(404).json({
         success: false,
         message: "Сотрудник не найден",
       });
     }
 
-    // ПРОВЕРКА ПРАВ ДОСТУПА
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Недостаточно прав",
+      });
+    }
+
+    await employee.update({
+      isDeleted: true,
+      deletedAt: new Date(),
+      markedForDeletion: false,
+      isActive: false,
+    });
+
     try {
-      await checkEmployeeAccess(req.user, employee);
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_active_inactive",
+        req.user.id,
+      );
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_secure_block",
+        req.user.id,
+      );
+    } catch (statusError) {
+      console.warn("Failed to update statuses on delete:", statusError.message);
     }
-
-    console.log("=== DELETING EMPLOYEE ===");
-    console.log("Employee:", {
-      id: employee.id,
-      name: `${employee.lastName} ${employee.firstName} ${employee.middleName || ""}`,
-    });
-
-    // 1. Находим связанного пользователя (если есть)
-    const userMapping = await UserEmployeeMapping.findOne({
-      where: { employeeId: id },
-      transaction,
-    });
-
-    if (userMapping) {
-      console.log(`Found linked user: ${userMapping.userId}`);
-
-      // Удаляем только связь, пользователь остаётся
-      await userMapping.destroy({ transaction });
-      console.log("✓ User-Employee mapping deleted (user remains intact)");
-    }
-
-    // 2. Получаем все файлы сотрудника из БД
-    const files = await File.findAll({
-      where: {
-        entityType: "employee",
-        entityId: id,
-      },
-      transaction,
-    });
-
-    console.log(`Found ${files.length} files to delete`);
-
-    // 3. Удаляем каждый файл из хранилища
-    for (const file of files) {
-      try {
-        console.log(`Deleting file from storage: ${file.filePath}`);
-        await storageProvider.deleteFile(file.filePath);
-        console.log(`✓ File deleted: ${file.filePath}`);
-      } catch (error) {
-        console.error(`✗ Error deleting file from storage: ${file.filePath}`);
-        console.error("Error details:", {
-          message: error.message,
-          stack: error.stack,
-        });
-        // Продолжаем удаление, даже если файл уже отсутствует
-      }
-    }
-
-    // 4. Физически удаляем файлы из БД
-    const deletedCount = await File.destroy({
-      where: {
-        entityType: "employee",
-        entityId: id,
-      },
-      transaction,
-    });
-    console.log(`Deleted ${deletedCount} file records from DB`);
-
-    // 5. Удаляем папку сотрудника в хранилище
-    if (employee.counterparty) {
-      const employeeFullName =
-        `${employee.lastName} ${employee.firstName} ${employee.middleName || ""}`.trim();
-      const employeeFolderPath = buildEmployeeFilePath(
-        employee.counterparty.name,
-        employeeFullName,
-      ).replace(/^\/+/, "");
-      const fullPath = storageProvider.resolvePath(employeeFolderPath);
-
-      console.log(`Deleting employee folder: ${fullPath}`);
-
-      try {
-        await storageProvider.deleteFile(fullPath);
-        console.log(`✓ Employee folder deleted: ${fullPath}`);
-      } catch (error) {
-        console.error(
-          `✗ Error deleting employee folder from storage: ${fullPath}`,
-        );
-        console.error("Error details:", {
-          message: error.message,
-          stack: error.stack,
-        });
-        // Продолжаем, даже если папка уже отсутствует
-      }
-    }
-
-    // 6. Удаляем сотрудника из БД
-    await employee.destroy({ transaction });
-    console.log("✓ Employee deleted from DB");
-
-    // Коммитим транзакцию
-    await transaction.commit();
-    console.log("=== DELETE COMPLETE ===");
 
     res.json({
       success: true,
-      message: "Сотрудник и связанный пользователь удалены",
+      message: "Сотрудник удален",
     });
   } catch (error) {
-    await transaction.rollback();
     console.error("Error deleting employee:", error);
+    next(error);
+  }
+};
+
+export const markEmployeeForDeletion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude,
+    });
+
+    if (!employee || employee.isDeleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Сотрудник не найден",
+      });
+    }
+
+    if (req.user.role !== "user") {
+      return res.status(403).json({
+        success: false,
+        message: "Недостаточно прав",
+      });
+    }
+
+    await checkEmployeeAccess(req.user, employee);
+
+    await employee.update({
+      markedForDeletion: true,
+      isActive: false,
+    });
+
+    try {
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_active_inactive",
+        req.user.id,
+      );
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_secure_block",
+        req.user.id,
+      );
+    } catch (statusError) {
+      console.warn(
+        "Failed to update statuses on mark for deletion:",
+        statusError.message,
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Сотрудник помечен на удаление",
+    });
+  } catch (error) {
+    console.error("Error marking employee for deletion:", error);
+    next(error);
+  }
+};
+
+export const unmarkEmployeeForDeletion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude,
+    });
+
+    if (!employee || employee.isDeleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Сотрудник не найден",
+      });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Недостаточно прав",
+      });
+    }
+
+    await employee.update({
+      markedForDeletion: false,
+      isActive: true,
+    });
+
+    try {
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_active_employed",
+        req.user.id,
+      );
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_secure_allow",
+        req.user.id,
+      );
+    } catch (statusError) {
+      console.warn(
+        "Failed to update statuses on unmark for deletion:",
+        statusError.message,
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Пометка на удаление отменена",
+    });
+  } catch (error) {
+    console.error("Error unmarking employee for deletion:", error);
+    next(error);
+  }
+};
+
+export const getMarkedForDeletionEmployees = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = {
+      isDeleted: false,
+      markedForDeletion: true,
+    };
+
+    if (search) {
+      where[Op.or] = [
+        { firstName: { [Op.iLike]: `%${search}%` } },
+        { lastName: { [Op.iLike]: `%${search}%` } },
+        { middleName: { [Op.iLike]: `%${search}%` } },
+        { inn: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const { count, rows } = await Employee.findAndCountAll({
+      where,
+      include: [
+        {
+          model: EmployeeCounterpartyMapping,
+          as: "employeeCounterpartyMappings",
+          include: [
+            {
+              model: Counterparty,
+              as: "counterparty",
+              attributes: ["id", "name"],
+            },
+            {
+              model: ConstructionSite,
+              as: "constructionSite",
+              attributes: ["id", "shortName", "fullName"],
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit),
+      offset,
+      order: [["updatedAt", "DESC"]],
+      distinct: true,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        employees: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: count,
+          pages: Math.ceil(count / limit),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDeletedEmployees = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = {
+      isDeleted: true,
+    };
+
+    if (search) {
+      where[Op.or] = [
+        { firstName: { [Op.iLike]: `%${search}%` } },
+        { lastName: { [Op.iLike]: `%${search}%` } },
+        { middleName: { [Op.iLike]: `%${search}%` } },
+        { inn: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const { count, rows } = await Employee.findAndCountAll({
+      where,
+      include: [
+        {
+          model: EmployeeCounterpartyMapping,
+          as: "employeeCounterpartyMappings",
+          include: [
+            {
+              model: Counterparty,
+              as: "counterparty",
+              attributes: ["id", "name"],
+            },
+            {
+              model: ConstructionSite,
+              as: "constructionSite",
+              attributes: ["id", "shortName", "fullName"],
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit),
+      offset,
+      order: [["deletedAt", "DESC"]],
+      distinct: true,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        employees: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: count,
+          pages: Math.ceil(count / limit),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const restoreEmployee = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude,
+    });
+
+    if (!employee || !employee.isDeleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Сотрудник не найден",
+      });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Недостаточно прав",
+      });
+    }
+
+    const duplicateChecks = [];
+    if (employee.inn) duplicateChecks.push({ inn: employee.inn });
+    if (employee.snils) duplicateChecks.push({ snils: employee.snils });
+    if (employee.kig) duplicateChecks.push({ kig: employee.kig });
+    if (employee.passportNumber)
+      duplicateChecks.push({ passportNumber: employee.passportNumber });
+
+    if (duplicateChecks.length > 0) {
+      const duplicate = await Employee.findOne({
+        where: {
+          id: { [Op.ne]: employee.id },
+          isDeleted: false,
+          [Op.or]: duplicateChecks,
+        },
+      });
+
+      if (duplicate) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Невозможно восстановить: найден активный сотрудник с такими же данными",
+        });
+      }
+    }
+
+    await employee.update({
+      isDeleted: false,
+      deletedAt: null,
+      markedForDeletion: false,
+      isActive: true,
+    });
+
+    try {
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_active_employed",
+        req.user.id,
+      );
+      await EmployeeStatusService.setStatusByName(
+        employee.id,
+        "status_secure_allow",
+        req.user.id,
+      );
+    } catch (statusError) {
+      console.warn(
+        "Failed to update statuses on restore:",
+        statusError.message,
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Сотрудник восстановлен",
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -2334,7 +2575,7 @@ export const checkEmployeeByInn = async (req, res, next) => {
     };
 
     // ЭТАП 1: Проверяем сотрудника в контрагенте пользователя
-    let where = { inn: normalizedInn };
+    let where = { inn: normalizedInn, isDeleted: false };
     let userAccessMapping = { ...mappingInclude };
 
     const defaultCounterpartyId = await Setting.getSetting(
@@ -2394,7 +2635,7 @@ export const checkEmployeeByInn = async (req, res, next) => {
       if (userRole === "user" && userCounterpartyId === defaultCounterpartyId) {
         // Ищем сотрудника В DEFAULT контрагенте (неважно, есть ли он в других)
         const employeeInSameCounterparty = await Employee.findOne({
-          where: { inn: normalizedInn },
+          where: { inn: normalizedInn, isDeleted: false },
           include: [
             {
               model: Citizenship,
@@ -2452,7 +2693,7 @@ export const checkEmployeeByInn = async (req, res, next) => {
 
       // ❌ СТАНДАРТНАЯ ЛОГИКА ДЛЯ ОСТАЛЬНЫХ
       const employeeInAnotherCounterparty = await Employee.findOne({
-        where: { inn: normalizedInn },
+        where: { inn: normalizedInn, isDeleted: false },
         include: [
           {
             model: EmployeeCounterpartyMapping,
@@ -2478,7 +2719,7 @@ export const checkEmployeeByInn = async (req, res, next) => {
     } else {
       // Для админа проверяем во всех контрагентах
       const anyEmployee = await Employee.findOne({
-        where: { inn: normalizedInn },
+        where: { inn: normalizedInn, isDeleted: false },
         include: [
           {
             model: EmployeeCounterpartyMapping,
@@ -2518,7 +2759,7 @@ export const searchEmployees = async (req, res, next) => {
   try {
     const { query, counterpartyId, position } = req.query;
 
-    const where = {};
+    const where = { isDeleted: false };
     const userId = req.user.id;
 
     if (query) {
@@ -2674,7 +2915,7 @@ export const updateMyProfile = async (req, res, next) => {
     }
 
     const employee = await Employee.findByPk(mapping.employeeId);
-    if (!employee) {
+    if (!employee || employee.isDeleted) {
       throw new AppError("Сотрудник не найден", 404);
     }
 

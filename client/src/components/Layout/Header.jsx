@@ -21,6 +21,7 @@ import { useAuthStore } from "@/store/authStore";
 import { usePageTitleStore } from "@/store/pageTitleStore";
 import { useNavigate } from "react-router-dom";
 import MobileDrawerMenu from "./MobileDrawerMenu";
+import { useTranslation } from "react-i18next";
 
 const { Header: AntHeader } = AntLayout;
 const { Text } = Typography;
@@ -30,6 +31,7 @@ const Header = () => {
   const { user, logout } = useAuthStore();
   const { pageTitle } = usePageTitleStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -40,7 +42,7 @@ const Header = () => {
       ? [
           {
             key: "employees",
-            label: "Сотрудники1",
+            label: t("menu.employees"),
             icon: <TeamOutlined />,
             onClick: () => {
               navigate("/employees");
@@ -48,7 +50,7 @@ const Header = () => {
           },
           {
             key: "admin",
-            label: "Администирование",
+            label: t("menu.administration"),
             icon: <SettingOutlined />,
             onClick: () => {
               navigate("/admin");
@@ -61,7 +63,7 @@ const Header = () => {
       : []),
     {
       key: "profile",
-      label: "Профиль",
+      label: t("common.profile"),
       icon: <UserOutlined />,
       onClick: () => {
         navigate("/profile");
@@ -72,7 +74,7 @@ const Header = () => {
     },
     {
       key: "logout",
-      label: "Выход",
+      label: t("common.logout"),
       danger: true,
       onClick: () => {
         logout();
@@ -83,11 +85,11 @@ const Header = () => {
 
   const getRoleLabel = (role) => {
     const roles = {
-      admin: "Администратор",
-      ot_admin: "Администратор ОТ",
-      ot_engineer: "Инженер ОТ",
-      manager: "Менеджер",
-      user: "Пользователь",
+      admin: t("roles.admin"),
+      ot_admin: t("roles.ot_admin"),
+      ot_engineer: t("roles.ot_engineer"),
+      manager: t("roles.manager"),
+      user: t("roles.user"),
     };
     return roles[role] || role;
   };

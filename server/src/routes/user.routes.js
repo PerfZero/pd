@@ -22,6 +22,7 @@ router.put(
   [
     body("firstName").optional().notEmpty().trim(),
     body("email").optional().isEmail().normalizeEmail(),
+    body("userLanguage").optional().isIn(["ru", "uz", "tj", "kz"]),
   ],
   validate,
   userController.updateMyProfile,
@@ -56,6 +57,7 @@ const createUserValidation = [
   body("role")
     .optional()
     .isIn(["admin", "user", "ot_engineer", "ot_admin", "manager"]),
+  body("userLanguage").optional().isIn(["ru", "uz", "tj", "kz"]),
 ];
 
 const updateUserValidation = [
@@ -65,6 +67,7 @@ const updateUserValidation = [
   body("role")
     .optional()
     .isIn(["admin", "user", "ot_engineer", "ot_admin", "manager"]),
+  body("userLanguage").optional().isIn(["ru", "uz", "tj", "kz"]),
 ];
 
 const updatePasswordValidation = [
@@ -75,6 +78,8 @@ const updatePasswordValidation = [
 ];
 
 // Routes
+router.get("/deleted", userController.getDeletedUsers);
+router.post("/:id/restore", userController.restoreUser);
 router.get("/", userController.getAllUsers);
 router.get("/:id", userController.getUserById);
 router.post("/", createUserValidation, validate, userController.createUser);

@@ -54,6 +54,38 @@ export const employeeService = {
     return response.data;
   },
 
+  // Пометить сотрудника на удаление
+  markForDeletion: async (id) => {
+    const response = await api.post(`/employees/${id}/mark-for-deletion`);
+    return response.data;
+  },
+
+  // Отменить пометку на удаление
+  unmarkForDeletion: async (id) => {
+    const response = await api.post(`/employees/${id}/unmark-for-deletion`);
+    return response.data;
+  },
+
+  // Получить сотрудников, помеченных на удаление
+  getMarkedForDeletion: async (params = {}) => {
+    const response = await api.get(`/employees/marked-for-deletion`, {
+      params,
+    });
+    return response.data;
+  },
+
+  // Получить удаленных сотрудников
+  getDeleted: async (params = {}) => {
+    const response = await api.get(`/employees/deleted`, { params });
+    return response.data;
+  },
+
+  // Восстановить сотрудника
+  restore: async (id) => {
+    const response = await api.post(`/employees/${id}/restore`);
+    return response.data;
+  },
+
   // Поиск сотрудников
   search: async (query) => {
     const response = await api.get("/employees/search", { params: { query } });

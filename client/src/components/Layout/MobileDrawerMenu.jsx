@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import settingsService from "@/services/settingsService";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Мобильное выдвижное меню (Drawer)
@@ -19,6 +20,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuthStore();
+  const { t } = useTranslation();
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const isOtEngineer = user?.role === "ot_engineer";
   const isOtAdmin = user?.role === "ot_admin";
@@ -46,7 +48,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
     topMenuItems.push({
       key: "/employees",
       icon: <TeamOutlined />,
-      label: "Сотрудники",
+      label: t("menu.employees"),
     });
   }
 
@@ -62,7 +64,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
     topMenuItems.push({
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
-      label: "Охрана труда",
+      label: t("menu.ot"),
     });
   }
 
@@ -71,7 +73,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
     topMenuItems.push({
       key: "/admin",
       icon: <SettingOutlined />,
-      label: "Администирование",
+      label: t("menu.administration"),
     });
   }
 
@@ -80,12 +82,12 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
     {
       key: "/profile",
       icon: <UserOutlined />,
-      label: "Профиль",
+      label: t("common.profile"),
     },
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "Выход",
+      label: t("common.logout"),
       danger: true,
     },
   ];
@@ -102,7 +104,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
 
   return (
     <Drawer
-      title="PassDesk1"
+      title="PassDesk"
       placement="left"
       onClose={onClose}
       open={visible}

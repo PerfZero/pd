@@ -31,6 +31,7 @@ import otService from "@/services/otService";
 import { constructionSiteService } from "@/services/constructionSiteService";
 import { counterpartyService } from "@/services/counterpartyService";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useTranslation } from "react-i18next";
 import {
   CheckOutlined,
   CloseOutlined,
@@ -105,6 +106,7 @@ const OccupationalSafetyPage = () => {
   const [instructionForm] = Form.useForm();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const { t } = useTranslation();
   const selectMinWidth = 100;
   const selectMaxWidth = 250;
   const selectCollapsedStyle = { width: selectMinWidth };
@@ -114,7 +116,7 @@ const OccupationalSafetyPage = () => {
     maxWidth: selectMaxWidth,
   };
 
-  usePageTitle("Охрана труда", isMobile);
+  usePageTitle(t("ot.title"), isMobile);
 
   useEffect(() => {
     const loadDefaultCounterpartyId = async () => {
@@ -1203,7 +1205,7 @@ const OccupationalSafetyPage = () => {
       items.push(
         {
           key: "all",
-          label: "Все объекты",
+          label: t("ot.tabs.all"),
           children: (
             <Card size="small">
               <Space direction="vertical" size={8} style={{ width: "100%" }}>
@@ -1279,7 +1281,7 @@ const OccupationalSafetyPage = () => {
         },
         {
           key: "object",
-          label: "Объект",
+          label: t("ot.tabs.object"),
           children: (
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
               <Card size="small">
@@ -1435,7 +1437,7 @@ const OccupationalSafetyPage = () => {
 
     items.push({
       key: "contractor",
-      label: "Подрядчик",
+      label: t("ot.tabs.contractor"),
       children: (
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
           <input
@@ -1617,7 +1619,7 @@ const OccupationalSafetyPage = () => {
     if (canManageSettings) {
       items.push({
         key: "settings",
-        label: "Настройка",
+        label: t("ot.tabs.settings"),
         children: (
           <Space direction="vertical" size={12} style={{ width: "100%" }}>
             <Card size="small">
@@ -1869,8 +1871,8 @@ const OccupationalSafetyPage = () => {
     return (
       <Result
         status="403"
-        title="Нет доступа"
-        subTitle="Раздел доступен только для подрядчиков, инженеров ОТ и администраторов ОТ"
+        title={t("common.accessDenied")}
+        subTitle={t("ot.accessDenied")}
       />
     );
   }
@@ -1879,8 +1881,8 @@ const OccupationalSafetyPage = () => {
     return (
       <Result
         status="403"
-        title="Нет доступа"
-        subTitle="Для контрагента по умолчанию доступ к разделу закрыт"
+        title={t("common.accessDenied")}
+        subTitle={t("ot.defaultCounterpartyDenied")}
       />
     );
   }
@@ -1889,7 +1891,7 @@ const OccupationalSafetyPage = () => {
     <div style={{ padding: 16 }}>
       <Space direction="vertical" size={12} style={{ width: "100%" }}>
         <Title level={3} style={{ margin: 0 }}>
-          Охрана труда
+          {t("ot.title")}
         </Title>
         <Tabs items={tabs} activeKey={activeTab} onChange={setActiveTab} />
       </Space>

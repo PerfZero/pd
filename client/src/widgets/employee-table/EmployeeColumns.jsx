@@ -30,6 +30,8 @@ export const useEmployeeColumns = ({
   canExport: _canExport,
   showCounterpartyColumn, // Новый параметр для показа столбца "Контрагент"
   canDeleteEmployee,
+  canMarkForDeletion,
+  onMarkForDeletion,
   uniqueFilters,
   filters = {}, // Состояние фильтров из localStorage
   defaultCounterpartyId,
@@ -64,6 +66,11 @@ export const useEmployeeColumns = ({
             }}
           >
             {record.lastName} {record.firstName} {record.middleName || ""}
+            {record.markedForDeletion && (
+              <Tag color="red" style={{ marginLeft: 6 }}>
+                🗑️
+              </Tag>
+            )}
           </div>
         ),
         sorter: (a, b) => a.lastName.localeCompare(b.lastName),
@@ -676,6 +683,18 @@ export const useEmployeeColumns = ({
                 </Popconfirm>
               </Tooltip>
             )}
+            {canMarkForDeletion &&
+              canMarkForDeletion(record) &&
+              !record.markedForDeletion && (
+                <Tooltip title="На удаление">
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => onMarkForDeletion(record)}
+                  />
+                </Tooltip>
+              )}
           </Space>
         ),
       },
@@ -696,5 +715,7 @@ export const useEmployeeColumns = ({
     showCounterpartyColumn,
     onConstructionSitesEdit,
     resetTrigger,
+    canMarkForDeletion,
+    onMarkForDeletion,
   ]);
 };

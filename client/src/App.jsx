@@ -22,6 +22,9 @@ import OccupationalSafetyPage from "./pages/OccupationalSafetyPage";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { useTokenRefresh } from "./hooks/useTokenRefresh";
 import { useAuthBootstrap } from "./hooks/useAuthBootstrap";
+import { useAuthStore } from "./store/authStore";
+import { useEffect } from "react";
+import { setLanguage } from "./i18n";
 
 // Компонент для перенаправления на employees для всех ролей
 const RoleBasedRedirect = () => {
@@ -32,6 +35,13 @@ function App() {
   useAuthBootstrap();
   // Автоматически обновляем токен в фоне каждые 30 секунд
   useTokenRefresh();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (user?.userLanguage) {
+      setLanguage(user.userLanguage);
+    }
+  }, [user?.userLanguage]);
 
   return (
     <ConfigProvider theme={antdTheme} locale={ruRU}>

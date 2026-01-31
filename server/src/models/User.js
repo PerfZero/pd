@@ -79,6 +79,16 @@ User.init(
       field: "is_active",
       comment: "Флаг активации пользователя администратором",
     },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "is_deleted",
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "deleted_at",
+    },
     lastLogin: {
       type: DataTypes.DATE,
       field: "last_login",
@@ -87,6 +97,12 @@ User.init(
       type: DataTypes.DATE,
       allowNull: true,
       field: "password_changed_at",
+    },
+    userLanguage: {
+      type: DataTypes.STRING(5),
+      allowNull: false,
+      defaultValue: "ru",
+      field: "user_language",
     },
   },
   {

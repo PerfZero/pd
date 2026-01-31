@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import { forbiddenPasswordValidator } from "@/utils/forbiddenPasswords";
+import { useTranslation } from "react-i18next";
 
 const { Title, Text, Link } = Typography;
 
@@ -17,6 +18,7 @@ const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const { login, register } = useAuthStore();
   const { message } = App.useApp();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
@@ -35,7 +37,7 @@ const LoginPage = () => {
     try {
       const response = await login(values);
 
-      message.success("Вход выполнен успешно!");
+      message.success(t("auth.loginSuccess"));
 
       // Проверяем активацию аккаунта
       const userIsActive = response.data.user.isActive;
@@ -51,7 +53,7 @@ const LoginPage = () => {
       console.error("Login error:", err);
 
       // Детальное сообщение об ошибке для входа
-      let errorMessage = "Ошибка входа. Попробуйте снова.";
+      let errorMessage = t("auth.loginError");
 
       if (err.response?.data?.message) {
         // Сообщение с сервера (например, "Неверный email или пароль")
@@ -60,12 +62,11 @@ const LoginPage = () => {
         // Улучшенное сообщение из interceptor (например, "Ошибка сети")
         errorMessage = err.userMessage;
       } else if (err.code === "ERR_NETWORK") {
-        errorMessage =
-          "Не удается подключиться к серверу. Проверьте, что сервер запущен.";
+        errorMessage = t("auth.networkError");
       } else if (err.response?.status === 401) {
-        errorMessage = "Неверный email или пароль";
+        errorMessage = t("auth.invalidCredentials");
       } else if (err.response?.status === 403) {
-        errorMessage = "Доступ запрещен. Ваш аккаунт может быть деактивирован.";
+        errorMessage = t("auth.accountDisabled");
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -93,7 +94,9 @@ const LoginPage = () => {
       const response = await register(registrationData);
 
       message.success({
-        content: `Регистрация прошла успешно! Ваш УИН: ${response.data.user.identificationNumber}`,
+        content: t("auth.registrationSuccess", {
+          uin: response.data.user.identificationNumber,
+        }),
         duration: 10,
       });
 
@@ -103,7 +106,7 @@ const LoginPage = () => {
       console.error("Registration error:", err);
 
       // Детальное сообщение об ошибке
-      let errorMessage = "Ошибка регистрации. Попробуйте снова.";
+      let errorMessage = t("auth.registrationError");
 
       if (err.userMessage) {
         // Используем улучшенное сообщение из interceptor
@@ -116,8 +119,7 @@ const LoginPage = () => {
         // Обычное сообщение с сервера
         errorMessage = err.response.data.message;
       } else if (err.code === "ERR_NETWORK") {
-        errorMessage =
-          "Не удается подключиться к серверу. Проверьте, что сервер запущен.";
+        errorMessage = t("auth.networkError");
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -139,10 +141,10 @@ const LoginPage = () => {
     >
       <Form.Item
         name="email"
-        label="Email"
+        label={t("auth.email")}
         rules={[
-          { required: true, message: "Пожалуйста, введите email" },
-          { type: "email", message: "Введите корректный email" },
+          { required: true, message: t("auth.emailRequired") },
+          { type: "email", message: t("auth.invalidEmail") },
         ]}
       >
         <Input
@@ -155,8 +157,8 @@ const LoginPage = () => {
 
       <Form.Item
         name="password"
-        label="Пароль"
-        rules={[{ required: true, message: "Пожалуйста, введите пароль" }]}
+        label={t("auth.password")}
+        rules={[{ required: true, message: t("auth.passwordRequired") }]}
       >
         <Input.Password
           prefix={<LockOutlined />}
@@ -174,7 +176,7 @@ const LoginPage = () => {
           loading={loading}
           block
         >
-          Войти
+          {t("auth.loginButton")}
         </Button>
       </Form.Item>
     </Form>
@@ -191,21 +193,19 @@ const LoginPage = () => {
     >
       <Form.Item
         name="fullName"
-        label="ФИО"
+        label={t("auth.fullName")}
         rules={[
-          { required: true, message: "Пожалуйста, введите ФИО" },
+          { required: true, message: t("auth.fullNameRequired") },
           {
             pattern: /^[А-Яа-яЁё\s-]+$/,
-            message: "ФИО должно содержать только русские буквы",
+            message: t("auth.fullNameCyrillic"),
           },
           {
             validator: (_, value) => {
               if (!value) return Promise.resolve();
               const parts = value.trim().split(/\s+/);
               if (parts.length < 2) {
-                return Promise.reject(
-                  new Error("Введите фамилию и имя (минимум 2 слова)"),
-                );
+                return Promise.reject(new Error(t("auth.fullNameMinWords")));
               }
               return Promise.resolve();
             },
@@ -221,10 +221,10 @@ const LoginPage = () => {
 
       <Form.Item
         name="email"
-        label="Email"
+        label={t("auth.email")}
         rules={[
-          { required: true, message: "Пожалуйста, введите email" },
-          { type: "email", message: "Введите корректный email" },
+          { required: true, message: t("auth.emailRequired") },
+          { type: "email", message: t("auth.invalidEmail") },
         ]}
       >
         <Input
@@ -237,10 +237,10 @@ const LoginPage = () => {
 
       <Form.Item
         name="password"
-        label="Пароль"
+        label={t("auth.password")}
         rules={[
-          { required: true, message: "Пожалуйста, введите пароль" },
-          { min: 8, message: "Пароль должен содержать минимум 8 символов" },
+          { required: true, message: t("auth.passwordRequired") },
+          { min: 8, message: t("auth.passwordMin") },
           forbiddenPasswordValidator,
         ]}
       >
@@ -254,16 +254,16 @@ const LoginPage = () => {
 
       <Form.Item
         name="confirmPassword"
-        label="Подтверждение пароля"
+        label={t("auth.confirmPassword")}
         dependencies={["password"]}
         rules={[
-          { required: true, message: "Пожалуйста, подтвердите пароль" },
+          { required: true, message: t("auth.confirmPasswordRequired") },
           ({ getFieldValue }) => ({
             validator(_, value) {
               if (!value || getFieldValue("password") === value) {
                 return Promise.resolve();
               }
-              return Promise.reject(new Error("Пароли не совпадают"));
+              return Promise.reject(new Error(t("auth.passwordsNotMatch")));
             },
           }),
         ]}
@@ -285,7 +285,7 @@ const LoginPage = () => {
           block
           icon={<UserAddOutlined />}
         >
-          Зарегистрироваться
+          {t("auth.registerButton")}
         </Button>
       </Form.Item>
 
@@ -293,14 +293,14 @@ const LoginPage = () => {
       {registrationCode && (
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <Text type="secondary">
-            Уже есть аккаунт?{" "}
+            {t("auth.alreadyHaveAccount")}{" "}
             <Link
               onClick={() => {
                 setRegistrationCode(null);
                 navigate("/login", { replace: true });
               }}
             >
-              Войти
+              {t("auth.loginLink")}
             </Link>
           </Text>
         </div>
@@ -352,11 +352,11 @@ const LoginPage = () => {
                 <UserAddOutlined style={{ fontSize: 20, color: "#fff" }} />
               </div>
               <Title level={2} style={{ margin: 0 }}>
-                Регистрация
+                {t("auth.register")}
               </Title>
             </div>
             <div style={{ textAlign: "center" }}>
-              <Text type="secondary">Портал управления пропусками</Text>
+              <Text type="secondary">{t("common.portalTitle")}</Text>
             </div>
           </div>
 
@@ -368,11 +368,11 @@ const LoginPage = () => {
                 href="https://docs.google.com/document/d/12wNHmIGNUcLjdDeThLY-77F_ARR1o2hKF_CIWhauy88/edit?usp=sharing"
                 target="_blank"
               >
-                Инструкция
+                {t("common.instruction")}
               </Link>
             </div>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              © 2025 PassDesk. Все права защищены.
+              {t("common.copyright")}
             </Text>
           </div>
         </Card>
@@ -387,7 +387,7 @@ const LoginPage = () => {
       label: (
         <span>
           <LoginOutlined />
-          Вход
+          {t("auth.login")}
         </span>
       ),
       children: loginTabContent,
@@ -440,7 +440,7 @@ const LoginPage = () => {
             </Title>
           </div>
           <div style={{ textAlign: "center" }}>
-            <Text type="secondary">Портал управления пропусками</Text>
+            <Text type="secondary">{t("common.portalTitle")}</Text>
           </div>
         </div>
 
@@ -452,11 +452,11 @@ const LoginPage = () => {
               href="https://docs.google.com/document/d/12wNHmIGNUcLjdDeThLY-77F_ARR1o2hKF_CIWhauy88/edit?usp=sharing"
               target="_blank"
             >
-              Инструкция
+              {t("common.instruction")}
             </Link>
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            © 2025 PassDesk. Все права защищены.
+            {t("common.copyright")}
           </Text>
         </div>
       </Card>

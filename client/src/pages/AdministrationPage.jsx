@@ -1,13 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Card, Tabs, Typography, Space, Grid, Segmented } from 'antd';
-import { SettingOutlined, TeamOutlined, GlobalOutlined, ShopOutlined, DownloadOutlined } from '@ant-design/icons';
-import UsersPage from './UsersPage';
-import MobileUsersPage from './MobileUsersPage';
-import SettingsPage from './SettingsPage';
-import CitizenshipsPage from './CitizenshipsPage';
-import CounterpartiesPage from './CounterpartiesPage';
-import MobileCounterpartiesPage from './MobileCounterpartiesPage';
-import ExportPage from './ExportPage';
+import { useState, useEffect } from "react";
+import { Card, Tabs, Typography, Space, Grid, Segmented } from "antd";
+import {
+  SettingOutlined,
+  TeamOutlined,
+  GlobalOutlined,
+  ShopOutlined,
+  DownloadOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+import UsersPage from "./UsersPage";
+import MobileUsersPage from "./MobileUsersPage";
+import SettingsPage from "./SettingsPage";
+import CitizenshipsPage from "./CitizenshipsPage";
+import CounterpartiesPage from "./CounterpartiesPage";
+import MobileCounterpartiesPage from "./MobileCounterpartiesPage";
+import ExportPage from "./ExportPage";
+import MarkedEmployeesPage from "./MarkedEmployeesPage";
+import TrashPage from "./TrashPage";
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
@@ -15,77 +24,110 @@ const { useBreakpoint } = Grid;
 const AdministrationPage = () => {
   const [activeTab, setActiveTab] = useState(() => {
     // Загружаем сохраненную вкладку из localStorage
-    const savedTab = localStorage.getItem('administrationActiveTab');
-    return savedTab || 'users';
+    const savedTab = localStorage.getItem("administrationActiveTab");
+    return savedTab || "users";
   });
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
   // Сохраняем активную вкладку в localStorage при изменении
   useEffect(() => {
-    localStorage.setItem('administrationActiveTab', activeTab);
+    localStorage.setItem("administrationActiveTab", activeTab);
   }, [activeTab]);
 
   // Десктопные вкладки (Tabs)
   const desktopItems = [
     {
-      key: 'users',
+      key: "users",
       label: (
         <span>
           <TeamOutlined />
           Пользователи
         </span>
       ),
-      children: <UsersPage />
+      children: <UsersPage />,
     },
     {
-      key: 'counterparties',
+      key: "counterparties",
       label: (
         <span>
           <ShopOutlined />
           Контрагенты
         </span>
       ),
-      children: <CounterpartiesPage />
+      children: <CounterpartiesPage />,
     },
     {
-      key: 'citizenships',
+      key: "citizenships",
       label: (
         <span>
           <GlobalOutlined />
           Гражданство
         </span>
       ),
-      children: <CitizenshipsPage />
+      children: <CitizenshipsPage />,
     },
     {
-      key: 'export',
+      key: "export",
       label: (
         <span>
           <DownloadOutlined />
           Выгрузка
         </span>
       ),
-      children: <ExportPage />
+      children: <ExportPage />,
     },
     {
-      key: 'settings',
+      key: "marked-employees",
+      label: (
+        <span>
+          <DeleteOutlined />
+          На удаление
+        </span>
+      ),
+      children: <MarkedEmployeesPage />,
+    },
+    {
+      key: "trash",
+      label: (
+        <span>
+          <DeleteOutlined />
+          Корзина
+        </span>
+      ),
+      children: <TrashPage />,
+    },
+    {
+      key: "settings",
       label: (
         <span>
           <SettingOutlined />
           Настройки
         </span>
       ),
-      children: <SettingsPage />
-    }
+      children: <SettingsPage />,
+    },
   ];
 
   // Мобильный рендер с полным контролем layout
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+        }}
+      >
         {/* Шапка */}
-        <div style={{ padding: '16px 16px 0 16px', flexShrink: 0, background: '#fff' }}>
+        <div
+          style={{
+            padding: "16px 16px 0 16px",
+            flexShrink: 0,
+            background: "#fff",
+          }}
+        >
           <Space>
             <SettingOutlined />
             <Title level={3} style={{ margin: 0 }}>
@@ -95,7 +137,14 @@ const AdministrationPage = () => {
         </div>
 
         {/* Переключатель вкладок */}
-        <div style={{ padding: '16px', flexShrink: 0, background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+        <div
+          style={{
+            padding: "16px",
+            flexShrink: 0,
+            background: "#fff",
+            borderBottom: "1px solid #f0f0f0",
+          }}
+        >
           <Segmented
             block
             size="large"
@@ -103,13 +152,13 @@ const AdministrationPage = () => {
             onChange={setActiveTab}
             options={[
               {
-                label: 'Пользователи',
-                value: 'users',
+                label: "Пользователи",
+                value: "users",
                 icon: <TeamOutlined />,
               },
               {
-                label: 'Контрагенты',
-                value: 'counterparties',
+                label: "Контрагенты",
+                value: "counterparties",
                 icon: <ShopOutlined />,
               },
             ]}
@@ -117,8 +166,19 @@ const AdministrationPage = () => {
         </div>
 
         {/* Контент (MobileUsersPage сам управляет прокруткой) */}
-        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
-          {activeTab === 'users' ? <MobileUsersPage /> : <MobileCounterpartiesPage />}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+            position: "relative",
+          }}
+        >
+          {activeTab === "users" ? (
+            <MobileUsersPage />
+          ) : (
+            <MobileCounterpartiesPage />
+          )}
         </div>
       </div>
     );
@@ -126,7 +186,16 @@ const AdministrationPage = () => {
 
   // Десктопный рендер (Tabs)
   return (
-    <div style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+    <div
+      style={{
+        padding: "0",
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
+      }}
+    >
       <Card
         title={
           <Space>
@@ -136,20 +205,44 @@ const AdministrationPage = () => {
             </Title>
           </Space>
         }
-        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0, padding: 0 }}
-        styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0, padding: 0 } }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          margin: 0,
+          padding: 0,
+        }}
+        styles={{
+          body: {
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            overflow: "hidden",
+            minHeight: 0,
+            padding: 0,
+          },
+        }}
       >
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
           items={desktopItems}
           size="large"
-          style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0, margin: 0 }}
-          tabBarStyle={{ 
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            overflow: "hidden",
+            minHeight: 0,
             margin: 0,
-            borderBottom: '1px solid #f0f0f0',
+          }}
+          tabBarStyle={{
+            margin: 0,
+            borderBottom: "1px solid #f0f0f0",
             flexShrink: 0,
-            paddingLeft: '10px'
+            paddingLeft: "10px",
           }}
         />
       </Card>

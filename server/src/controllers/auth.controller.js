@@ -221,6 +221,7 @@ export const register = async (req, res, next) => {
         counterpartyId,
         identificationNumber,
         isActive: false, // Пользователь неактивен до активации администратором
+        userLanguage: "ru",
       },
       { transaction },
     );
@@ -248,6 +249,7 @@ export const register = async (req, res, next) => {
           counterpartyId: user.counterpartyId,
           identificationNumber: user.identificationNumber,
           isActive: user.isActive,
+          userLanguage: user.userLanguage,
         },
         token,
       },
@@ -275,7 +277,7 @@ export const login = async (req, res, next) => {
       ],
     });
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       throw new AppError(
         "Неверный email или пароль. Проверьте правильность введенных данных.",
         401,
@@ -380,7 +382,7 @@ export const refreshToken = async (req, res, next) => {
 
     // Находим пользователя
     const user = await User.findByPk(decoded.id);
-    if (!user) {
+    if (!user || user.isDeleted) {
       throw new AppError("Пользователь не найден", 404);
     }
 
@@ -465,6 +467,7 @@ export const getCurrentUser = async (req, res, next) => {
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
+          userLanguage: user.userLanguage,
         },
       },
     });

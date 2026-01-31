@@ -14,6 +14,7 @@ import {
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import settingsService from "@/services/settingsService";
+import { useTranslation } from "react-i18next";
 
 const { Sider } = Layout;
 
@@ -29,6 +30,7 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuthStore();
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const isOtEngineer = user?.role === "ot_engineer";
@@ -64,7 +66,7 @@ const Sidebar = () => {
     {
       key: "/employees",
       icon: <TeamOutlined />,
-      label: "Сотрудники",
+      label: t("menu.employees"),
     },
   ];
 
@@ -72,7 +74,7 @@ const Sidebar = () => {
     userMenuItems.push({
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
-      label: "Охрана труда",
+      label: t("menu.ot"),
     });
   }
 
@@ -81,12 +83,12 @@ const Sidebar = () => {
     userMenuItems.push({
       key: "references",
       icon: <BankOutlined />,
-      label: "Справочники",
+      label: t("menu.references"),
       children: [
         {
           key: "/counterparties",
           icon: <ShopOutlined />,
-          label: "Контрагенты",
+          label: t("menu.counterparties"),
         },
       ],
     });
@@ -97,44 +99,44 @@ const Sidebar = () => {
     {
       key: "/employees",
       icon: <UserOutlined />,
-      label: "Сотрудники",
+      label: t("menu.employees"),
     },
     {
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
-      label: "Охрана труда",
+      label: t("menu.ot"),
     },
     {
       key: "references",
       icon: <BankOutlined />,
-      label: "Справочники",
+      label: t("menu.references"),
       children: [
         {
           key: "/counterparties",
           icon: <ShopOutlined />,
-          label: "Контрагенты",
+          label: t("menu.counterparties"),
         },
         {
           key: "/construction-sites",
           icon: <BankOutlined />,
-          label: "Объекты",
+          label: t("menu.constructionSites"),
         },
         {
           key: "/contracts",
           icon: <FileTextOutlined />,
-          label: "Договора",
+          label: t("menu.contracts"),
         },
         {
           key: "/directories",
           icon: <BookOutlined />,
-          label: "Подразделения",
+          label: t("menu.directories"),
         },
       ],
     },
     {
       key: "/administration",
       icon: <ControlOutlined />,
-      label: "Администрирование",
+      label: t("menu.administration"),
     },
   ];
 
@@ -142,7 +144,7 @@ const Sidebar = () => {
     {
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
-      label: "Охрана труда",
+      label: t("menu.ot"),
     },
   ];
 

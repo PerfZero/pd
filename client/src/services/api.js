@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "@/store/authStore";
 import { jwtDecode } from "jwt-decode";
+import i18n from "@/i18n";
 
 // Флаг для предотвращения множественных уведомлений
 let isRedirecting = false;
@@ -126,6 +127,10 @@ api.interceptors.request.use(
       if (authToken) {
         config.headers.Authorization = `Bearer ${authToken}`;
       }
+    }
+
+    if (i18n?.language) {
+      config.headers["Accept-Language"] = i18n.language;
     }
 
     return config;

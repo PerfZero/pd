@@ -12,6 +12,7 @@ import {
   Grid,
   Modal,
   Divider,
+  Select,
 } from "antd";
 import {
   UserOutlined,
@@ -27,6 +28,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import profileService from "@/services/profileService";
 import { forbiddenPasswordValidator } from "@/utils/forbiddenPasswords";
+import { useTranslation } from "react-i18next";
+import { useSettings } from "@/entities/settings";
+import { setLanguage } from "@/i18n";
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -36,6 +40,13 @@ const ProfilePage = () => {
   const isMobile = !screens.md;
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { t } = useTranslation();
+  const { defaultCounterpartyId } = useSettings();
+  const isContractorUser =
+    user?.role === "user" &&
+    user?.counterpartyId &&
+    user?.counterpartyId !== defaultCounterpartyId;
+  const canChangeLanguage = isContractorUser || user?.role === "admin";
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,6 +65,7 @@ const ProfilePage = () => {
       profileForm.setFieldsValue({
         firstName: response.data.user.firstName,
         email: response.data.user.email,
+        userLanguage: response.data.user.userLanguage || "ru",
       });
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -74,18 +86,19 @@ const ProfilePage = () => {
       setSaving(true);
 
       await profileService.updateMyProfile(values);
+      if (values.userLanguage) {
+        setLanguage(values.userLanguage);
+      }
 
       // Обновляем данные в store
       await useAuthStore.getState().getCurrentUser();
 
-      message.success("Профиль успешно обновлен");
+      message.success(t("profile.profileUpdated"));
       setIsEditing(false);
       await loadProfile();
     } catch (error) {
       console.error("Error saving profile:", error);
-      message.error(
-        error.response?.data?.message || "Ошибка сохранения профиля",
-      );
+      message.error(error.response?.data?.message || t("profile.saveError"));
     } finally {
       setSaving(false);
     }
@@ -96,6 +109,7 @@ const ProfilePage = () => {
     profileForm.setFieldsValue({
       firstName: profileData.firstName,
       email: profileData.email,
+      userLanguage: profileData.userLanguage || "ru",
     });
   };
 
@@ -108,12 +122,14 @@ const ProfilePage = () => {
         values.newPassword,
       );
 
-      message.success("Пароль успешно изменен");
+      message.success(t("profile.passwordChanged"));
       setPasswordModalVisible(false);
       passwordForm.resetFields();
     } catch (error) {
       console.error("Error changing password:", error);
-      message.error(error.response?.data?.message || "Ошибка смены пароля");
+      message.error(
+        error.response?.data?.message || t("profile.passwordChangeError"),
+      );
     }
   };
 
@@ -151,7 +167,7 @@ const ProfilePage = () => {
         title={
           <Space>
             <UserOutlined />
-            <span>Профиль пользователя</span>
+            <span>{t("profile.title")}</span>
           </Space>
         }
         extra={
@@ -162,7 +178,7 @@ const ProfilePage = () => {
               onClick={() => setIsEditing(true)}
               size={isMobile ? "small" : "default"}
             >
-              {!isMobile && "Редактировать"}
+              {!isMobile && t("common.edit")}
             </Button>
           ) : (
             <Space size="small">
@@ -171,7 +187,7 @@ const ProfilePage = () => {
                 onClick={handleCancelEdit}
                 size={isMobile ? "small" : "default"}
               >
-                {!isMobile && "Отмена"}
+                {!isMobile && t("common.cancel")}
               </Button>
               <Button
                 type="primary"
@@ -180,7 +196,7 @@ const ProfilePage = () => {
                 loading={saving}
                 size={isMobile ? "small" : "default"}
               >
-                {!isMobile && "Сохранить"}
+                {!isMobile && t("common.save")}
               </Button>
             </Space>
           )
@@ -198,7 +214,7 @@ const ProfilePage = () => {
         >
           <Space>
             <IdcardOutlined style={{ color: "#1890ff" }} />
-            <Text strong>УИН:</Text>
+            <Text strong>{t("profile.uin")}:</Text>
             <Text style={{ fontSize: 16, fontWeight: 500 }}>
               {formatUIN(profileData?.identificationNumber)}
             </Text>
@@ -208,7 +224,7 @@ const ProfilePage = () => {
         {/* Сообщение о неактивации */}
         {!user?.isActive && (
           <Alert
-            message="Пользователь не активирован. Обратитесь к администратору"
+            message={t("profile.notActivated")}
             type="warning"
             showIcon
             style={{ marginBottom: 16 }}
@@ -218,12 +234,12 @@ const ProfilePage = () => {
         <Form form={profileForm} layout="vertical" disabled={!isEditing}>
           <Form.Item
             name="firstName"
-            label="ФИО"
+            label={t("auth.fullName")}
             rules={[
-              { required: true, message: "Пожалуйста, введите ФИО" },
+              { required: true, message: t("auth.fullNameRequired") },
               {
                 pattern: /^[А-Яа-яЁё\s-]+$/,
-                message: "ФИО должно содержать только русские буквы",
+                message: t("auth.fullNameCyrillic"),
               },
             ]}
           >
@@ -235,14 +251,31 @@ const ProfilePage = () => {
 
           <Form.Item
             name="email"
-            label="Email"
+            label={t("auth.email")}
             rules={[
-              { required: true, message: "Пожалуйста, введите email" },
-              { type: "email", message: "Введите корректный email" },
+              { required: true, message: t("auth.emailRequired") },
+              { type: "email", message: t("auth.invalidEmail") },
             ]}
           >
             <Input prefix={<MailOutlined />} placeholder="user@example.com" />
           </Form.Item>
+
+          {canChangeLanguage && (
+            <Form.Item
+              name="userLanguage"
+              label={t("profile.language")}
+              extra={isContractorUser ? t("profile.languageHint") : undefined}
+            >
+              <Select
+                options={[
+                  { value: "ru", label: t("languages.ru") },
+                  { value: "uz", label: t("languages.uz") },
+                  { value: "tj", label: t("languages.tj") },
+                  { value: "kz", label: t("languages.kz") },
+                ]}
+              />
+            </Form.Item>
+          )}
         </Form>
 
         <Divider style={{ margin: "16px 0" }} />
@@ -250,7 +283,7 @@ const ProfilePage = () => {
         <Space direction="vertical" size="small" style={{ width: "100%" }}>
           {profileData?.createdAt && (
             <Text type="secondary">
-              Дата регистрации:{" "}
+              {t("profile.registrationDate")}:{" "}
               <Text strong>
                 {new Date(profileData.createdAt).toLocaleDateString("ru-RU")}
               </Text>
@@ -267,11 +300,11 @@ const ProfilePage = () => {
             onClick={() => setPasswordModalVisible(true)}
             block
           >
-            Сменить пароль
+            {t("profile.changePassword")}
           </Button>
 
           <Button danger icon={<LogoutOutlined />} onClick={handleLogout} block>
-            Выйти из аккаунта
+            {t("common.logout")}
           </Button>
 
           <Divider style={{ margin: "8px 0" }} />
@@ -281,14 +314,14 @@ const ProfilePage = () => {
             target="_blank"
             style={{ display: "block", textAlign: "center" }}
           >
-            Инструкция
+            {t("common.instruction")}
           </Typography.Link>
         </Space>
       </Card>
 
       {/* Модальное окно смены пароля */}
       <Modal
-        title="Смена пароля"
+        title={t("profile.changePasswordTitle")}
         open={passwordModalVisible}
         onCancel={() => {
           setPasswordModalVisible(false);
@@ -304,8 +337,8 @@ const ProfilePage = () => {
         >
           <Form.Item
             name="currentPassword"
-            label="Текущий пароль"
-            rules={[{ required: true, message: "Введите текущий пароль" }]}
+            label={t("profile.currentPassword")}
+            rules={[{ required: true, message: t("auth.passwordRequired") }]}
           >
             <Input.Password
               prefix={<LockOutlined />}
@@ -316,10 +349,10 @@ const ProfilePage = () => {
 
           <Form.Item
             name="newPassword"
-            label="Новый пароль"
+            label={t("profile.newPassword")}
             rules={[
-              { required: true, message: "Введите новый пароль" },
-              { min: 8, message: "Пароль должен содержать минимум 8 символов" },
+              { required: true, message: t("auth.passwordRequired") },
+              { min: 8, message: t("auth.passwordMin") },
               forbiddenPasswordValidator,
             ]}
           >
@@ -332,16 +365,16 @@ const ProfilePage = () => {
 
           <Form.Item
             name="confirmPassword"
-            label="Подтверждение нового пароля"
+            label={t("profile.confirmNewPassword")}
             dependencies={["newPassword"]}
             rules={[
-              { required: true, message: "Подтвердите новый пароль" },
+              { required: true, message: t("auth.confirmPasswordRequired") },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue("newPassword") === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error("Пароли не совпадают"));
+                  return Promise.reject(new Error(t("auth.passwordsNotMatch")));
                 },
               }),
             ]}
@@ -361,10 +394,10 @@ const ProfilePage = () => {
                   passwordForm.resetFields();
                 }}
               >
-                Отмена
+                {t("common.cancel")}
               </Button>
               <Button type="primary" htmlType="submit">
-                Сменить пароль
+                {t("profile.changePassword")}
               </Button>
             </Space>
           </Form.Item>

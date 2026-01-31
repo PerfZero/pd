@@ -36,7 +36,7 @@ export const getAllUsers = async (req, res, next) => {
     const { page = 1, limit = 10, search, role, isActive } = req.query;
 
     const offset = (page - 1) * limit;
-    const where = {};
+    const where = { isDeleted: false };
 
     // Фильтр по поиску
     if (search) {
@@ -97,7 +97,7 @@ export const getUserById = async (req, res, next) => {
     const { id } = req.params;
 
     const user = await User.findByPk(id);
-    if (!user) {
+    if (!user || user.isDeleted) {
       throw new AppError("Пользователь не найден", 404);
     }
 
@@ -156,7 +156,7 @@ export const updateUser = async (req, res, next) => {
     delete updateData.password;
 
     const user = await User.findByPk(id);
-    if (!user) {
+    if (!user || user.isDeleted) {
       throw new AppError("Пользователь не найден", 404);
     }
 
@@ -197,15 +197,108 @@ export const deleteUser = async (req, res, next) => {
     }
 
     const user = await User.findByPk(id);
-    if (!user) {
+    if (!user || user.isDeleted) {
       throw new AppError("Пользователь не найден", 404);
     }
 
-    await user.destroy();
+    await user.update({
+      isDeleted: true,
+      deletedAt: new Date(),
+      isActive: false,
+    });
 
     res.json({
       success: true,
       message: "Пользователь удален успешно",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDeletedUsers = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, search } = req.query;
+    const offset = (page - 1) * limit;
+    const where = { isDeleted: true };
+
+    if (search) {
+      where[Op.or] = [
+        { firstName: { [Op.iLike]: `%${search}%` } },
+        { lastName: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const { count, rows: users } = await User.findAndCountAll({
+      where,
+      attributes: [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "role",
+        "counterpartyId",
+        "identificationNumber",
+        "isActive",
+        "deletedAt",
+        "createdAt",
+      ],
+      limit: parseInt(limit),
+      offset,
+      order: [["deletedAt", "DESC"]],
+    });
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: count,
+          pages: Math.ceil(count / limit),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const restoreUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(id);
+    if (!user || !user.isDeleted) {
+      throw new AppError("Пользователь не найден", 404);
+    }
+
+    // Проверяем, не существует ли активный пользователь с таким email
+    const existing = await User.findOne({
+      where: {
+        email: user.email,
+        isDeleted: false,
+        id: { [Op.ne]: user.id },
+      },
+    });
+    if (existing) {
+      throw new AppError(
+        "Невозможно восстановить: найден активный пользователь с таким email",
+        409,
+      );
+    }
+
+    await user.update({
+      isDeleted: false,
+      deletedAt: null,
+    });
+
+    res.json({
+      success: true,
+      message: "Пользователь восстановлен",
+      data: { user },
     });
   } catch (error) {
     next(error);
@@ -225,7 +318,7 @@ export const updatePassword = async (req, res, next) => {
     const user = await User.findByPk(id, {
       attributes: { include: ["password"] },
     });
-    if (!user) {
+    if (!user || user.isDeleted) {
       throw new AppError("Пользователь не найден", 404);
     }
 
@@ -328,7 +421,7 @@ export const getMyProfile = async (req, res, next) => {
 export const updateMyProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { firstName, email } = req.body;
+    const { firstName, email, userLanguage } = req.body;
 
     const user = await User.findByPk(userId);
     if (!user) {
@@ -349,6 +442,13 @@ export const updateMyProfile = async (req, res, next) => {
     const updateData = {};
     if (firstName !== undefined) updateData.firstName = firstName;
     if (email !== undefined) updateData.email = email;
+    if (userLanguage !== undefined) {
+      const allowedRoles = ["user", "admin"];
+      if (!allowedRoles.includes(req.user.role)) {
+        throw new AppError("Недостаточно прав для изменения языка", 403);
+      }
+      updateData.userLanguage = userLanguage;
+    }
 
     await user.update(updateData);
 
