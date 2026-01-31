@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   Table,
@@ -47,7 +47,6 @@ const CounterpartiesPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [objectsModalVisible, setObjectsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [editingRecord, setEditingRecord] = useState(null);
   const [selectedCounterpartyId, setSelectedCounterpartyId] = useState(null);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -85,33 +84,6 @@ const CounterpartiesPage = () => {
       user?.counterpartyId &&
       user?.counterpartyId !== defaultCounterpartyId);
 
-  // Проверка: может ли пользователь просматривать страницу
-  const canViewCounterparties =
-    user?.role === "admin" ||
-    (user?.role === "user" &&
-      user?.counterpartyId &&
-      user?.counterpartyId !== defaultCounterpartyId);
-
-  // Если user (default) - показываем 403
-  if (
-    defaultCounterpartyId !== null &&
-    user?.role === "user" &&
-    user?.counterpartyId === defaultCounterpartyId
-  ) {
-    return (
-      <Result
-        status="403"
-        title="403 - Доступ запрещен"
-        subTitle="У вас нет доступа к справочнику контрагентов. Для работы доступны сотрудники вашей организации."
-        extra={
-          <Link to="/employees">
-            <Button type="primary">Перейти к сотрудникам</Button>
-          </Link>
-        }
-      />
-    );
-  }
-
   // Debounce для фильтров (500мс)
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -130,11 +102,7 @@ const CounterpartiesPage = () => {
   }, [filters]);
 
   // Загрузка данных при изменении debounced фильтров или пагинации
-  useEffect(() => {
-    fetchData();
-  }, [pagination.current, debouncedFilters]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: response } = await counterpartyService.getAll({
@@ -153,18 +121,20 @@ const CounterpartiesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedFilters, message, pagination]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAdd = () => {
     setEditingId(null);
-    setEditingRecord(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record) => {
     setEditingId(record.id);
-    setEditingRecord(record);
 
     // Для admin устанавливаем все поля включая type
     // Для user (не default) устанавливаем все кроме type
@@ -281,6 +251,26 @@ const CounterpartiesPage = () => {
     setSelectedCounterpartyId(counterpartyId);
     setObjectsModalVisible(true);
   };
+
+  // Если user (default) - показываем 403
+  if (
+    defaultCounterpartyId !== null &&
+    user?.role === "user" &&
+    user?.counterpartyId === defaultCounterpartyId
+  ) {
+    return (
+      <Result
+        status="403"
+        title="403 - Доступ запрещен"
+        subTitle="У вас нет доступа к справочнику контрагентов. Для работы доступны сотрудники вашей организации."
+        extra={
+          <Link to="/employees">
+            <Button type="primary">Перейти к сотрудникам</Button>
+          </Link>
+        }
+      />
+    );
+  }
 
   const handleSaveObjects = async (selectedIds) => {
     try {

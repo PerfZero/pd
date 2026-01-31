@@ -1,28 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 // Все доступные столбцы для экспорта (в стандартном порядке)
 const DEFAULT_COLUMNS = [
-  { key: 'number', label: '№ п/п' },
-  { key: 'fullName', label: 'ФИО' },
-  { key: 'kig', label: 'КИГ' },
-  { key: 'citizenship', label: 'Гражданство' },
-  { key: 'birthDate', label: 'Дата рождения' },
-  { key: 'snils', label: 'СНИЛС' },
-  { key: 'position', label: 'Должность' },
-  { key: 'inn', label: 'ИНН сотрудника' },
-  { key: 'passport', label: 'Паспорт' },
-  { key: 'passportDate', label: 'Дата выдачи паспорта' },
-  { key: 'passportIssuer', label: 'Орган выдачи паспорта' },
-  { key: 'registrationAddress', label: 'Адрес регистрации' },
-  { key: 'phone', label: 'Телефон' },
-  { key: 'counterparty', label: 'Контрагент' },
-  { key: 'counterpartyInn', label: 'ИНН контрагента' },
-  { key: 'counterpartyKpp', label: 'КПП контрагента' },
+  { key: "number", label: "№ п/п" },
+  { key: "fullName", label: "ФИО" },
+  { key: "kig", label: "КИГ" },
+  { key: "citizenship", label: "Гражданство" },
+  { key: "birthDate", label: "Дата рождения" },
+  { key: "snils", label: "СНИЛС" },
+  { key: "position", label: "Должность" },
+  { key: "inn", label: "ИНН сотрудника" },
+  { key: "passport", label: "Паспорт" },
+  { key: "passportDate", label: "Дата выдачи паспорта" },
+  { key: "passportIssuer", label: "Орган выдачи паспорта" },
+  { key: "registrationAddress", label: "Адрес регистрации" },
+  { key: "phone", label: "Телефон" },
+  { key: "counterparty", label: "Контрагент" },
+  { key: "counterpartyInn", label: "ИНН контрагента" },
+  { key: "counterpartyKpp", label: "КПП контрагента" },
 ];
 
 export const AVAILABLE_COLUMNS = DEFAULT_COLUMNS;
 
-const STORAGE_KEY = 'passdesk_excel_columns_selection';
+const STORAGE_KEY = "passdesk_excel_columns_selection";
 
 // Получить дефолтное состояние (все столбцы активны в стандартном порядке)
 const getDefaultSelection = () => {
@@ -51,15 +51,16 @@ export const useExcelColumns = () => {
         // Проверяем что это массив и есть все нужные поля
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Синхронизируем с DEFAULT_COLUMNS - добавляем новые столбцы
-          const defaultKeys = DEFAULT_COLUMNS.map(col => col.key);
-          const savedKeys = parsed.map(col => col.key);
-          
+          const savedKeys = parsed.map((col) => col.key);
+
           // Находим новые столбцы, которых нет в сохраненных
-          const newColumns = DEFAULT_COLUMNS.filter(col => !savedKeys.includes(col.key));
-          
+          const newColumns = DEFAULT_COLUMNS.filter(
+            (col) => !savedKeys.includes(col.key),
+          );
+
           if (newColumns.length > 0) {
             // Добавляем новые столбцы в конец с enabled: true
-            const maxOrder = Math.max(...parsed.map(col => col.order || 0));
+            const maxOrder = Math.max(...parsed.map((col) => col.order || 0));
             const updatedColumns = [
               ...parsed,
               ...newColumns.map((col, index) => ({
@@ -67,7 +68,7 @@ export const useExcelColumns = () => {
                 label: col.label,
                 enabled: true,
                 order: maxOrder + index + 1,
-              }))
+              })),
             ];
             setColumns(updatedColumns);
             // Сохраняем обновленный список
@@ -78,7 +79,7 @@ export const useExcelColumns = () => {
         }
       }
     } catch (error) {
-      console.error('Error loading Excel columns selection:', error);
+      console.error("Error loading Excel columns selection:", error);
     } finally {
       setIsLoading(false);
     }
@@ -90,53 +91,59 @@ export const useExcelColumns = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newColumns));
     } catch (error) {
-      console.error('Error saving Excel columns selection:', error);
+      console.error("Error saving Excel columns selection:", error);
     }
   };
 
   // Включить/отключить столбец
   const toggleColumn = (columnKey) => {
-    const updated = columns.map(col => 
-      col.key === columnKey ? { ...col, enabled: !col.enabled } : col
+    const updated = columns.map((col) =>
+      col.key === columnKey ? { ...col, enabled: !col.enabled } : col,
     );
     updateColumns(updated);
   };
 
   // Переместить столбец вверх
   const moveColumnUp = (columnKey) => {
-    const currentIndex = columns.findIndex(col => col.key === columnKey);
+    const currentIndex = columns.findIndex((col) => col.key === columnKey);
     if (currentIndex <= 0) return;
 
     const updated = [...columns];
-    [updated[currentIndex], updated[currentIndex - 1]] = [updated[currentIndex - 1], updated[currentIndex]];
-    
+    [updated[currentIndex], updated[currentIndex - 1]] = [
+      updated[currentIndex - 1],
+      updated[currentIndex],
+    ];
+
     // Обновляем значения order для корректности
     updated.forEach((col, index) => {
       col.order = index;
     });
-    
+
     updateColumns(updated);
   };
 
   // Переместить столбец вниз
   const moveColumnDown = (columnKey) => {
-    const currentIndex = columns.findIndex(col => col.key === columnKey);
+    const currentIndex = columns.findIndex((col) => col.key === columnKey);
     if (currentIndex >= columns.length - 1) return;
 
     const updated = [...columns];
-    [updated[currentIndex], updated[currentIndex + 1]] = [updated[currentIndex + 1], updated[currentIndex]];
-    
+    [updated[currentIndex], updated[currentIndex + 1]] = [
+      updated[currentIndex + 1],
+      updated[currentIndex],
+    ];
+
     // Обновляем значения order для корректности
     updated.forEach((col, index) => {
       col.order = index;
     });
-    
+
     updateColumns(updated);
   };
 
   // Включить все
   const selectAll = () => {
-    const allSelected = columns.map(col => ({
+    const allSelected = columns.map((col) => ({
       ...col,
       enabled: true,
     }));
@@ -145,7 +152,7 @@ export const useExcelColumns = () => {
 
   // Отключить все
   const deselectAll = () => {
-    const allDeselected = columns.map(col => ({
+    const allDeselected = columns.map((col) => ({
       ...col,
       enabled: false,
     }));
@@ -154,7 +161,7 @@ export const useExcelColumns = () => {
 
   // Получить список активных столбцов в порядке
   const getActiveColumns = () => {
-    return columns.filter(col => col.enabled);
+    return columns.filter((col) => col.enabled);
   };
 
   // Сбросить в дефолтное состояние
@@ -176,4 +183,3 @@ export const useExcelColumns = () => {
     getActiveColumns,
   };
 };
-

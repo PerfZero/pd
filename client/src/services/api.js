@@ -5,14 +5,9 @@ import { jwtDecode } from "jwt-decode";
 // Флаг для предотвращения множественных уведомлений
 let isRedirecting = false;
 
-// Флаг для предотвращения множественных refresh запросов
-let isRefreshing = false;
-let failedQueue = [];
-
 // Счетчик попыток refresh для exponential backoff
 let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
-const REFRESH_TIMEOUT = 5000; // 5 секунд между попытками
 
 const resetAuthState = () => {
   useAuthStore.setState({
@@ -22,20 +17,6 @@ const resetAuthState = () => {
     isAuthenticated: false,
   });
   localStorage.removeItem("auth-storage");
-};
-
-// Очередь для обработки запросов, пока идет refresh
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-
-  isRefreshing = false;
-  failedQueue = [];
 };
 
 // Функция для получения базового URL
@@ -204,20 +185,7 @@ api.interceptors.response.use(
       if (!isRedirecting) {
         isRedirecting = true;
 
-        // Определяем причину ошибки
         const errorMessage = error.response?.data?.message || "";
-        let notificationMessage =
-          "Ваша сессия истекла. Пожалуйста, войдите снова.";
-
-        if (errorMessage.includes("Token expired")) {
-          notificationMessage =
-            "⏱️ Время сессии истекло. Войдите в систему заново.";
-        } else if (errorMessage.includes("Invalid token")) {
-          notificationMessage =
-            "🔐 Невалидный токен. Требуется повторная авторизация.";
-        } else if (errorMessage.includes("No token provided")) {
-          notificationMessage = "🔐 Необходима авторизация.";
-        }
 
         console.warn("🚪 Logging out user due to 401 error:", errorMessage);
 

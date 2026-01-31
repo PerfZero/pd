@@ -75,7 +75,7 @@ const getInitialHiddenColumns = () => {
  * Адаптивный дизайн: таблица на десктопе, карточки на мобильных
  */
 const EmployeesPage = () => {
-  const { message, modal } = App.useApp();
+  const { modal } = App.useApp();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -193,7 +193,7 @@ const EmployeesPage = () => {
 
   // Определяем, может ли пользователь удалять сотрудника
   // Удаление доступно только администраторам
-  const canDeleteEmployee = (employee) => {
+  const canDeleteEmployee = () => {
     return user?.role === "admin";
   };
 
@@ -403,42 +403,37 @@ const EmployeesPage = () => {
   };
 
   const handleFormSuccess = async (values) => {
-    try {
-      if (editingEmployee) {
-        // Обновление существующего сотрудника
-        const updated = await updateEmployee(editingEmployee.id, values);
-        setEditingEmployee(updated);
+    if (editingEmployee) {
+      // Обновление существующего сотрудника
+      const updated = await updateEmployee(editingEmployee.id, values);
+      setEditingEmployee(updated);
 
-        // Проверяем есть ли у сотрудника статусы с is_upload = true
-        // Если есть - устанавливаем статус "Редактирован" с is_upload = true
-        if (
-          editingEmployee.statusMappings &&
-          editingEmployee.statusMappings.length > 0
-        ) {
-          const hasUploadedStatus = editingEmployee.statusMappings.some(
-            (mapping) => mapping.isUpload,
-          );
+      // Проверяем есть ли у сотрудника статусы с is_upload = true
+      // Если есть - устанавливаем статус "Редактирован" с is_upload = true
+      if (
+        editingEmployee.statusMappings &&
+        editingEmployee.statusMappings.length > 0
+      ) {
+        const hasUploadedStatus = editingEmployee.statusMappings.some(
+          (mapping) => mapping.isUpload,
+        );
 
-          if (hasUploadedStatus) {
-            try {
-              // Устанавливаем статус "Редактирован" с is_upload = true
-              await employeeApi.setEditedStatus(editingEmployee.id, true);
-            } catch (error) {
-              console.warn("Error setting edited status:", error);
-              // Не прерываем процесс сохранения если ошибка при установке статуса
-            }
+        if (hasUploadedStatus) {
+          try {
+            // Устанавливаем статус "Редактирован" с is_upload = true
+            await employeeApi.setEditedStatus(editingEmployee.id, true);
+          } catch (error) {
+            console.warn("Error setting edited status:", error);
+            // Не прерываем процесс сохранения если ошибка при установке статуса
           }
         }
-      } else {
-        // Создание нового сотрудника
-        const newEmployee = await createEmployee(values);
-        setEditingEmployee(newEmployee);
       }
-      refetchEmployees();
-    } catch (error) {
-      // Ошибка уже обработана в хуке
-      throw error;
+    } else {
+      // Создание нового сотрудника
+      const newEmployee = await createEmployee(values);
+      setEditingEmployee(newEmployee);
     }
+    refetchEmployees();
   };
 
   // Сброс фильтров таблицы
@@ -586,7 +581,7 @@ const EmployeesPage = () => {
           <Space size="middle">
             <Dropdown
               trigger={["click"]}
-              dropdownRender={() => (
+              popupRender={() => (
                 <div
                   style={{
                     padding: 12,

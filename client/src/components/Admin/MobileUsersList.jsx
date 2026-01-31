@@ -8,7 +8,6 @@ import {
   Spin,
   Empty,
   Switch,
-  App,
   Button,
 } from "antd";
 import {
@@ -178,9 +177,7 @@ const MobileUsersList = ({
               {currentUser?.role === "admin" && user.id !== currentUser?.id && (
                 <Switch
                   checked={user.isActive}
-                  onChange={(checked) => {
-                    onStatusToggle(user.id);
-                  }}
+                  onChange={() => onStatusToggle(user.id)}
                   size="small"
                   style={{ margin: 0 }}
                 />
@@ -235,8 +232,6 @@ const UserDrawer = ({
   currentUser,
   onEdit,
 }) => {
-  const { message } = App.useApp();
-
   // Получить имя контрагента
   const getCounterpartyName = (counterpartyId) => {
     if (!counterpartyId) return "-";

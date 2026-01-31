@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   Tabs,
   Card,
@@ -151,7 +151,7 @@ const OccupationalSafetyPage = () => {
     if (!activeTab || activeTab === "contractor") {
       setActiveTab(isStaff ? "all" : "contractor");
     }
-  }, [isStaff]);
+  }, [activeTab, isStaff]);
 
   const loadContractorDocs = async ({
     constructionSiteId,
@@ -297,7 +297,7 @@ const OccupationalSafetyPage = () => {
     user?.counterpartyId,
   ]);
 
-  const loadSettingsData = async () => {
+  const loadSettingsData = useCallback(async () => {
     if (!canManageSettings) return;
 
     try {
@@ -332,7 +332,7 @@ const OccupationalSafetyPage = () => {
     } finally {
       setSettingsLoading(false);
     }
-  };
+  }, [canManageSettings, selectedCategoryId]);
 
   useEffect(() => {
     if (!isStaff || !isAllowed) return;
@@ -340,9 +340,9 @@ const OccupationalSafetyPage = () => {
     if (activeTab === "settings") {
       loadSettingsData();
     }
-  }, [activeTab, canManageSettings, isAllowed]);
+  }, [activeTab, isAllowed, isStaff, loadSettingsData]);
 
-  const loadObjectStatuses = async (constructionSiteId) => {
+  const loadObjectStatuses = useCallback(async (constructionSiteId) => {
     if (!constructionSiteId) return;
 
     try {
@@ -357,9 +357,9 @@ const OccupationalSafetyPage = () => {
     } finally {
       setObjectStatusLoading(false);
     }
-  };
+  }, []);
 
-  const loadAllSiteSummaries = async () => {
+  const loadAllSiteSummaries = useCallback(async () => {
     if (!constructionSites.length) return;
 
     const requestId = (allSiteRequestRef.current += 1);
@@ -415,7 +415,7 @@ const OccupationalSafetyPage = () => {
         setAllSiteLoading(false);
       }
     }
-  };
+  }, [constructionSites]);
 
   useEffect(() => {
     if (!isStaff || !isAllowed) return;
@@ -433,6 +433,8 @@ const OccupationalSafetyPage = () => {
     isAllowed,
     selectedConstructionSiteId,
     constructionSites,
+    loadAllSiteSummaries,
+    loadObjectStatuses,
   ]);
 
   const contractorTree = useMemo(() => {
@@ -750,19 +752,22 @@ const OccupationalSafetyPage = () => {
     }
   };
 
-  const handleOpenCategoryModal = (category = null) => {
-    setEditingCategory(category);
-    categoryForm.resetFields();
-    if (category) {
-      categoryForm.setFieldsValue({
-        name: category.name,
-        description: category.description,
-        parentId: category.parentId || null,
-        sortOrder: category.sortOrder ?? 0,
-      });
-    }
-    setCategoryModalOpen(true);
-  };
+  const handleOpenCategoryModal = useCallback(
+    (category = null) => {
+      setEditingCategory(category);
+      categoryForm.resetFields();
+      if (category) {
+        categoryForm.setFieldsValue({
+          name: category.name,
+          description: category.description,
+          parentId: category.parentId || null,
+          sortOrder: category.sortOrder ?? 0,
+        });
+      }
+      setCategoryModalOpen(true);
+    },
+    [categoryForm],
+  );
 
   const handleCategorySubmit = async () => {
     try {
@@ -784,25 +789,28 @@ const OccupationalSafetyPage = () => {
     }
   };
 
-  const handleDeleteCategory = (category) => {
-    Modal.confirm({
-      title: "Удалить категорию?",
-      content: "Категория будет скрыта в списке. Документы сохранятся.",
-      okText: "Удалить",
-      okType: "danger",
-      cancelText: "Отмена",
-      onOk: async () => {
-        try {
-          await otService.deleteCategory(category.id);
-          message.success("Категория удалена");
-          await loadSettingsData();
-        } catch (error) {
-          console.error("Error deleting OT category:", error);
-          message.error("Ошибка при удалении категории");
-        }
-      },
-    });
-  };
+  const handleDeleteCategory = useCallback(
+    (category) => {
+      Modal.confirm({
+        title: "Удалить категорию?",
+        content: "Категория будет скрыта в списке. Документы сохранятся.",
+        okText: "Удалить",
+        okType: "danger",
+        cancelText: "Отмена",
+        onOk: async () => {
+          try {
+            await otService.deleteCategory(category.id);
+            message.success("Категория удалена");
+            await loadSettingsData();
+          } catch (error) {
+            console.error("Error deleting OT category:", error);
+            message.error("Ошибка при удалении категории");
+          }
+        },
+      });
+    },
+    [loadSettingsData],
+  );
 
   const handleOpenDocumentModal = (document = null) => {
     setEditingDocument(document);
@@ -1067,7 +1075,7 @@ const OccupationalSafetyPage = () => {
       }));
 
     return buildTree(settingsCategories);
-  }, [settingsCategories]);
+  }, [settingsCategories, handleDeleteCategory, handleOpenCategoryModal]);
 
   const objectStatusSummary = useMemo(() => {
     return objectStatuses.reduce(

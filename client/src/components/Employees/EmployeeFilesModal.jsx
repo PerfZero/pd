@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Modal, List, Button, Tooltip, Space, Spin } from 'antd';
+import { useState, useEffect, useCallback } from "react";
+import { Modal, List, Button, Tooltip, Space, Spin } from "antd";
 import {
   FileOutlined,
   EyeOutlined,
@@ -8,22 +8,59 @@ import {
   FileImageOutlined,
   FileExcelOutlined,
   FileWordOutlined,
-} from '@ant-design/icons';
-import { FileViewer } from '../../shared/ui/FileViewer';
-import { employeeService } from '../../services/employeeService';
+} from "@ant-design/icons";
+import { FileViewer } from "../../shared/ui/FileViewer";
+import { employeeService } from "../../services/employeeService";
 
-const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFilesUpdated }) => {
+const EmployeeFilesModal = ({
+  visible,
+  employeeId,
+  employeeName,
+  onClose,
+  onFilesUpdated,
+}) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewingFile, setViewingFile] = useState(null);
+
+  const fetchFiles = useCallback(
+    async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
+      try {
+        const response = await employeeService.getFiles(employeeId);
+        const newFiles = response.data || [];
+
+        // Проверяем, изменилось ли количество файлов
+        if (files.length !== newFiles.length) {
+          setFiles(newFiles);
+          // Вызываем callback для обновления таблицы
+          if (onFilesUpdated) {
+            onFilesUpdated(newFiles.length);
+          }
+        } else if (!silent) {
+          // Обновляем даже если количество не изменилось, но в явном виде (не silent)
+          setFiles(newFiles);
+        }
+      } catch (error) {
+        console.error("Error loading files:", error);
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [employeeId, files.length, onFilesUpdated],
+  );
 
   // Загрузка файлов при открытии модального окна
   useEffect(() => {
     if (visible && employeeId) {
       fetchFiles();
     }
-  }, [visible, employeeId]);
+  }, [visible, employeeId, fetchFiles]);
 
   // Периодическая проверка обновления файлов каждые 2 секунды
   useEffect(() => {
@@ -34,47 +71,19 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [visible, employeeId]);
-
-  const fetchFiles = async (silent = false) => {
-    if (!silent) {
-      setLoading(true);
-    }
-    try {
-      const response = await employeeService.getFiles(employeeId);
-      const newFiles = response.data || [];
-      
-      // Проверяем, изменилось ли количество файлов
-      if (files.length !== newFiles.length) {
-        setFiles(newFiles);
-        // Вызываем callback для обновления таблицы
-        if (onFilesUpdated) {
-          onFilesUpdated(newFiles.length);
-        }
-      } else if (!silent) {
-        // Обновляем даже если количество не изменилось, но в явном виде (не silent)
-        setFiles(newFiles);
-      }
-    } catch (error) {
-      console.error('Error loading files:', error);
-    } finally {
-      if (!silent) {
-        setLoading(false);
-      }
-    }
-  };
+  }, [visible, fetchFiles]);
 
   const getFileIcon = (mimeType) => {
-    if (mimeType.startsWith('image/')) {
-      return <FileImageOutlined style={{ fontSize: 32, color: '#52c41a' }} />;
-    } else if (mimeType.includes('pdf')) {
-      return <FilePdfOutlined style={{ fontSize: 32, color: '#f5222d' }} />;
-    } else if (mimeType.includes('sheet') || mimeType.includes('excel')) {
-      return <FileExcelOutlined style={{ fontSize: 32, color: '#52c41a' }} />;
-    } else if (mimeType.includes('word') || mimeType.includes('document')) {
-      return <FileWordOutlined style={{ fontSize: 32, color: '#1890ff' }} />;
+    if (mimeType.startsWith("image/")) {
+      return <FileImageOutlined style={{ fontSize: 32, color: "#52c41a" }} />;
+    } else if (mimeType.includes("pdf")) {
+      return <FilePdfOutlined style={{ fontSize: 32, color: "#f5222d" }} />;
+    } else if (mimeType.includes("sheet") || mimeType.includes("excel")) {
+      return <FileExcelOutlined style={{ fontSize: 32, color: "#52c41a" }} />;
+    } else if (mimeType.includes("word") || mimeType.includes("document")) {
+      return <FileWordOutlined style={{ fontSize: 32, color: "#1890ff" }} />;
     }
-    return <FileOutlined style={{ fontSize: 32, color: '#8c8c8c' }} />;
+    return <FileOutlined style={{ fontSize: 32, color: "#8c8c8c" }} />;
   };
 
   const formatFileSize = (bytes) => {
@@ -85,42 +94,37 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
 
   const handleDownload = async (file) => {
     try {
-      const response = await employeeService.getFileDownloadLink(employeeId, file.id);
+      const response = await employeeService.getFileDownloadLink(
+        employeeId,
+        file.id,
+      );
       if (response.data.downloadUrl) {
         // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
-        window.open(response.data.downloadUrl, '_blank');
+        window.open(response.data.downloadUrl, "_blank");
       }
     } catch (error) {
-      console.error('Error getting download link:', error);
-    }
-  };
-
-  const handleView = async (file) => {
-    try {
-      const response = await employeeService.getFileViewLink(employeeId, file.id);
-      if (response.data.viewUrl) {
-        window.open(response.data.viewUrl, '_blank');
-      }
-    } catch (error) {
-      console.error('Error getting view link:', error);
+      console.error("Error getting download link:", error);
     }
   };
 
   const handlePreview = async (file) => {
     // Открываем файл во встроенном просмотрщике с увеличением
     try {
-      const response = await employeeService.getFileViewLink(employeeId, file.id);
+      const response = await employeeService.getFileViewLink(
+        employeeId,
+        file.id,
+      );
       if (response.data.viewUrl) {
         setViewingFile({
           url: response.data.viewUrl,
           name: file.fileName,
           mimeType: file.mimeType,
-          fileId: file.id
+          fileId: file.id,
         });
         setViewerVisible(true);
       }
     } catch (error) {
-      console.error('Error getting view link:', error);
+      console.error("Error getting view link:", error);
     }
   };
 
@@ -128,13 +132,16 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
   const handleDownloadFromViewer = async () => {
     if (viewingFile) {
       try {
-        const response = await employeeService.getFileDownloadLink(employeeId, viewingFile.fileId);
+        const response = await employeeService.getFileDownloadLink(
+          employeeId,
+          viewingFile.fileId,
+        );
         if (response.data.downloadUrl) {
           // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
-          window.open(response.data.downloadUrl, '_blank');
+          window.open(response.data.downloadUrl, "_blank");
         }
       } catch (error) {
-        console.error('Error getting download link:', error);
+        console.error("Error getting download link:", error);
       }
     }
   };
@@ -149,30 +156,30 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
         footer={[
           <Button key="close" onClick={onClose}>
             Закрыть
-          </Button>
+          </Button>,
         ]}
       >
         <Spin spinning={loading}>
           <List
             dataSource={files}
-            locale={{ emptyText: 'Нет загруженных файлов' }}
+            locale={{ emptyText: "Нет загруженных файлов" }}
             renderItem={(file) => (
               <List.Item
                 actions={[
-                  <Tooltip title="Просмотр">
+                  <Tooltip key="preview" title="Просмотр">
                     <Button
                       icon={<EyeOutlined />}
                       size="small"
                       onClick={() => handlePreview(file)}
                     />
                   </Tooltip>,
-                  <Tooltip title="Скачать">
+                  <Tooltip key="download" title="Скачать">
                     <Button
                       icon={<DownloadOutlined />}
                       size="small"
                       onClick={() => handleDownload(file)}
                     />
-                  </Tooltip>
+                  </Tooltip>,
                 ]}
               >
                 <List.Item.Meta
@@ -181,7 +188,9 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
                   description={
                     <Space split="|">
                       <span>{formatFileSize(file.fileSize)}</span>
-                      <span>{new Date(file.createdAt).toLocaleDateString('ru-RU')}</span>
+                      <span>
+                        {new Date(file.createdAt).toLocaleDateString("ru-RU")}
+                      </span>
                     </Space>
                   }
                 />
@@ -205,4 +214,3 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
 };
 
 export default EmployeeFilesModal;
-

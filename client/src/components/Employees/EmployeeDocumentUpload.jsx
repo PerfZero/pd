@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button, Image, App, Space, Popconfirm, Tooltip, Spin } from "antd";
 import {
   UploadOutlined,
@@ -55,14 +55,6 @@ const EmployeeDocumentUpload = ({
     setEffectiveEmployeeId(employeeId || null);
   }, [employeeId]);
 
-  useEffect(() => {
-    if (effectiveEmployeeId) {
-      fetchFiles();
-    } else {
-      setFiles([]);
-    }
-  }, [effectiveEmployeeId, documentType]);
-
   const resolveEmployeeId = async () => {
     if (effectiveEmployeeId) {
       return effectiveEmployeeId;
@@ -86,7 +78,7 @@ const EmployeeDocumentUpload = ({
   };
 
   // Загрузка файлов с сервера
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     setLoading(true);
     try {
       if (!effectiveEmployeeId) {
@@ -110,7 +102,15 @@ const EmployeeDocumentUpload = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [documentType, effectiveEmployeeId, message]);
+
+  useEffect(() => {
+    if (effectiveEmployeeId) {
+      fetchFiles();
+    } else {
+      setFiles([]);
+    }
+  }, [effectiveEmployeeId, documentType, fetchFiles]);
 
   // Загрузка файла (универсальная функция)
   const uploadFile = async (file) => {
@@ -152,12 +152,6 @@ const EmployeeDocumentUpload = ({
     } finally {
       setUploading(false);
     }
-  };
-
-  // Загрузка файла через Upload компонент
-  const handleUpload = async (options) => {
-    const { file } = options;
-    await uploadFile(file);
   };
 
   // Обработка захвата с камеры (OpenCV)
@@ -270,14 +264,6 @@ const EmployeeDocumentUpload = ({
       console.error("Error getting view link:", error);
       message.error("Ошибка получения ссылки для просмотра");
     }
-  };
-
-  const uploadProps = {
-    accept: ".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx",
-    showUploadList: false,
-    customRequest: handleUpload,
-    multiple: multiple,
-    disabled: uploading || readonly,
   };
 
   return (

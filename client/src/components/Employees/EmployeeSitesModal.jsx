@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Modal, Checkbox, Space, App } from 'antd';
-import { employeeApi } from '@/entities/employee';
-import api from '@/services/api';
-import settingsService from '@/services/settingsService';
-import { constructionSiteService } from '@/services/constructionSiteService';
-import { useAuthStore } from '@/store/authStore';
+import { useState, useEffect, useCallback } from "react";
+import { Modal, Checkbox, Space, App } from "antd";
+import { employeeApi } from "@/entities/employee";
+import api from "@/services/api";
+import settingsService from "@/services/settingsService";
+import { constructionSiteService } from "@/services/constructionSiteService";
+import { useAuthStore } from "@/store/authStore";
 
 const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
   const { message } = App.useApp();
@@ -13,20 +13,7 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [selectedSites, setSelectedSites] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (visible) {
-      fetchConstructionSites();
-      // Устанавливаем уже выбранные объекты
-      if (employee?.employeeCounterpartyMappings) {
-        const siteIds = employee.employeeCounterpartyMappings
-          .map(mapping => mapping.constructionSiteId)
-          .filter(Boolean); // Убираем null значения
-        setSelectedSites(siteIds);
-      }
-    }
-  }, [visible, employee]);
-
-  const fetchConstructionSites = async () => {
+  const fetchConstructionSites = useCallback(async () => {
     try {
       if (!user?.counterpartyId) {
         setConstructionSites([]);
@@ -35,30 +22,46 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
 
       // Получаем публичные настройки (доступно всем пользователям)
       const settingsResponse = await settingsService.getPublicSettings();
-      const defaultCounterpartyId = settingsResponse?.data?.defaultCounterpartyId;
+      const defaultCounterpartyId =
+        settingsResponse?.data?.defaultCounterpartyId;
 
       // Если это default контрагент - загружаем все объекты
       if (user.counterpartyId === defaultCounterpartyId) {
-        const response = await api.get('/construction-sites');
+        const response = await api.get("/construction-sites");
         const sites = response.data.data.constructionSites || [];
         setConstructionSites(sites);
       } else {
         // Для остальных контрагентов - только назначенные объекты
-        const { data } = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
+        const { data } = await constructionSiteService.getCounterpartyObjects(
+          user.counterpartyId,
+        );
         setConstructionSites(data.data || []);
       }
     } catch (error) {
-      console.error('Error loading construction sites:', error);
+      console.error("Error loading construction sites:", error);
       // Не показываем ошибку, если просто нет объектов
       setConstructionSites([]);
     }
-  };
+  }, [user?.counterpartyId]);
+
+  useEffect(() => {
+    if (visible) {
+      fetchConstructionSites();
+      // Устанавливаем уже выбранные объекты
+      if (employee?.employeeCounterpartyMappings) {
+        const siteIds = employee.employeeCounterpartyMappings
+          .map((mapping) => mapping.constructionSiteId)
+          .filter(Boolean); // Убираем null значения
+        setSelectedSites(siteIds);
+      }
+    }
+  }, [visible, employee, fetchConstructionSites]);
 
   const handleSiteChange = (siteId, checked) => {
     if (checked) {
       setSelectedSites([...selectedSites, siteId]);
     } else {
-      setSelectedSites(selectedSites.filter(id => id !== siteId));
+      setSelectedSites(selectedSites.filter((id) => id !== siteId));
     }
   };
 
@@ -67,11 +70,11 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
       setLoading(true);
       // Отправляем выбранные объекты на сервер
       await employeeApi.updateConstructionSites(employee.id, selectedSites);
-      message.success('Объекты обновлены');
+      message.success("Объекты обновлены");
       onCancel(); // Закрываем модальное окно
       onSuccess(); // Обновляем данные в родительском компоненте
     } catch (error) {
-      message.error('Ошибка при сохранении объектов');
+      message.error("Ошибка при сохранении объектов");
     } finally {
       setLoading(false);
     }
@@ -88,20 +91,22 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
       confirmLoading={loading}
       width={600}
     >
-      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+      <div style={{ maxHeight: 400, overflowY: "auto" }}>
         {constructionSites.length === 0 ? (
-          <div style={{ 
-            padding: '20px', 
-            background: '#f0f5ff', 
-            border: '1px solid #adc6ff',
-            borderRadius: '6px',
-            textAlign: 'center',
-            color: '#1890ff'
-          }}>
+          <div
+            style={{
+              padding: "20px",
+              background: "#f0f5ff",
+              border: "1px solid #adc6ff",
+              borderRadius: "6px",
+              textAlign: "center",
+              color: "#1890ff",
+            }}
+          >
             Обратитесь к администратору для назначения доступных объектов
           </div>
         ) : (
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             {constructionSites.map((site) => (
               <Checkbox
                 key={site.id}
@@ -119,4 +124,3 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
 };
 
 export default EmployeeSitesModal;
-

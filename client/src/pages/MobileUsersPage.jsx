@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input, App, Modal, Form, Select, Button, Dropdown } from "antd";
 import {
   SearchOutlined,
@@ -7,7 +7,6 @@ import {
   FilterOutlined,
   CheckOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
 import { userService } from "@/services/userService";
 import { counterpartyService } from "@/services/counterpartyService";
 import { useAuthStore } from "@/store/authStore";
@@ -19,7 +18,6 @@ import MobileUsersList from "@/components/Admin/MobileUsersList";
  */
 const MobileUsersPage = () => {
   const { message } = App.useApp();
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [counterparties, setCounterparties] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,14 +39,8 @@ const MobileUsersPage = () => {
     user: { text: "Пользователь", color: "default" },
   };
 
-  // Загрузка данных при монтировании
-  useEffect(() => {
-    fetchUsers();
-    fetchCounterparties();
-  }, []);
-
   // Загрузить пользователей
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const response = await userService.getAll();
@@ -60,10 +52,10 @@ const MobileUsersPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
   // Загрузить контрагентов
-  const fetchCounterparties = async () => {
+  const fetchCounterparties = useCallback(async () => {
     try {
       // Загружаем все контрагенты без ограничения для поиска в Select
       const { data } = await counterpartyService.getAll({
@@ -75,7 +67,13 @@ const MobileUsersPage = () => {
       console.error("Error loading counterparties:", error);
       message.error("Ошибка загрузки контрагентов");
     }
-  };
+  }, [message]);
+
+  // Загрузка данных при монтировании
+  useEffect(() => {
+    fetchUsers();
+    fetchCounterparties();
+  }, [fetchUsers, fetchCounterparties]);
 
   // Отфильтрованный список пользователей
   const filteredUsers = users.filter((user) => {
@@ -120,13 +118,6 @@ const MobileUsersPage = () => {
     setEditingUser(user);
     form.setFieldsValue(user);
     setIsModalOpen(true);
-  };
-
-  // Открыть форму изменения пароля
-  const handleChangePassword = (user) => {
-    setEditingUser(user);
-    passwordForm.resetFields();
-    setIsPasswordModalOpen(true);
   };
 
   // Сохранить изменения пользователя

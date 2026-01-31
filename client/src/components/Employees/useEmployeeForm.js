@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Form, App } from "antd";
 import { constructionSiteService } from "@/services/constructionSiteService";
 import { useAuthStore } from "@/store/authStore";
@@ -89,62 +89,73 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   }, [cachedSettings]);
 
   // Загрузка справочников (теперь использует кэш)
-  const loadReferences = async (abortSignal) => {
-    // Если сигнал уже отменён до начала - не делаем запрос
-    if (abortSignal?.aborted) {
-      return;
-    }
-
-    setLoadingReferences(true);
-    try {
-      // Загружаем из кэша (или делаем запрос если кэш пустой/старый)
-      const [citizenshipsData, positionsData, settingsData] = await Promise.all(
-        [fetchCitizenships(), fetchPositions(), fetchSettings()],
-      );
-
-      // Проверяем, не был ли запрос отменен
+  const loadReferences = useCallback(
+    async (abortSignal) => {
+      // Если сигнал уже отменён до начала - не делаем запрос
       if (abortSignal?.aborted) {
         return;
       }
 
-      const dcId = settingsData?.defaultCounterpartyId;
-      setDefaultCounterpartyId(dcId);
+      setLoadingReferences(true);
+      try {
+        // Загружаем из кэша (или делаем запрос если кэш пустой/старый)
+        const [, , settingsData] = await Promise.all([
+          fetchCitizenships(),
+          fetchPositions(),
+          fetchSettings(),
+        ]);
 
-      // Загружаем объекты строительства с учетом контрагента
-      // (Объекты строительства не кэшируем глобально, т.к. они зависят от counterpartyId)
-      let sitesData = [];
-      if (user?.counterpartyId) {
-        try {
-          if (user.counterpartyId === dcId) {
-            // Для default контрагента - все объекты
-            const sitesRes = await constructionSiteService.getAll();
-            sitesData = sitesRes.data?.data?.constructionSites || [];
-          } else {
-            // Для остальных - только назначенные
-            const sitesRes =
-              await constructionSiteService.getCounterpartyObjects(
-                user.counterpartyId,
-              );
-            sitesData = sitesRes.data?.data || [];
-          }
-        } catch (sitesError) {
-          console.error("Error loading construction sites:", sitesError);
-          // Не показываем ошибку, просто оставляем пустой массив
-          sitesData = [];
+        // Проверяем, не был ли запрос отменен
+        if (abortSignal?.aborted) {
+          return;
         }
+
+        const dcId = settingsData?.defaultCounterpartyId;
+        setDefaultCounterpartyId(dcId);
+
+        // Загружаем объекты строительства с учетом контрагента
+        // (Объекты строительства не кэшируем глобально, т.к. они зависят от counterpartyId)
+        let sitesData = [];
+        if (user?.counterpartyId) {
+          try {
+            if (user.counterpartyId === dcId) {
+              // Для default контрагента - все объекты
+              const sitesRes = await constructionSiteService.getAll();
+              sitesData = sitesRes.data?.data?.constructionSites || [];
+            } else {
+              // Для остальных - только назначенные
+              const sitesRes =
+                await constructionSiteService.getCounterpartyObjects(
+                  user.counterpartyId,
+                );
+              sitesData = sitesRes.data?.data || [];
+            }
+          } catch (sitesError) {
+            console.error("Error loading construction sites:", sitesError);
+            // Не показываем ошибку, просто оставляем пустой массив
+            sitesData = [];
+          }
+        }
+        setConstructionSites(sitesData);
+      } catch (error) {
+        // Игнорируем ошибки отмены запроса
+        if (error.name === "AbortError" || error.name === "CanceledError") {
+          return;
+        }
+        console.error("❌ Ошибка загрузки справочников:", error);
+        message.error("Ошибка загрузки справочников");
+      } finally {
+        setLoadingReferences(false);
       }
-      setConstructionSites(sitesData);
-    } catch (error) {
-      // Игнорируем ошибки отмены запроса
-      if (error.name === "AbortError" || error.name === "CanceledError") {
-        return;
-      }
-      console.error("❌ Ошибка загрузки справочников:", error);
-      message.error("Ошибка загрузки справочников");
-    } finally {
-      setLoadingReferences(false);
-    }
-  };
+    },
+    [
+      fetchCitizenships,
+      fetchPositions,
+      fetchSettings,
+      message,
+      user?.counterpartyId,
+    ],
+  );
 
   // Проверка гражданства
   const checkCitizenship = (citizenshipId) => {
@@ -291,7 +302,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [loadReferences]);
 
   // Инициализация данных сотрудника
   const initializeEmployeeData = (isMobile = false) => {

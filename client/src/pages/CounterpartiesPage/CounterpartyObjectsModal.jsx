@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Modal, Checkbox, Space, Spin, Empty, App, Alert } from 'antd';
-import { constructionSiteService } from '../../services/constructionSiteService';
-import { counterpartyService } from '../../services/counterpartyService';
-import { useAuthStore } from '../../store/authStore';
-import settingsService from '../../services/settingsService';
+import { useState, useEffect, useCallback } from "react";
+import { Modal, Checkbox, Space, Spin, Empty, App, Alert } from "antd";
+import { constructionSiteService } from "../../services/constructionSiteService";
+import { counterpartyService } from "../../services/counterpartyService";
+import { useAuthStore } from "../../store/authStore";
+import settingsService from "../../services/settingsService";
 
-export const CounterpartyObjectsModal = ({ 
-  visible, 
-  counterpartyId, 
-  onCancel, 
+export const CounterpartyObjectsModal = ({
+  visible,
+  counterpartyId,
+  onCancel,
   onSave,
-  currentObjects = []
 }) => {
   const { message: msg } = App.useApp();
   const { user } = useAuthStore();
@@ -28,26 +27,24 @@ export const CounterpartyObjectsModal = ({
           setDefaultCounterpartyId(response.data.defaultCounterpartyId);
         }
       } catch (error) {
-        console.error('Error loading default counterparty ID:', error);
+        console.error("Error loading default counterparty ID:", error);
       }
     };
-    
+
     loadDefaultCounterpartyId();
   }, []);
 
-  useEffect(() => {
-    if (visible && counterpartyId) {
-      fetchSites();
-      fetchCurrentObjects();
-    }
-  }, [visible, counterpartyId]);
-
-  const fetchSites = async () => {
+  const fetchSites = useCallback(async () => {
     setLoading(true);
     try {
       // Для user (не default) загружаем только объекты своего контрагента
-      if (user?.role === 'user' && user?.counterpartyId !== defaultCounterpartyId) {
-        const response = await counterpartyService.getConstructionSites(user.counterpartyId);
+      if (
+        user?.role === "user" &&
+        user?.counterpartyId !== defaultCounterpartyId
+      ) {
+        const response = await counterpartyService.getConstructionSites(
+          user.counterpartyId,
+        );
         if (response.data.success && Array.isArray(response.data.data)) {
           setSites(response.data.data);
         } else {
@@ -59,31 +56,39 @@ export const CounterpartyObjectsModal = ({
         setSites(response.data.data.constructionSites);
       }
     } catch (error) {
-      msg.error('Ошибка при загрузке объектов');
+      msg.error("Ошибка при загрузке объектов");
       setSites([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [defaultCounterpartyId, msg, user?.counterpartyId, user?.role]);
 
-  const fetchCurrentObjects = async () => {
+  const fetchCurrentObjects = useCallback(async () => {
     try {
-      const response = await constructionSiteService.getCounterpartyObjects(counterpartyId);
+      const response =
+        await constructionSiteService.getCounterpartyObjects(counterpartyId);
       if (response.data.success && Array.isArray(response.data.data)) {
-        setSelectedIds(response.data.data.map(obj => obj.id));
+        setSelectedIds(response.data.data.map((obj) => obj.id));
       } else {
         setSelectedIds([]);
       }
     } catch (error) {
       setSelectedIds([]);
     }
-  };
+  }, [counterpartyId]);
+
+  useEffect(() => {
+    if (visible && counterpartyId) {
+      fetchSites();
+      fetchCurrentObjects();
+    }
+  }, [visible, counterpartyId, fetchSites, fetchCurrentObjects]);
 
   const handleCheckboxChange = (siteId) => {
-    setSelectedIds(prev => 
+    setSelectedIds((prev) =>
       prev.includes(siteId)
-        ? prev.filter(id => id !== siteId)
-        : [...prev, siteId]
+        ? prev.filter((id) => id !== siteId)
+        : [...prev, siteId],
     );
   };
 
@@ -94,7 +99,7 @@ export const CounterpartyObjectsModal = ({
       setSaving(false);
       onCancel();
     } catch (error) {
-      msg.error(error.response?.data?.message || 'Ошибка при сохранении');
+      msg.error(error.response?.data?.message || "Ошибка при сохранении");
       setSaving(false);
     }
   };
@@ -114,29 +119,41 @@ export const CounterpartyObjectsModal = ({
       cancelText="Отмена"
       okButtonProps={{ loading: saving }}
     >
-      {user?.role === 'user' && user?.counterpartyId !== defaultCounterpartyId && (
-        <Alert
-          message="Информация"
-          description="Вы можете назначать только те объекты, которые назначены вашему контрагенту"
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
-      
+      {user?.role === "user" &&
+        user?.counterpartyId !== defaultCounterpartyId && (
+          <Alert
+            message="Информация"
+            description="Вы можете назначать только те объекты, которые назначены вашему контрагенту"
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
       <Spin spinning={loading} tip="Загрузка объектов...">
         {sites.length === 0 ? (
           <Empty description="Нет доступных объектов" />
         ) : (
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {sites.map(site => (
-              <div key={site.id} style={{ padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px' }}>
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            {sites.map((site) => (
+              <div
+                key={site.id}
+                style={{
+                  padding: "8px",
+                  border: "1px solid #f0f0f0",
+                  borderRadius: "4px",
+                }}
+              >
                 <Checkbox
                   checked={selectedIds.includes(site.id)}
                   onChange={() => handleCheckboxChange(site.id)}
                 >
                   <strong>{site.shortName}</strong>
-                  {site.fullName && <div style={{ fontSize: '12px', color: '#666' }}>{site.fullName}</div>}
+                  {site.fullName && (
+                    <div style={{ fontSize: "12px", color: "#666" }}>
+                      {site.fullName}
+                    </div>
+                  )}
                 </Checkbox>
               </div>
             ))}
@@ -146,4 +163,3 @@ export const CounterpartyObjectsModal = ({
     </Modal>
   );
 };
-

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Button, Tag, Tooltip, Space, Popconfirm, Select, Badge } from 'antd';
+import { useMemo } from "react";
+import { Button, Tag, Tooltip, Space, Popconfirm, Select, Badge } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
@@ -7,14 +7,14 @@ import {
   FileOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
-} from '@ant-design/icons';
-import { getStatusPriority } from '@/entities/employee';
-import { calculateDocumentExpiryStatus } from '@/utils/documentExpiry';
-import { PositionFilterDropdown } from './PositionFilterDropdown';
-import { FullNameFilterDropdown } from './FullNameFilterDropdown';
-import { CounterpartyFilterDropdown } from './CounterpartyFilterDropdown';
-import { CreatedAtFilterDropdown } from './CreatedAtFilterDropdown';
-import { DocumentExpiryStatus } from './DocumentExpiryStatus';
+} from "@ant-design/icons";
+import { getStatusPriority } from "@/entities/employee";
+import { calculateDocumentExpiryStatus } from "@/utils/documentExpiry";
+import { PositionFilterDropdown } from "./PositionFilterDropdown";
+import { FullNameFilterDropdown } from "./FullNameFilterDropdown";
+import { CounterpartyFilterDropdown } from "./CounterpartyFilterDropdown";
+import { CreatedAtFilterDropdown } from "./CreatedAtFilterDropdown";
+import { DocumentExpiryStatus } from "./DocumentExpiryStatus";
 
 /**
  * Создание конфигурации колонок для таблицы сотрудников
@@ -27,7 +27,7 @@ export const useEmployeeColumns = ({
   onDelete,
   onViewFiles,
   onDepartmentChange,
-  canExport,
+  canExport: _canExport,
   showCounterpartyColumn, // Новый параметр для показа столбца "Контрагент"
   canDeleteEmployee,
   uniqueFilters,
@@ -39,24 +39,31 @@ export const useEmployeeColumns = ({
 }) => {
   // Определяем, должен ли быть виден столбец Подразделение
   // Видно ТОЛЬКО для пользователей контрагента по умолчанию
-  const showDepartmentColumn = defaultCounterpartyId && userCounterpartyId === defaultCounterpartyId;
-  
+  const showDepartmentColumn =
+    defaultCounterpartyId && userCounterpartyId === defaultCounterpartyId;
+
   return useMemo(() => {
     const columns = [
       {
-        title: '№',
-        key: 'index',
+        title: "№",
+        key: "index",
         width: 55,
-        align: 'center',
+        align: "center",
         render: (text, record, index) => index + 1,
       },
       {
-        title: 'ФИО',
-        key: 'fullName',
+        title: "ФИО",
+        key: "fullName",
         width: 230,
         render: (_, record) => (
-          <div style={{ whiteSpace: 'normal', wordBreak: 'normal', overflowWrap: 'break-word' }}>
-            {record.lastName} {record.firstName} {record.middleName || ''}
+          <div
+            style={{
+              whiteSpace: "normal",
+              wordBreak: "normal",
+              overflowWrap: "break-word",
+            }}
+          >
+            {record.lastName} {record.firstName} {record.middleName || ""}
           </div>
         ),
         sorter: (a, b) => a.lastName.localeCompare(b.lastName),
@@ -69,37 +76,36 @@ export const useEmployeeColumns = ({
           />
         ),
         filterIcon: (filtered) => (
-          <div style={{ color: filtered ? '#1890ff' : undefined }}>
-            ☰
-          </div>
+          <div style={{ color: filtered ? "#1890ff" : undefined }}>☰</div>
         ),
         filteredValue: filters.fullName || [],
         onFilter: (value, record) => {
-          const fullName = `${record.lastName} ${record.firstName} ${record.middleName || ''}`.trim();
+          const fullName =
+            `${record.lastName} ${record.firstName} ${record.middleName || ""}`.trim();
           return fullName === value;
         },
       },
       {
-        title: 'Должность',
-        dataIndex: ['position', 'name'],
-        key: 'position',
+        title: "Должность",
+        dataIndex: ["position", "name"],
+        key: "position",
         width: 186,
         ellipsis: false,
         render: (name) => (
           <div
             style={{
-              whiteSpace: 'normal',
-              wordBreak: 'keep-all',
-              overflowWrap: 'break-word',
-              lineHeight: '1.4',
+              whiteSpace: "normal",
+              wordBreak: "keep-all",
+              overflowWrap: "break-word",
+              lineHeight: "1.4",
             }}
           >
-            {name || '-'}
+            {name || "-"}
           </div>
         ),
         sorter: (a, b) => {
-          const aPos = a.position?.name || '';
-          const bPos = b.position?.name || '';
+          const aPos = a.position?.name || "";
+          const bPos = b.position?.name || "";
           return aPos.localeCompare(bPos);
         },
         filterDropdown: (props) => (
@@ -110,13 +116,11 @@ export const useEmployeeColumns = ({
           />
         ),
         filterIcon: (filtered) => (
-          <div style={{ color: filtered ? '#1890ff' : undefined }}>
-            ☰
-          </div>
+          <div style={{ color: filtered ? "#1890ff" : undefined }}>☰</div>
         ),
         filteredValue: filters.position || [],
         onFilter: (value, record) => {
-          const positionName = record.position?.name || '';
+          const positionName = record.position?.name || "";
           return positionName === value;
         },
       },
@@ -124,8 +128,8 @@ export const useEmployeeColumns = ({
       ...(showDepartmentColumn
         ? [
             {
-              title: 'Подразделение',
-              key: 'department',
+              title: "Подразделение",
+              key: "department",
               width: 180,
               ellipsis: false,
               render: (_, record) => {
@@ -138,25 +142,32 @@ export const useEmployeeColumns = ({
                   <Select
                     value={
                       currentDepartmentId
-                        ? { label: currentDepartmentName, value: currentDepartmentId }
+                        ? {
+                            label: currentDepartmentName,
+                            value: currentDepartmentId,
+                          }
                         : undefined
                     }
                     placeholder="Выберите подразделение"
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                     className="department-select"
                     popupMatchSelectWidth={false}
-                    onChange={(option) => onDepartmentChange(record.id, option?.value || null)}
+                    onChange={(option) =>
+                      onDepartmentChange(record.id, option?.value || null)
+                    }
                     allowClear
                     showSearch
                     optionFilterProp="children"
                     filterOption={(input, option) =>
-                      option.children.toLowerCase().includes(input.toLowerCase())
+                      option.children
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
                     }
                     labelInValue
                   >
                     {departments.map((dept) => (
-                      <Select.Option 
-                        key={dept.id} 
+                      <Select.Option
+                        key={dept.id}
                         value={dept.id}
                         label={dept.name}
                       >
@@ -167,11 +178,16 @@ export const useEmployeeColumns = ({
                 );
               },
               sorter: (a, b) => {
-                const aDept = a.employeeCounterpartyMappings?.[0]?.department?.name || '';
-                const bDept = b.employeeCounterpartyMappings?.[0]?.department?.name || '';
+                const aDept =
+                  a.employeeCounterpartyMappings?.[0]?.department?.name || "";
+                const bDept =
+                  b.employeeCounterpartyMappings?.[0]?.department?.name || "";
                 return aDept.localeCompare(bDept);
               },
-              filters: uniqueFilters.departments.map((dept) => ({ text: dept, value: dept })),
+              filters: uniqueFilters.departments.map((dept) => ({
+                text: dept,
+                value: dept,
+              })),
               filteredValue: filters.department || [],
               onFilter: (value, record) => {
                 const mappings = record.employeeCounterpartyMappings || [];
@@ -184,24 +200,26 @@ export const useEmployeeColumns = ({
       ...(showCounterpartyColumn
         ? [
             {
-              title: 'Контрагент',
-              key: 'counterparty',
+              title: "Контрагент",
+              key: "counterparty",
               width: 168,
               ellipsis: false,
               render: (_, record) => {
                 const mappings = record.employeeCounterpartyMappings || [];
-                if (mappings.length === 0) return '-';
+                if (mappings.length === 0) return "-";
                 const counterparties = [
-                  ...new Set(mappings.map((m) => m.counterparty?.name).filter(Boolean)),
+                  ...new Set(
+                    mappings.map((m) => m.counterparty?.name).filter(Boolean),
+                  ),
                 ];
-                const text = counterparties.join(', ') || '-';
+                const text = counterparties.join(", ") || "-";
                 return (
                   <div
                     style={{
-                      whiteSpace: 'normal',
-                      wordBreak: 'keep-all',
-                      overflowWrap: 'break-word',
-                      lineHeight: '1.4',
+                      whiteSpace: "normal",
+                      wordBreak: "keep-all",
+                      overflowWrap: "break-word",
+                      lineHeight: "1.4",
                     }}
                   >
                     {text}
@@ -209,8 +227,10 @@ export const useEmployeeColumns = ({
                 );
               },
               sorter: (a, b) => {
-                const aCounterparty = a.employeeCounterpartyMappings?.[0]?.counterparty?.name || '';
-                const bCounterparty = b.employeeCounterpartyMappings?.[0]?.counterparty?.name || '';
+                const aCounterparty =
+                  a.employeeCounterpartyMappings?.[0]?.counterparty?.name || "";
+                const bCounterparty =
+                  b.employeeCounterpartyMappings?.[0]?.counterparty?.name || "";
                 return aCounterparty.localeCompare(bCounterparty);
               },
               filterDropdown: (props) => (
@@ -221,7 +241,7 @@ export const useEmployeeColumns = ({
                 />
               ),
               filterIcon: (filtered) => (
-                <div style={{ color: filtered ? '#1890ff' : undefined }}>
+                <div style={{ color: filtered ? "#1890ff" : undefined }}>
                   ☰
                 </div>
               ),
@@ -234,8 +254,8 @@ export const useEmployeeColumns = ({
           ]
         : []),
       {
-        title: 'Объект',
-        key: 'constructionSite',
+        title: "Объект",
+        key: "constructionSite",
         width: 150,
         render: (_, record) => {
           const mappings = record.employeeCounterpartyMappings || [];
@@ -243,11 +263,13 @@ export const useEmployeeColumns = ({
 
           if (siteMappings.length === 0) {
             return (
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 size="small"
-                onClick={() => onConstructionSitesEdit && onConstructionSitesEdit(record)}
-                style={{ padding: '0 4px', color: '#1890ff' }}
+                onClick={() =>
+                  onConstructionSitesEdit && onConstructionSitesEdit(record)
+                }
+                style={{ padding: "0 4px", color: "#1890ff" }}
               >
                 + Выбрать
               </Button>
@@ -256,31 +278,34 @@ export const useEmployeeColumns = ({
 
           return (
             <div
-              onClick={() => onConstructionSitesEdit && onConstructionSitesEdit(record)}
+              onClick={() =>
+                onConstructionSitesEdit && onConstructionSitesEdit(record)
+              }
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px',
-                whiteSpace: 'normal',
-                wordBreak: 'normal',
-                overflowWrap: 'break-word',
-                cursor: 'pointer',
-                padding: '4px 8px',
-                marginLeft: '-8px',
-                marginRight: '-8px',
-                borderRadius: '2px',
-                transition: 'background-color 0.2s'
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+                whiteSpace: "normal",
+                wordBreak: "normal",
+                overflowWrap: "break-word",
+                cursor: "pointer",
+                padding: "4px 8px",
+                marginLeft: "-8px",
+                marginRight: "-8px",
+                borderRadius: "2px",
+                transition: "background-color 0.2s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f5';
+                e.currentTarget.style.backgroundColor = "#f5f5f5";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
               {siteMappings.map((mapping, index) => (
                 <div key={index}>
-                  {mapping.constructionSite?.shortName || mapping.constructionSite?.name}
+                  {mapping.constructionSite?.shortName ||
+                    mapping.constructionSite?.name}
                 </div>
               ))}
             </div>
@@ -288,139 +313,150 @@ export const useEmployeeColumns = ({
         },
         sorter: (a, b) => {
           const aSite =
-            a.employeeCounterpartyMappings?.find((m) => m.constructionSite)?.constructionSite
-              ?.shortName ||
-            a.employeeCounterpartyMappings?.find((m) => m.constructionSite)?.constructionSite
-              ?.name ||
-            '';
+            a.employeeCounterpartyMappings?.find((m) => m.constructionSite)
+              ?.constructionSite?.shortName ||
+            a.employeeCounterpartyMappings?.find((m) => m.constructionSite)
+              ?.constructionSite?.name ||
+            "";
           const bSite =
-            b.employeeCounterpartyMappings?.find((m) => m.constructionSite)?.constructionSite
-              ?.shortName ||
-            b.employeeCounterpartyMappings?.find((m) => m.constructionSite)?.constructionSite
-              ?.name ||
-            '';
+            b.employeeCounterpartyMappings?.find((m) => m.constructionSite)
+              ?.constructionSite?.shortName ||
+            b.employeeCounterpartyMappings?.find((m) => m.constructionSite)
+              ?.constructionSite?.name ||
+            "";
           return aSite.localeCompare(bSite);
         },
-        filters: uniqueFilters.constructionSites?.map((site) => ({ text: site, value: site })) || [],
+        filters:
+          uniqueFilters.constructionSites?.map((site) => ({
+            text: site,
+            value: site,
+          })) || [],
         filteredValue: filters.constructionSite || [],
         onFilter: (value, record) => {
           const mappings = record.employeeCounterpartyMappings || [];
           return mappings.some((m) => {
-            const siteName = m.constructionSite?.shortName || m.constructionSite?.name;
+            const siteName =
+              m.constructionSite?.shortName || m.constructionSite?.name;
             return siteName === value;
           });
         },
       },
       {
-        title: 'Гражданство',
-        dataIndex: ['citizenship', 'name'],
-        key: 'citizenship',
+        title: "Гражданство",
+        dataIndex: ["citizenship", "name"],
+        key: "citizenship",
         width: 150,
         ellipsis: true,
-        render: (name) => name || '-',
+        render: (name) => name || "-",
         sorter: (a, b) => {
-          const aCit = a.citizenship?.name || '';
-          const bCit = b.citizenship?.name || '';
+          const aCit = a.citizenship?.name || "";
+          const bCit = b.citizenship?.name || "";
           return aCit.localeCompare(bCit);
         },
-        filters: uniqueFilters.citizenships.map((cit) => ({ text: cit, value: cit })),
+        filters: uniqueFilters.citizenships.map((cit) => ({
+          text: cit,
+          value: cit,
+        })),
         filteredValue: filters.citizenship || [],
         onFilter: (value, record) => record.citizenship?.name === value,
       },
       {
-        title: 'Заполнен',
-        key: 'statusCard',
+        title: "Заполнен",
+        key: "statusCard",
         width: 130,
-        align: 'center',
+        align: "center",
         render: (_, record) => {
-          const isCompleted = record.statusCard === 'completed';
+          const isCompleted = record.statusCard === "completed";
 
           return (
             <Tooltip
               title={
                 isCompleted
-                  ? 'Все обязательные поля заполнены'
-                  : 'Не все обязательные поля заполнены'
+                  ? "Все обязательные поля заполнены"
+                  : "Не все обязательные поля заполнены"
               }
             >
               {isCompleted ? (
-                <CheckCircleFilled style={{ fontSize: 20, color: '#52c41a' }} />
+                <CheckCircleFilled style={{ fontSize: 20, color: "#52c41a" }} />
               ) : (
-                <CloseCircleFilled style={{ fontSize: 20, color: '#ff4d4f' }} />
+                <CloseCircleFilled style={{ fontSize: 20, color: "#ff4d4f" }} />
               )}
             </Tooltip>
           );
         },
         sorter: (a, b) => {
-          const aCompleted = a.statusCard === 'completed' ? 1 : 0;
-          const bCompleted = b.statusCard === 'completed' ? 1 : 0;
+          const aCompleted = a.statusCard === "completed" ? 1 : 0;
+          const bCompleted = b.statusCard === "completed" ? 1 : 0;
           return aCompleted - bCompleted;
         },
         filters: [
-          { text: 'Заполнен', value: 'completed' },
-          { text: 'Не заполнен', value: 'draft' },
+          { text: "Заполнен", value: "completed" },
+          { text: "Не заполнен", value: "draft" },
         ],
         filteredValue: filters.statusCard || [],
         onFilter: (value, record) => record.statusCard === value,
       },
       {
-        title: 'Дата создания',
-        key: 'createdAt',
+        title: "Дата создания",
+        key: "createdAt",
         width: 120,
         render: (_, record) => {
-          if (!record.createdAt) return '-';
+          if (!record.createdAt) return "-";
           const date = new Date(record.createdAt);
-          return date.toLocaleDateString('ru-RU');
+          return date.toLocaleDateString("ru-RU");
         },
         sorter: (a, b) => {
           if (!a.createdAt || !b.createdAt) return 0;
           return new Date(a.createdAt) - new Date(b.createdAt);
         },
         filterDropdown: (props) => (
-          <CreatedAtFilterDropdown
-            {...props}
-            resetTrigger={resetTrigger}
-          />
+          <CreatedAtFilterDropdown {...props} resetTrigger={resetTrigger} />
         ),
         filterIcon: (filtered) => (
-          <div style={{ color: filtered ? '#1890ff' : undefined }}>
-            ☰
-          </div>
+          <div style={{ color: filtered ? "#1890ff" : undefined }}>☰</div>
         ),
         filteredValue: filters.createdAt || [],
         onFilter: (value, record) => {
           if (!record.createdAt) return false;
-          const recordDate = new Date(record.createdAt).toISOString().split('T')[0];
-          
+          const recordDate = new Date(record.createdAt)
+            .toISOString()
+            .split("T")[0];
+
           // Если выбран диапазон
           if (Array.isArray(value)) {
             const [fromDate, toDate] = value;
             return recordDate >= fromDate && recordDate <= toDate;
           }
-          
+
           // Обратная совместимость для одиночного значения
           return recordDate === value;
         },
       },
       {
-        title: 'Файлы',
-        key: 'files',
+        title: "Файлы",
+        key: "files",
         width: 80,
-        align: 'center',
+        align: "center",
         render: (_, record) => {
           const filesCount = record.filesCount || 0;
           return (
-            <Tooltip title={filesCount > 0 ? `Просмотр файлов (${filesCount})` : 'Нет файлов'}>
-              <Badge 
+            <Tooltip
+              title={
+                filesCount > 0
+                  ? `Просмотр файлов (${filesCount})`
+                  : "Нет файлов"
+              }
+            >
+              <Badge
                 count={filesCount > 0 ? filesCount : 0}
                 offset={[-8, 4]}
-                style={{ 
-                  backgroundColor: filesCount > 0 ? '#ff7a45' : '#d9d9d9',
-                  fontSize: '10px',
-                  height: '16px',
-                  lineHeight: '16px',
-                  minWidth: '16px',
-                  padding: '0 3px'
+                style={{
+                  backgroundColor: filesCount > 0 ? "#ff7a45" : "#d9d9d9",
+                  fontSize: "10px",
+                  height: "16px",
+                  lineHeight: "16px",
+                  minWidth: "16px",
+                  padding: "0 3px",
                 }}
               >
                 <Button
@@ -429,8 +465,8 @@ export const useEmployeeColumns = ({
                   onClick={() => onViewFiles(record)}
                   disabled={filesCount === 0}
                   style={{
-                    color: filesCount > 0 ? '#1890ff' : '#d9d9d9',
-                    padding: '4px 8px',
+                    color: filesCount > 0 ? "#1890ff" : "#d9d9d9",
+                    padding: "4px 8px",
                   }}
                 />
               </Badge>
@@ -440,16 +476,16 @@ export const useEmployeeColumns = ({
         sorter: (a, b) => (a.filesCount || 0) - (b.filesCount || 0),
       },
       {
-        title: 'Срок действия док.',
-        key: 'documentExpiry',
+        title: "Срок действия док.",
+        key: "documentExpiry",
         width: 100,
-        align: 'center',
+        align: "center",
         render: (_, record) => <DocumentExpiryStatus employee={record} />,
         filters: [
-          { text: '🔴 Истек', value: 'expired' },
-          { text: '🟠 Осталось ≤ 2 недели', value: 'expiring-soon' },
-          { text: '🟢 В норме', value: 'valid' },
-          { text: '-  Нет данных', value: 'no-data' },
+          { text: "🔴 Истек", value: "expired" },
+          { text: "🟠 Осталось ≤ 2 недели", value: "expiring-soon" },
+          { text: "🟢 В норме", value: "valid" },
+          { text: "-  Нет данных", value: "no-data" },
         ],
         filteredValue: filters.documentExpiry || [],
         onFilter: (value, record) => {
@@ -458,36 +494,38 @@ export const useEmployeeColumns = ({
             record.kigEndDate || record.kig_end_date,
             record.patentIssueDate || record.patent_issue_date
               ? (() => {
-                  const issueDate = new Date(record.patentIssueDate || record.patent_issue_date);
+                  const issueDate = new Date(
+                    record.patentIssueDate || record.patent_issue_date,
+                  );
                   const expiryDate = new Date(issueDate);
                   expiryDate.setFullYear(expiryDate.getFullYear() + 1);
                   return expiryDate.toISOString();
                 })()
-              : null
+              : null,
           ].filter(Boolean);
-          
+
           if (dates.length === 0) {
-            return value === 'no-data';
+            return value === "no-data";
           }
-          
+
           const status = calculateDocumentExpiryStatus(dates);
           return status === value;
         },
       },
       {
-        title: 'Статус',
-        key: 'status',
+        title: "Статус",
+        key: "status",
         width: 120,
         render: (_, record) => {
           // Получаем текущие статусы из маппинга
           const statusMappings = record.statusMappings || [];
-          
+
           // Функция для получения статуса по группе
           // API возвращает snake_case поля: status_group, status.name
           // Также поддерживаем старые неправильные группы из импорта (draft, card draft)
           const getStatusByGroup = (group, alternativeGroups = []) => {
             const groupsToCheck = [group, ...alternativeGroups];
-            const mapping = statusMappings.find(m => {
+            const mapping = statusMappings.find((m) => {
               const mappingGroup = m.statusGroup || m.status_group;
               return groupsToCheck.includes(mappingGroup);
             });
@@ -498,45 +536,57 @@ export const useEmployeeColumns = ({
           };
 
           // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status_card (Черновик) > status (Новый/Проведен ТБ/Обработан)
-          const secureStatus = getStatusByGroup('status_secure');
-          const activeStatus = getStatusByGroup('status_active');
+          const secureStatus = getStatusByGroup("status_secure");
+          const activeStatus = getStatusByGroup("status_active");
           // Проверяем группу status_card и старую неправильную группу 'card draft'
-          const cardStatus = getStatusByGroup('status_card', ['card draft']);
+          const cardStatus = getStatusByGroup("status_card", ["card draft"]);
           // Проверяем группу status и старую неправильную группу 'draft'
-          const mainStatus = getStatusByGroup('status', ['draft']);
+          const mainStatus = getStatusByGroup("status", ["draft"]);
 
-          if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') {
+          if (
+            secureStatus === "status_secure_block" ||
+            secureStatus === "status_secure_block_compl"
+          ) {
             return <Tag color="red">Заблокирован</Tag>;
           }
 
-          if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') {
+          if (
+            activeStatus === "status_active_fired" ||
+            activeStatus === "status_active_fired_compl"
+          ) {
             return <Tag color="red">Уволен</Tag>;
           }
-          if (activeStatus === 'status_active_inactive') {
+          if (activeStatus === "status_active_inactive") {
             return <Tag color="blue">Неактивный</Tag>;
           }
 
           // Проверяем черновик - может быть в группе status_card или status
-          if (cardStatus === 'status_card_draft' || mainStatus === 'status_draft') {
+          if (
+            cardStatus === "status_card_draft" ||
+            mainStatus === "status_draft"
+          ) {
             return <Tag color="default">Черновик</Tag>;
           }
 
           const statusMap = {
-            'status_new': { text: 'Действующий', color: 'green' },
-            'status_tb_passed': { text: 'Действующий', color: 'green' },
-            'status_processed': { text: 'Действующий', color: 'success' },
+            status_new: { text: "Действующий", color: "green" },
+            status_tb_passed: { text: "Действующий", color: "green" },
+            status_processed: { text: "Действующий", color: "success" },
           };
 
-          const statusInfo = statusMap[mainStatus] || { text: '-', color: 'default' };
+          const statusInfo = statusMap[mainStatus] || {
+            text: "-",
+            color: "default",
+          };
           return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
         },
         sorter: (a, b) => getStatusPriority(a) - getStatusPriority(b),
         filters: [
-          { text: 'Заблокирован', value: 'blocked' },
-          { text: 'Уволен', value: 'fired' },
-          { text: 'Неактивный', value: 'inactive' },
-          { text: 'Черновик', value: 'draft' },
-          { text: 'Действующий', value: 'active' },
+          { text: "Заблокирован", value: "blocked" },
+          { text: "Уволен", value: "fired" },
+          { text: "Неактивный", value: "inactive" },
+          { text: "Черновик", value: "draft" },
+          { text: "Действующий", value: "active" },
         ],
         filteredValue: filters.status || [],
         onFilter: (value, record) => {
@@ -544,7 +594,7 @@ export const useEmployeeColumns = ({
           // Функция с поддержкой альтернативных групп (для совместимости со старыми данными)
           const getStatusByGroup = (group, alternativeGroups = []) => {
             const groupsToCheck = [group, ...alternativeGroups];
-            const mapping = statusMappings.find(m => {
+            const mapping = statusMappings.find((m) => {
               const mappingGroup = m.statusGroup || m.status_group;
               return groupsToCheck.includes(mappingGroup);
             });
@@ -553,43 +603,64 @@ export const useEmployeeColumns = ({
             return statusObj?.name;
           };
 
-          const secureStatus = getStatusByGroup('status_secure');
-          const activeStatus = getStatusByGroup('status_active');
-          const cardStatus = getStatusByGroup('status_card', ['card draft']);
-          const mainStatus = getStatusByGroup('status', ['draft']);
+          const secureStatus = getStatusByGroup("status_secure");
+          const activeStatus = getStatusByGroup("status_active");
+          const cardStatus = getStatusByGroup("status_card", ["card draft"]);
+          const mainStatus = getStatusByGroup("status", ["draft"]);
 
-          if (value === 'blocked') {
-            return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
+          if (value === "blocked") {
+            return (
+              secureStatus === "status_secure_block" ||
+              secureStatus === "status_secure_block_compl"
+            );
           }
-          if (value === 'fired') {
-            return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
+          if (value === "fired") {
+            return (
+              activeStatus === "status_active_fired" ||
+              activeStatus === "status_active_fired_compl"
+            );
           }
-          if (value === 'inactive') {
-            return activeStatus === 'status_active_inactive';
+          if (value === "inactive") {
+            return activeStatus === "status_active_inactive";
           }
-          if (value === 'draft') {
+          if (value === "draft") {
             // Черновик может быть в группе status_card или status
-            return cardStatus === 'status_card_draft' || mainStatus === 'status_draft';
+            return (
+              cardStatus === "status_card_draft" ||
+              mainStatus === "status_draft"
+            );
           }
-          if (value === 'active') {
+          if (value === "active") {
             // Действующий = status_new или status_tb_passed или status_processed
-            return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
+            return (
+              mainStatus === "status_new" ||
+              mainStatus === "status_tb_passed" ||
+              mainStatus === "status_processed"
+            );
           }
-          
+
           return false;
         },
       },
       {
-        title: 'Действия',
-        key: 'actions',
+        title: "Действия",
+        key: "actions",
         width: 150,
         render: (_, record) => (
           <Space>
             <Tooltip title="Просмотр">
-              <Button type="text" icon={<EyeOutlined />} onClick={() => onView(record)} />
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                onClick={() => onView(record)}
+              />
             </Tooltip>
             <Tooltip title="Редактировать">
-              <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                onClick={() => onEdit(record)}
+              />
             </Tooltip>
             {canDeleteEmployee && canDeleteEmployee(record) && (
               <Tooltip title="Удалить">
@@ -618,13 +689,12 @@ export const useEmployeeColumns = ({
     onDelete,
     onViewFiles,
     onDepartmentChange,
-    canExport,
     canDeleteEmployee,
     uniqueFilters,
     filters,
     showDepartmentColumn,
+    showCounterpartyColumn,
     onConstructionSitesEdit,
     resetTrigger,
   ]);
 };
-

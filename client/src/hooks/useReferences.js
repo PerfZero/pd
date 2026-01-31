@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useReferencesStore } from '@/store/referencesStore';
+import { useEffect } from "react";
+import { useReferencesStore } from "@/store/referencesStore";
 
 /**
  * Хуки для работы с кэшированными справочниками
@@ -12,19 +12,19 @@ import { useReferencesStore } from '@/store/referencesStore';
  * @param {boolean} autoLoad - автоматически загружать при монтировании (по умолчанию true)
  */
 export const useCitizenships = (autoLoad = true) => {
-  const { 
-    citizenships, 
-    citizenshipsLoading, 
-    citizenshipsError, 
+  const {
+    citizenships,
+    citizenshipsLoading,
+    citizenshipsError,
     fetchCitizenships,
-    invalidateCitizenships 
+    invalidateCitizenships,
   } = useReferencesStore();
 
   useEffect(() => {
     if (autoLoad) {
       fetchCitizenships();
     }
-  }, [autoLoad]);
+  }, [autoLoad, fetchCitizenships]);
 
   return {
     citizenships: citizenships || [],
@@ -40,19 +40,19 @@ export const useCitizenships = (autoLoad = true) => {
  * @param {boolean} autoLoad - автоматически загружать при монтировании (по умолчанию true)
  */
 export const usePositions = (autoLoad = true) => {
-  const { 
-    positions, 
-    positionsLoading, 
-    positionsError, 
+  const {
+    positions,
+    positionsLoading,
+    positionsError,
     fetchPositions,
-    invalidatePositions 
+    invalidatePositions,
   } = useReferencesStore();
 
   useEffect(() => {
     if (autoLoad) {
       fetchPositions();
     }
-  }, [autoLoad]);
+  }, [autoLoad, fetchPositions]);
 
   return {
     positions: positions || [],
@@ -68,19 +68,19 @@ export const usePositions = (autoLoad = true) => {
  * @param {boolean} autoLoad - автоматически загружать при монтировании (по умолчанию true)
  */
 export const useDepartmentsReference = (autoLoad = true) => {
-  const { 
-    departments, 
-    departmentsLoading, 
-    departmentsError, 
+  const {
+    departments,
+    departmentsLoading,
+    departmentsError,
     fetchDepartments,
-    invalidateDepartments 
+    invalidateDepartments,
   } = useReferencesStore();
 
   useEffect(() => {
     if (autoLoad) {
       fetchDepartments();
     }
-  }, [autoLoad]);
+  }, [autoLoad, fetchDepartments]);
 
   return {
     departments: departments || [],
@@ -96,19 +96,19 @@ export const useDepartmentsReference = (autoLoad = true) => {
  * @param {boolean} autoLoad - автоматически загружать при монтировании (по умолчанию true)
  */
 export const useSettingsReference = (autoLoad = true) => {
-  const { 
-    settings, 
-    settingsLoading, 
-    settingsError, 
+  const {
+    settings,
+    settingsLoading,
+    settingsError,
     fetchSettings,
-    invalidateSettings 
+    invalidateSettings,
   } = useReferencesStore();
 
   useEffect(() => {
     if (autoLoad) {
       fetchSettings();
     }
-  }, [autoLoad]);
+  }, [autoLoad, fetchSettings]);
 
   return {
     settings: settings || {},
@@ -125,20 +125,23 @@ export const useSettingsReference = (autoLoad = true) => {
  * @param {number} counterpartyId - ID контрагента
  * @param {boolean} autoLoad - автоматически загружать при монтировании (по умолчанию true)
  */
-export const useConstructionSitesReference = (counterpartyId, autoLoad = true) => {
-  const { 
-    constructionSites, 
-    constructionSitesLoading, 
-    constructionSitesError, 
+export const useConstructionSitesReference = (
+  counterpartyId,
+  autoLoad = true,
+) => {
+  const {
+    constructionSites,
+    constructionSitesLoading,
+    constructionSitesError,
     fetchConstructionSites,
-    invalidateConstructionSites 
+    invalidateConstructionSites,
   } = useReferencesStore();
 
   useEffect(() => {
     if (autoLoad && counterpartyId) {
       fetchConstructionSites(counterpartyId);
     }
-  }, [autoLoad, counterpartyId]);
+  }, [autoLoad, counterpartyId, fetchConstructionSites]);
 
   return {
     constructionSites: constructionSites || [],
@@ -163,28 +166,20 @@ export const useAllReferences = () => {
     clearAll,
   } = useReferencesStore();
 
-  const {
-    citizenships,
-    citizenshipsLoading,
-  } = useCitizenships();
+  const { citizenships, citizenshipsLoading } = useCitizenships();
 
-  const {
-    positions,
-    positionsLoading,
-  } = usePositions();
+  const { positions, positionsLoading } = usePositions();
 
-  const {
-    departments,
-    departmentsLoading,
-  } = useDepartmentsReference();
+  const { departments, departmentsLoading } = useDepartmentsReference();
 
-  const {
-    settings,
-    defaultCounterpartyId,
-    settingsLoading,
-  } = useSettingsReference();
+  const { settings, defaultCounterpartyId, settingsLoading } =
+    useSettingsReference();
 
-  const loading = citizenshipsLoading || positionsLoading || departmentsLoading || settingsLoading;
+  const loading =
+    citizenshipsLoading ||
+    positionsLoading ||
+    departmentsLoading ||
+    settingsLoading;
 
   return {
     citizenships,
@@ -205,4 +200,3 @@ export const useAllReferences = () => {
     clearAll,
   };
 };
-

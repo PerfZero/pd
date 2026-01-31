@@ -26,6 +26,7 @@ import {
   filterCyrillicOnly,
 } from "../../utils/formatters";
 import EmployeeDocumentUpload from "./EmployeeDocumentUpload";
+import MaskedDateInput from "../../shared/ui/MaskedDateInput";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -52,65 +53,13 @@ const noAutoFillProps = {
   readOnly: true, // Начинаем с readonly чтобы предотвратить автозаполнение
 };
 
-const useAntiAutofillIds = () => ({
+const createAntiAutofillIds = () => ({
   lastName: `employee_last_${Math.random().toString(36).slice(2, 9)}`,
   firstName: `employee_first_${Math.random().toString(36).slice(2, 9)}`,
   middleName: `employee_middle_${Math.random().toString(36).slice(2, 9)}`,
   phone: `employee_phone_${Math.random().toString(36).slice(2, 9)}`,
   registrationAddress: `employee_reg_addr_${Math.random().toString(36).slice(2, 9)}`,
 });
-
-const useSelectAutoFillBlocker = (wrapperId) => {
-  useEffect(() => {
-    if (!wrapperId) return;
-    let inputNode = null;
-    let intervalId = null;
-
-    const setupInput = () => {
-      const wrapper = document.getElementById(wrapperId);
-      if (!wrapper) return false;
-      const input = wrapper.querySelector(".ant-select-selection-search-input");
-      if (!input) return false;
-      inputNode = input;
-      const handleFocus = () => {
-        input.setAttribute("readonly", "readonly");
-        setTimeout(() => {
-          input.removeAttribute("readonly");
-        }, 120);
-      };
-      input.setAttribute("autocomplete", "off");
-      input.setAttribute("autocorrect", "off");
-      input.setAttribute("autocapitalize", "off");
-      input.setAttribute("spellcheck", "false");
-      input.setAttribute("data-form-type", "other");
-      input.setAttribute("data-lpignore", "true");
-      input.addEventListener("focus", handleFocus);
-
-      inputNode.__cleanupAutofill = () => {
-        input.removeEventListener("focus", handleFocus);
-      };
-
-      return true;
-    };
-
-    if (!setupInput()) {
-      intervalId = window.setInterval(() => {
-        if (setupInput()) {
-          clearInterval(intervalId);
-        }
-      }, 150);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-      if (inputNode && inputNode.__cleanupAutofill) {
-        inputNode.__cleanupAutofill();
-      }
-    };
-  }, [wrapperId]);
-};
 
 // Маска для российского паспорта: форматирует ввод в 1234 №567890 (4 цифры, пробел, №, 6 цифр)
 const formatRussianPassportNumber = (value) => {
@@ -134,14 +83,6 @@ const formatRussianPassportNumber = (value) => {
   return `${limited.slice(0, 4)} №${limited.slice(4)}`;
 };
 
-// Функция для удаления форматирования российского паспорта перед отправкой
-// Возвращает формат XXXXXXXXXXXX (10 цифр без пробелов и №)
-const normalizeRussianPassportNumber = (value) => {
-  if (!value) return value;
-  // Убираем пробелы и символ №, оставляем только цифры
-  return value.replace(/[\s№]/g, "");
-};
-
 /**
  * Мобильная форма сотрудника
  * Все поля в один столбец, блоки вместо вкладок
@@ -153,9 +94,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     loading,
     loadingReferences,
     citizenships,
-    constructionSites,
     positions,
-    selectedCitizenship,
     requiresPatent,
     defaultCounterpartyId,
     user,
@@ -171,7 +110,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     formatBlankNumber,
     getFieldProps,
   } = useEmployeeForm(employee, true, onSuccess);
-  const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
+  const antiAutofillIds = useMemo(() => createAntiAutofillIds(), []);
 
   // Состояние для открытых панелей (по умолчанию все открыны)
   const [activeKeys, setActiveKeys] = useState([
@@ -230,7 +169,16 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
         setEmployeeIdOnLoad(employee?.id);
       }
     }
-  }, [employee?.id, citizenships.length, positions.length]);
+  }, [
+    employee?.id,
+    employee?.citizenshipId,
+    employeeIdOnLoad,
+    citizenships.length,
+    positions.length,
+    form,
+    handleCitizenshipChange,
+    initializeEmployeeData,
+  ]);
 
   // Загружаем доступные контрагенты
   useEffect(() => {
@@ -260,7 +208,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     if (user?.counterpartyId) {
       loadCounterparties();
     }
-  }, [user?.counterpartyId, employee?.id]);
+  }, [form, user?.counterpartyId, employee?.id]);
 
   // 🎯 Обертки для обработки сохранения с очисткой таймера ИНН
   const handleSaveWithReset = async () => {
@@ -846,7 +794,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               return value;
             }}
           >
-            <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
+            <MaskedDateInput format={DATE_FORMAT} size="large" />
           </Form.Item>
         )}
 
@@ -867,10 +815,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 option.children.toLowerCase().includes(input.toLowerCase())
               }
               virtual={false}
-              onChange={(value) => {
-                // После выбора просто устанавливаем значение в форму
-                // Form.Item сам срабатит на onChange
-              }}
               loading={loadingReferences}
               disabled={loadingReferences || citizenships.length === 0}
               autoComplete="off"
@@ -1516,7 +1460,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
           layout="vertical"
           initialValues={{ gender: "male" }}
           autoComplete="off"
-          onFieldsChange={(changedFields) => {
+          onFieldsChange={(_changedFields) => {
             // Сбрасываем флаг после обработки
             isFormResetRef.current = false;
             if (canSaveTimeoutRef.current) {

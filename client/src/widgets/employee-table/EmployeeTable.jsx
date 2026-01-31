@@ -134,7 +134,6 @@ export const EmployeeTable = ({
     onFiltersChange: handleLocalFiltersChange,
     clearFilters,
   } = useTableFilters();
-  const [sortOrder, setSortOrder] = useState({});
 
   // Состояние для количества строк на странице с сохранением в localStorage
   const [pageSize, setPageSize] = useState(() => {
@@ -185,23 +184,15 @@ export const EmployeeTable = ({
     if (resetTrigger > 0) {
       clearFilters();
     }
-  }, [resetTrigger]);
+  }, [resetTrigger, clearFilters]);
 
   // Обработчик изменения таблицы (фильтры, сортировка, пагинация)
-  const handleTableChange = (pagination, filters, sorter) => {
+  const handleTableChange = (pagination, filters, _sorter) => {
     handleLocalFiltersChange(filters);
 
     // Передаем фильтры на верхний уровень если callback передан
     if (onFiltersChange) {
       onFiltersChange(filters);
-    }
-
-    // Сохраняем сортировку
-    if (sorter.field) {
-      setSortOrder({
-        field: sorter.field,
-        order: sorter.order,
-      });
     }
 
     // Сохраняем pageSize в localStorage при изменении

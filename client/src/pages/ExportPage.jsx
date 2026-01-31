@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, Tooltip } from 'antd';
-import { EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
-import { useEmployees, useEmployeeActions } from '@/entities/employee';
-import { employeeApi } from '@/entities/employee';
-import { ExportDateFilter } from '@/features/export-date-filter';
-import StatusUploadToggle from '@/components/Employees/StatusUploadToggle';
-import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
-import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
-import ExcelExportModal from '@/components/Employees/ExcelExportModal';
+import { useState, useEffect } from "react";
+import { Table, Button, Space, Tag, Tooltip } from "antd";
+import { EyeOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons";
+import { useEmployees, useEmployeeActions } from "@/entities/employee";
+import { employeeApi } from "@/entities/employee";
+import { ExportDateFilter } from "@/features/export-date-filter";
+import StatusUploadToggle from "@/components/Employees/StatusUploadToggle";
+import EmployeeViewModal from "@/components/Employees/EmployeeViewModal";
+import EmployeeFormModal from "@/components/Employees/EmployeeFormModal";
+import ExcelExportModal from "@/components/Employees/ExcelExportModal";
 
 /**
  * Страница выгрузки сотрудников для администрирования
@@ -20,16 +20,16 @@ const ExportPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [tableFilters, setTableFilters] = useState({});
-  
+
   // Инициализируем фильтр из localStorage
   const [filterParams, setFilterParams] = useState(() => {
-    const saved = localStorage.getItem('exportPageDateFilter');
+    const saved = localStorage.getItem("exportPageDateFilter");
     return saved ? JSON.parse(saved) : {};
   });
 
   // Сохраняем фильтр при изменении
   useEffect(() => {
-    localStorage.setItem('exportPageDateFilter', JSON.stringify(filterParams));
+    localStorage.setItem("exportPageDateFilter", JSON.stringify(filterParams));
   }, [filterParams]);
 
   // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам и датам)
@@ -52,34 +52,34 @@ const ExportPage = () => {
   };
 
   const handleFormSuccess = async (values) => {
-    try {
-      if (selectedEmployee) {
-        // Обновление существующего сотрудника
-        const updated = await updateEmployee(selectedEmployee.id, values);
-        setSelectedEmployee(updated);
-        
-        // Проверяем есть ли у сотрудника статусы с is_upload = true
-        // Если есть - устанавливаем статус "Редактирован" с is_upload = true
-        if (selectedEmployee.statusMappings && selectedEmployee.statusMappings.length > 0) {
-          const hasUploadedStatus = selectedEmployee.statusMappings.some(mapping => mapping.isUpload);
-          
-          if (hasUploadedStatus) {
-            try {
-              // Устанавливаем статус "Редактирован" с is_upload = true
-              await employeeApi.setEditedStatus(selectedEmployee.id, true);
-            } catch (error) {
-              console.warn('Error setting edited status:', error);
-            }
+    if (selectedEmployee) {
+      // Обновление существующего сотрудника
+      const updated = await updateEmployee(selectedEmployee.id, values);
+      setSelectedEmployee(updated);
+
+      // Проверяем есть ли у сотрудника статусы с is_upload = true
+      // Если есть - устанавливаем статус "Редактирован" с is_upload = true
+      if (
+        selectedEmployee.statusMappings &&
+        selectedEmployee.statusMappings.length > 0
+      ) {
+        const hasUploadedStatus = selectedEmployee.statusMappings.some(
+          (mapping) => mapping.isUpload,
+        );
+
+        if (hasUploadedStatus) {
+          try {
+            // Устанавливаем статус "Редактирован" с is_upload = true
+            await employeeApi.setEditedStatus(selectedEmployee.id, true);
+          } catch (error) {
+            console.warn("Error setting edited status:", error);
           }
         }
       }
-      await refetch();
-      setIsEditModalOpen(false);
-      setSelectedEmployee(null);
-    } catch (error) {
-      // Ошибка уже обработана в хуке
-      throw error;
     }
+    await refetch();
+    setIsEditModalOpen(false);
+    setSelectedEmployee(null);
   };
 
   // Обработчики фильтра по дате
@@ -96,7 +96,7 @@ const ExportPage = () => {
   };
 
   // Обработчик обновления флага is_upload
-  const handleStatusUploadUpdate = (employeeId, updatedMappings) => {
+  const handleStatusUploadUpdate = (_employeeId, _updatedMappings) => {
     // Обновляем employees напрямую, без setEmployees (используем что вернул useEmployees)
     // Просто перезагружаем данные с сервера
     refetch();
@@ -124,37 +124,45 @@ const ExportPage = () => {
 
     // Применяем фильтры из таблицы (position, department, counterparty, citizenship, isUpload, status)
     if (tableFilters.position && tableFilters.position.length > 0) {
-      filtered = filtered.filter(emp => tableFilters.position.includes(emp.position?.name));
+      filtered = filtered.filter((emp) =>
+        tableFilters.position.includes(emp.position?.name),
+      );
     }
 
     if (tableFilters.department && tableFilters.department.length > 0) {
-      filtered = filtered.filter(emp => {
+      filtered = filtered.filter((emp) => {
         const mappings = emp.employeeCounterpartyMappings || [];
-        return mappings.some(m => tableFilters.department.includes(m.department?.name));
+        return mappings.some((m) =>
+          tableFilters.department.includes(m.department?.name),
+        );
       });
     }
 
     if (tableFilters.counterparty && tableFilters.counterparty.length > 0) {
-      filtered = filtered.filter(emp => {
+      filtered = filtered.filter((emp) => {
         const mappings = emp.employeeCounterpartyMappings || [];
-        return mappings.some(m => tableFilters.counterparty.includes(m.counterparty?.name));
+        return mappings.some((m) =>
+          tableFilters.counterparty.includes(m.counterparty?.name),
+        );
       });
     }
 
     if (tableFilters.citizenship && tableFilters.citizenship.length > 0) {
-      filtered = filtered.filter(emp => tableFilters.citizenship.includes(emp.citizenship?.name));
+      filtered = filtered.filter((emp) =>
+        tableFilters.citizenship.includes(emp.citizenship?.name),
+      );
     }
 
     if (tableFilters.isUpload && tableFilters.isUpload.length > 0) {
-      filtered = filtered.filter(emp => {
+      filtered = filtered.filter((emp) => {
         const statusMappings = emp.statusMappings || [];
         if (statusMappings.length === 0) return false;
-        const allUploaded = statusMappings.every(sm => sm.isUpload);
-        
-        if (tableFilters.isUpload.includes('uploaded')) {
+        const allUploaded = statusMappings.every((sm) => sm.isUpload);
+
+        if (tableFilters.isUpload.includes("uploaded")) {
           return allUploaded;
         }
-        if (tableFilters.isUpload.includes('not_uploaded')) {
+        if (tableFilters.isUpload.includes("not_uploaded")) {
           return !allUploaded;
         }
         return true;
@@ -162,14 +170,14 @@ const ExportPage = () => {
     }
 
     if (tableFilters.status && tableFilters.status.length > 0) {
-      filtered = filtered.filter(emp => {
+      filtered = filtered.filter((emp) => {
         const statusMappings = emp.statusMappings || [];
-        
+
         // Фильтруем только активные статусы
-        const activeStatusMappings = statusMappings.filter(m => m.isActive);
-        
+        const activeStatusMappings = statusMappings.filter((m) => m.isActive);
+
         const getStatusByGroup = (group) => {
-          const mapping = activeStatusMappings.find(m => {
+          const mapping = activeStatusMappings.find((m) => {
             const mappingGroup = m.statusGroup || m.status_group;
             return mappingGroup === group;
           });
@@ -178,25 +186,32 @@ const ExportPage = () => {
           return statusObj?.name;
         };
 
-        const activeStatus = getStatusByGroup('status_active');
-        const hrStatus = getStatusByGroup('status_hr');
-        const mainStatus = getStatusByGroup('status');
+        const activeStatus = getStatusByGroup("status_active");
+        const hrStatus = getStatusByGroup("status_hr");
+        const mainStatus = getStatusByGroup("status");
 
-        return tableFilters.status.some(value => {
-          if (value === 'fired') {
-            return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
+        return tableFilters.status.some((value) => {
+          if (value === "fired") {
+            return (
+              activeStatus === "status_active_fired" ||
+              activeStatus === "status_active_fired_compl"
+            );
           }
-          if (value === 'fired_off') {
-            return hrStatus === 'status_hr_fired_off';
+          if (value === "fired_off") {
+            return hrStatus === "status_hr_fired_off";
           }
-          if (value === 'edited') {
-            return hrStatus === 'status_hr_edited';
+          if (value === "edited") {
+            return hrStatus === "status_hr_edited";
           }
-          if (value === 'active') {
+          if (value === "active") {
             // Действующий = status_new или status_tb_passed или status_processed
-            return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
+            return (
+              mainStatus === "status_new" ||
+              mainStatus === "status_tb_passed" ||
+              mainStatus === "status_processed"
+            );
           }
-          
+
           return false;
         });
       });
@@ -213,13 +228,13 @@ const ExportPage = () => {
   // Определение статуса сотрудника (та же логика, что на странице Сотрудники)
   const getEmployeeStatus = (employee) => {
     const statusMappings = employee.statusMappings || [];
-    
+
     // Фильтруем только активные статусы
-    const activeStatusMappings = statusMappings.filter(m => m.isActive);
-    
+    const activeStatusMappings = statusMappings.filter((m) => m.isActive);
+
     // Функция для получения статуса по группе из активных статусов
     const getStatusByGroup = (group) => {
-      const mapping = activeStatusMappings.find(m => {
+      const mapping = activeStatusMappings.find((m) => {
         const mappingGroup = m.statusGroup || m.status_group;
         return mappingGroup === group;
       });
@@ -228,19 +243,22 @@ const ExportPage = () => {
       return statusObj?.name;
     };
 
-    const activeStatus = getStatusByGroup('status_active');
-    const hrStatus = getStatusByGroup('status_hr');
-    const mainStatus = getStatusByGroup('status');
+    const activeStatus = getStatusByGroup("status_active");
+    const hrStatus = getStatusByGroup("status_hr");
+    const mainStatus = getStatusByGroup("status");
 
     // Проверяем статус "Уволен"
-    if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') {
-      return { name: 'Уволен', color: 'red' };
+    if (
+      activeStatus === "status_active_fired" ||
+      activeStatus === "status_active_fired_compl"
+    ) {
+      return { name: "Уволен", color: "red" };
     }
 
     // Статусы из группы status_hr (приоритет выше, чем статусы в группе status)
     const hrStatusMap = {
-      'status_hr_fired_off': { name: 'Повторно принят', color: 'orange' },
-      'status_hr_edited': { name: 'Редактирован', color: 'orange' },
+      status_hr_fired_off: { name: "Повторно принят", color: "orange" },
+      status_hr_edited: { name: "Редактирован", color: "orange" },
     };
 
     if (hrStatus && hrStatusMap[hrStatus]) {
@@ -248,30 +266,29 @@ const ExportPage = () => {
     }
 
     const statusMap = {
-      'status_new': { name: 'Действующий', color: 'green' },
-      'status_tb_passed': { name: 'Действующий', color: 'green' },
-      'status_processed': { name: 'Действующий', color: 'success' },
+      status_new: { name: "Действующий", color: "green" },
+      status_tb_passed: { name: "Действующий", color: "green" },
+      status_processed: { name: "Действующий", color: "success" },
     };
 
-    return statusMap[mainStatus] || { name: '-', color: 'default' };
+    return statusMap[mainStatus] || { name: "-", color: "default" };
   };
 
   // Колонки таблицы
   const columns = [
     {
-      title: '№',
-      key: 'index',
+      title: "№",
+      key: "index",
       width: 40,
-      align: 'center',
+      align: "center",
       render: (text, record, index) => index + 1,
     },
     {
-      title: 'ФИО',
-      key: 'fullName',
+      title: "ФИО",
+      key: "fullName",
       width: 270,
-      render: (text, record) => (
-        `${record.lastName || ''} ${record.firstName || ''} ${record.middleName || ''}`.trim()
-      ),
+      render: (text, record) =>
+        `${record.lastName || ""} ${record.firstName || ""} ${record.middleName || ""}`.trim(),
       sorter: (a, b) => {
         const nameA = `${a.lastName} ${a.firstName}`.toLowerCase();
         const nameB = `${b.lastName} ${b.firstName}`.toLowerCase();
@@ -279,22 +296,24 @@ const ExportPage = () => {
       },
     },
     {
-      title: 'Должность',
-      dataIndex: ['position', 'name'],
-      key: 'position',
+      title: "Должность",
+      dataIndex: ["position", "name"],
+      key: "position",
       render: (text) => (
         <div
           style={{
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            wordWrap: 'break-word',
-            lineHeight: '1.4',
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            wordWrap: "break-word",
+            lineHeight: "1.4",
           }}
         >
-          {text || '-'}
+          {text || "-"}
         </div>
       ),
-      filters: [...new Set(employees.map(e => e.position?.name).filter(Boolean))].map(name => ({
+      filters: [
+        ...new Set(employees.map((e) => e.position?.name).filter(Boolean)),
+      ].map((name) => ({
         text: name,
         value: name,
       })),
@@ -302,8 +321,8 @@ const ExportPage = () => {
       onFilter: (value, record) => record.position?.name === value,
     },
     {
-      title: 'Подразделение',
-      key: 'department',
+      title: "Подразделение",
+      key: "department",
       render: (_, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
         const currentMapping = mappings[0];
@@ -311,21 +330,23 @@ const ExportPage = () => {
         return (
           <div
             style={{
-              whiteSpace: 'normal',
-              wordBreak: 'break-word',
-              wordWrap: 'break-word',
-              lineHeight: '1.4',
+              whiteSpace: "normal",
+              wordBreak: "break-word",
+              wordWrap: "break-word",
+              lineHeight: "1.4",
             }}
           >
-            {currentDepartmentName || '-'}
+            {currentDepartmentName || "-"}
           </div>
         );
       },
-      filters: [...new Set(
-        employees
-          .map(e => e.employeeCounterpartyMappings?.[0]?.department?.name)
-          .filter(Boolean)
-      )].map(name => ({
+      filters: [
+        ...new Set(
+          employees
+            .map((e) => e.employeeCounterpartyMappings?.[0]?.department?.name)
+            .filter(Boolean),
+        ),
+      ].map((name) => ({
         text: name,
         value: name,
       })),
@@ -336,35 +357,37 @@ const ExportPage = () => {
       },
     },
     {
-      title: 'Контрагент',
-      key: 'counterparty',
+      title: "Контрагент",
+      key: "counterparty",
       width: 150,
       render: (_, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
-        if (mappings.length === 0) return '-';
+        if (mappings.length === 0) return "-";
         const counterparties = [
           ...new Set(mappings.map((m) => m.counterparty?.name).filter(Boolean)),
         ];
-        const text = counterparties.join(', ') || '-';
+        const text = counterparties.join(", ") || "-";
         return (
           <div
             style={{
-              whiteSpace: 'normal',
-              wordBreak: 'keep-all',
-              overflowWrap: 'break-word',
-              lineHeight: '1.4',
+              whiteSpace: "normal",
+              wordBreak: "keep-all",
+              overflowWrap: "break-word",
+              lineHeight: "1.4",
             }}
           >
             {text}
           </div>
         );
       },
-      filters: [...new Set(
-        employees
-          .flatMap(e => e.employeeCounterpartyMappings || [])
-          .map(m => m.counterparty?.name)
-          .filter(Boolean)
-      )].map(name => ({
+      filters: [
+        ...new Set(
+          employees
+            .flatMap((e) => e.employeeCounterpartyMappings || [])
+            .map((m) => m.counterparty?.name)
+            .filter(Boolean),
+        ),
+      ].map((name) => ({
         text: name,
         value: name,
       })),
@@ -375,22 +398,24 @@ const ExportPage = () => {
       },
     },
     {
-      title: 'Гражданство',
-      dataIndex: ['citizenship', 'name'],
-      key: 'citizenship',
+      title: "Гражданство",
+      dataIndex: ["citizenship", "name"],
+      key: "citizenship",
       render: (text) => (
         <div
           style={{
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            wordWrap: 'break-word',
-            lineHeight: '1.4',
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            wordWrap: "break-word",
+            lineHeight: "1.4",
           }}
         >
-          {text || '-'}
+          {text || "-"}
         </div>
       ),
-      filters: [...new Set(employees.map(e => e.citizenship?.name).filter(Boolean))].map(name => ({
+      filters: [
+        ...new Set(employees.map((e) => e.citizenship?.name).filter(Boolean)),
+      ].map((name) => ({
         text: name,
         value: name,
       })),
@@ -398,49 +423,51 @@ const ExportPage = () => {
       onFilter: (value, record) => record.citizenship?.name === value,
     },
     {
-      title: 'ЗУП',
-      key: 'isUpload',
+      title: "ЗУП",
+      key: "isUpload",
       width: 80,
-      align: 'center',
+      align: "center",
       render: (text, record) => {
         // Получаем все активные статусы
         const statusMappings = record.statusMappings || [];
         if (statusMappings.length === 0) {
-          return '-';
+          return "-";
         }
         return (
           <StatusUploadToggle
             employeeId={record.id}
             statusMappings={statusMappings}
-            onUpdate={(updatedMappings) => handleStatusUploadUpdate(record.id, updatedMappings)}
+            onUpdate={(updatedMappings) =>
+              handleStatusUploadUpdate(record.id, updatedMappings)
+            }
           />
         );
       },
       filters: [
-        { text: 'ДА (выгружен)', value: 'uploaded' },
-        { text: 'НЕТ (не выгружен)', value: 'not_uploaded' },
+        { text: "ДА (выгружен)", value: "uploaded" },
+        { text: "НЕТ (не выгружен)", value: "not_uploaded" },
       ],
       filteredValue: tableFilters.isUpload || [],
       onFilter: (value, record) => {
         const statusMappings = record.statusMappings || [];
         if (statusMappings.length === 0) return false;
-        
-        const allUploaded = statusMappings.every(sm => sm.isUpload);
-        
-        if (value === 'uploaded') {
+
+        const allUploaded = statusMappings.every((sm) => sm.isUpload);
+
+        if (value === "uploaded") {
           return allUploaded;
         }
-        if (value === 'not_uploaded') {
+        if (value === "not_uploaded") {
           return !allUploaded;
         }
         return true;
       },
     },
     {
-      title: 'Файлы',
-      key: 'files',
+      title: "Файлы",
+      key: "files",
       width: 80,
-      align: 'center',
+      align: "center",
       render: (text, record) => {
         const count = getFilesCount(record);
         return count > 0 ? (
@@ -453,28 +480,28 @@ const ExportPage = () => {
       },
     },
     {
-      title: 'Статус',
-      key: 'status',
+      title: "Статус",
+      key: "status",
       width: 115,
       render: (text, record) => {
         const status = getEmployeeStatus(record);
         return <Tag color={status.color}>{status.name}</Tag>;
       },
       filters: [
-        { text: 'Действующий', value: 'active' },
-        { text: 'Редактирован', value: 'edited' },
-        { text: 'Повторно принят', value: 'fired_off' },
-        { text: 'Уволен', value: 'fired' },
+        { text: "Действующий", value: "active" },
+        { text: "Редактирован", value: "edited" },
+        { text: "Повторно принят", value: "fired_off" },
+        { text: "Уволен", value: "fired" },
       ],
       filteredValue: tableFilters.status || [],
       onFilter: (value, record) => {
         const statusMappings = record.statusMappings || [];
-        
+
         // Фильтруем только активные статусы
-        const activeStatusMappings = statusMappings.filter(m => m.isActive);
-        
+        const activeStatusMappings = statusMappings.filter((m) => m.isActive);
+
         const getStatusByGroup = (group) => {
-          const mapping = activeStatusMappings.find(m => {
+          const mapping = activeStatusMappings.find((m) => {
             const mappingGroup = m.statusGroup || m.status_group;
             return mappingGroup === group;
           });
@@ -483,47 +510,54 @@ const ExportPage = () => {
           return statusObj?.name;
         };
 
-        const activeStatus = getStatusByGroup('status_active');
-        const hrStatus = getStatusByGroup('status_hr');
-        const mainStatus = getStatusByGroup('status');
+        const activeStatus = getStatusByGroup("status_active");
+        const hrStatus = getStatusByGroup("status_hr");
+        const mainStatus = getStatusByGroup("status");
 
-        if (value === 'fired') {
-          return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
+        if (value === "fired") {
+          return (
+            activeStatus === "status_active_fired" ||
+            activeStatus === "status_active_fired_compl"
+          );
         }
-        if (value === 'fired_off') {
-          return hrStatus === 'status_hr_fired_off';
+        if (value === "fired_off") {
+          return hrStatus === "status_hr_fired_off";
         }
-        if (value === 'edited') {
-          return hrStatus === 'status_hr_edited';
+        if (value === "edited") {
+          return hrStatus === "status_hr_edited";
         }
-        if (value === 'active') {
+        if (value === "active") {
           // Действующий = status_new или status_tb_passed или status_processed
-          return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
+          return (
+            mainStatus === "status_new" ||
+            mainStatus === "status_tb_passed" ||
+            mainStatus === "status_processed"
+          );
         }
-        
+
         return false;
       },
     },
     {
-      title: 'Действия',
-      key: 'actions',
+      title: "Действия",
+      key: "actions",
       width: 100,
-      align: 'center',
-      fixed: 'right',
+      align: "center",
+      fixed: "right",
       render: (text, record) => (
         <Space>
           <Tooltip title="Просмотр">
-            <Button 
-              type="text" 
-              icon={<EyeOutlined />} 
-              onClick={() => handleView(record)} 
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
             />
           </Tooltip>
           <Tooltip title="Редактировать">
-            <Button 
-              type="text" 
-              icon={<EditOutlined />} 
-              onClick={() => handleEdit(record)} 
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
             />
           </Tooltip>
         </Space>
@@ -532,7 +566,7 @@ const ExportPage = () => {
   ];
 
   return (
-    <div style={{ padding: '16px 0' }}>
+    <div style={{ padding: "16px 0" }}>
       <style>{`
         .export-table .ant-table-cell {
           padding: 4px 8px !important;
@@ -543,7 +577,7 @@ const ExportPage = () => {
       `}</style>
 
       {/* Блок фильтра по дате */}
-      <ExportDateFilter 
+      <ExportDateFilter
         initialFilter={filterParams}
         onFilter={handleDateFilterApply}
         onReset={handleDateFilterReset}
@@ -557,7 +591,7 @@ const ExportPage = () => {
         rowKey="id"
         loading={loading}
         size="small"
-        onChange={(pag, filters, sorter) => {
+        onChange={(pag, filters, _sorter) => {
           // Сохраняем фильтры при изменении
           setTableFilters(filters);
         }}
@@ -567,7 +601,7 @@ const ExportPage = () => {
           total: employees.length,
           showSizeChanger: true,
           showTotal: (total) => `Всего: ${total}`,
-          pageSizeOptions: ['10', '20', '50', '100'],
+          pageSizeOptions: ["10", "20", "50", "100"],
           onChange: (page, pageSize) => {
             setPagination({ current: page, pageSize });
           },
@@ -615,4 +649,3 @@ const ExportPage = () => {
 };
 
 export default ExportPage;
-

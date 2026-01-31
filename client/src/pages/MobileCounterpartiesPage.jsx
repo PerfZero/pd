@@ -1,48 +1,51 @@
-import { useState, useEffect } from 'react';
-import { Input, App, Modal, Form, Select } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
-import { counterpartyService } from '@/services/counterpartyService';
-import MobileCounterpartiesList from '@/components/Admin/MobileCounterpartiesList';
+import { useState, useEffect, useCallback } from "react";
+import { Input, App, Modal, Form, Select } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
+import { counterpartyService } from "@/services/counterpartyService";
+import MobileCounterpartiesList from "@/components/Admin/MobileCounterpartiesList";
 
 /**
  * Мобильная страница управления контрагентами
  * Адаптирована для мобильных устройств
  */
 const typeMap = {
-  customer: { label: 'Заказчик', color: 'blue' },
-  contractor: { label: 'Подрядчик', color: 'green' },
-  general_contractor: { label: 'Генподрядчик', color: 'gold' }
+  customer: { label: "Заказчик", color: "blue" },
+  contractor: { label: "Подрядчик", color: "green" },
+  general_contractor: { label: "Генподрядчик", color: "gold" },
 };
 
 const MobileCounterpartiesPage = () => {
   const { message } = App.useApp();
   const [counterparties, setCounterparties] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCounterparty, setEditingCounterparty] = useState(null);
   const [form] = Form.useForm();
 
-  // Загрузка данных при монтировании
-  useEffect(() => {
-    fetchCounterparties();
-  }, []);
-
   // Загрузить контрагентов
-  const fetchCounterparties = async () => {
+  const fetchCounterparties = useCallback(async () => {
     setLoading(true);
     try {
       // Загружаем все контрагенты без ограничения для поиска
-      const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
+      const { data } = await counterpartyService.getAll({
+        limit: 10000,
+        page: 1,
+      });
       setCounterparties(data.data.counterparties || []);
     } catch (error) {
-      console.error('Error fetching counterparties:', error);
+      console.error("Error fetching counterparties:", error);
       setCounterparties([]);
-      message.error('Ошибка загрузки контрагентов');
+      message.error("Ошибка загрузки контрагентов");
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
+
+  // Загрузка данных при монтировании
+  useEffect(() => {
+    fetchCounterparties();
+  }, [fetchCounterparties]);
 
   // Отфильтрованный список контрагентов
   const filteredCounterparties = counterparties.filter((counterparty) => {
@@ -65,14 +68,16 @@ const MobileCounterpartiesPage = () => {
     try {
       const values = await form.validateFields();
       await counterpartyService.update(editingCounterparty.id, values);
-      message.success('Контрагент обновлен');
+      message.success("Контрагент обновлен");
       setIsModalOpen(false);
       fetchCounterparties();
     } catch (error) {
       if (error.errorFields) {
         return;
       }
-      message.error(error.response?.data?.message || 'Ошибка сохранения контрагента');
+      message.error(
+        error.response?.data?.message || "Ошибка сохранения контрагента",
+      );
     }
   };
 
@@ -84,9 +89,23 @@ const MobileCounterpartiesPage = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
       {/* Поиск */}
-      <div style={{ padding: '12px 16px 8px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div
+        style={{
+          padding: "12px 16px 8px 16px",
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
         <Input
           placeholder="Поиск по названию или ИНН..."
           prefix={<SearchOutlined />}
@@ -119,7 +138,7 @@ const MobileCounterpartiesPage = () => {
           <Form.Item
             name="name"
             label="Название"
-            rules={[{ required: true, message: 'Введите название' }]}
+            rules={[{ required: true, message: "Введите название" }]}
           >
             <Input />
           </Form.Item>
@@ -127,22 +146,19 @@ const MobileCounterpartiesPage = () => {
           <Form.Item
             name="inn"
             label="ИНН"
-            rules={[{ required: true, message: 'Введите ИНН' }]}
+            rules={[{ required: true, message: "Введите ИНН" }]}
           >
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="kpp"
-            label="КПП"
-          >
+          <Form.Item name="kpp" label="КПП">
             <Input />
           </Form.Item>
 
           <Form.Item
             name="type"
             label="Тип"
-            rules={[{ required: true, message: 'Выберите тип' }]}
+            rules={[{ required: true, message: "Выберите тип" }]}
           >
             <Select>
               {Object.entries(typeMap).map(([key, value]) => (
@@ -153,24 +169,15 @@ const MobileCounterpartiesPage = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="phone"
-            label="Телефон"
-          >
+          <Form.Item name="phone" label="Телефон">
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="email"
-            label="Email"
-          >
+          <Form.Item name="email" label="Email">
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="address"
-            label="Адрес"
-          >
+          <Form.Item name="address" label="Адрес">
             <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
@@ -180,4 +187,3 @@ const MobileCounterpartiesPage = () => {
 };
 
 export default MobileCounterpartiesPage;
-

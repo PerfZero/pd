@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Button,
@@ -25,14 +25,7 @@ const DepartmentsPage = () => {
   const [form] = Form.useForm();
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    if (user) {
-      fetchDepartments();
-      fetchConstructionSites();
-    }
-  }, [user]);
-
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await departmentService.getAll(user.counterpartyId);
@@ -43,10 +36,10 @@ const DepartmentsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.counterpartyId]);
 
   // Загрузка объектов (для default контрагента - все, для остальных - только привязанные)
-  const fetchConstructionSites = async () => {
+  const fetchConstructionSites = useCallback(async () => {
     try {
       let sites = [];
 
@@ -73,7 +66,14 @@ const DepartmentsPage = () => {
       // Не показываем ошибку, если просто нет объектов
       setConstructionSites([]);
     }
-  };
+  }, [user?.counterpartyId]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDepartments();
+      fetchConstructionSites();
+    }
+  }, [user, fetchDepartments, fetchConstructionSites]);
 
   const handleOpenModal = (department = null) => {
     setEditingDepartment(department);

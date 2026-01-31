@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Button,
@@ -39,39 +39,42 @@ const PositionsPage = () => {
     user?.role === "admin" || user?.counterpartyId === defaultCounterpartyId;
 
   // Загрузка должностей
-  const fetchPositions = async (page = 1, search = "") => {
-    try {
-      setLoading(true);
-      const response = await positionService.getAll({
-        page,
-        limit: 50,
-        search,
-      });
-      setPositions(response.data.data.positions);
-      setTotalCount(response.data.data.totalCount);
-      setCurrentPage(page);
-    } catch (error) {
-      console.error("Error fetching positions:", error);
-      message.error(error.userMessage || "Ошибка загрузки должностей");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPositions();
-    fetchDefaultCounterparty();
-  }, []);
+  const fetchPositions = useCallback(
+    async (page = 1, search = "") => {
+      try {
+        setLoading(true);
+        const response = await positionService.getAll({
+          page,
+          limit: 50,
+          search,
+        });
+        setPositions(response.data.data.positions);
+        setTotalCount(response.data.data.totalCount);
+        setCurrentPage(page);
+      } catch (error) {
+        console.error("Error fetching positions:", error);
+        message.error(error.userMessage || "Ошибка загрузки должностей");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [message],
+  );
 
   // Загрузка настроек контрагента по умолчанию
-  const fetchDefaultCounterparty = async () => {
+  const fetchDefaultCounterparty = useCallback(async () => {
     try {
       const response = await settingsService.getPublicSettings();
       setDefaultCounterpartyId(response.data?.data?.defaultCounterpartyId);
     } catch (error) {
       console.error("Error loading default counterparty:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPositions();
+    fetchDefaultCounterparty();
+  }, [fetchPositions, fetchDefaultCounterparty]);
 
   // Поиск
   const handleSearch = (value) => {

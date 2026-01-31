@@ -1,78 +1,88 @@
-import { useState, useEffect, useRef } from 'react';
-import { Row, Col, Button, Upload, App, Tooltip, Spin, List, Space, Popconfirm } from 'antd';
-import { CheckCircleOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
-import { FileViewer } from '../../shared/ui/FileViewer';
-import { employeeService } from '../../services/employeeService';
-import { ALLOWED_MIME_TYPES, SUPPORTED_FORMATS, ALLOWED_EXTENSIONS } from '../../shared/constants/fileTypes.js';
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Row,
+  Col,
+  Button,
+  Upload,
+  App,
+  Tooltip,
+  Spin,
+  List,
+  Space,
+  Popconfirm,
+} from "antd";
+import {
+  CheckCircleOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
+import { FileViewer } from "../../shared/ui/FileViewer";
+import { employeeService } from "../../services/employeeService";
+import {
+  ALLOWED_MIME_TYPES,
+  SUPPORTED_FORMATS,
+  ALLOWED_EXTENSIONS,
+} from "../../shared/constants/fileTypes.js";
 
 // Типы документов
 const DOCUMENT_TYPES = [
-  { value: 'passport', label: 'Паспорт' },
-  { value: 'bank_details', label: 'Реквизиты счета' },
-  { value: 'kig', label: 'КИГ' },
-  { value: 'patent_front', label: 'Патент (лиц.)' },
-  { value: 'patent_back', label: 'Патент (спин.)' },
-  { value: 'biometric_consent', label: 'Согласие на перс.дан. Генподряд' },
-  { value: 'biometric_consent_developer', label: 'Согласие на перс.дан. Застройщ' },
-  { value: 'diploma', label: 'Диплом' },
-  { value: 'med_book', label: 'Мед.книжка' },
-  { value: 'migration_card', label: 'Миграционная карта' },
-  { value: 'arrival_notice', label: 'Уведомление о прибытии' },
-  { value: 'patent_payment_receipt', label: 'Чек оплаты патента' },
-  { value: 'mvd_notification', label: 'Уведомление МВД' }
+  { value: "passport", label: "Паспорт" },
+  { value: "bank_details", label: "Реквизиты счета" },
+  { value: "kig", label: "КИГ" },
+  { value: "patent_front", label: "Патент (лиц.)" },
+  { value: "patent_back", label: "Патент (спин.)" },
+  { value: "biometric_consent", label: "Согласие на перс.дан. Генподряд" },
+  {
+    value: "biometric_consent_developer",
+    label: "Согласие на перс.дан. Застройщ",
+  },
+  { value: "diploma", label: "Диплом" },
+  { value: "med_book", label: "Мед.книжка" },
+  { value: "migration_card", label: "Миграционная карта" },
+  { value: "arrival_notice", label: "Уведомление о прибытии" },
+  { value: "patent_payment_receipt", label: "Чек оплаты патента" },
+  { value: "mvd_notification", label: "Уведомление МВД" },
 ];
 
 /**
  * Компонент для загрузки документов по типам с автоматической загрузкой
  * Каждый тип документа имеет отдельную кнопку с множественным выбором файлов
  */
-const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) => {
+const DocumentTypeUploader = ({
+  employeeId,
+  onFilesUpdated,
+  readonly = false,
+}) => {
   const { message } = App.useApp();
   const [uploadingTypes, setUploadingTypes] = useState({}); // { docType: true/false }
-  const [fileCounts, setFileCounts] = useState({}); // { docType: count }
   const [allFiles, setAllFiles] = useState([]); // все загруженные файлы
-  const [loading, setLoading] = useState(false);
   const uploadingRef = useRef(new Set()); // Отслеживаем уже отправленные файлы
   const [viewerVisible, setViewerVisible] = useState(false); // Видимость модального окна
   const [viewingFile, setViewingFile] = useState(null); // Файл для просмотра
+
+  // Загрузить все файлы и обновить счетчики по типам
+  const fetchAllFiles = useCallback(async () => {
+    try {
+      const response = await employeeService.getFiles(employeeId);
+      const files = response?.data || response || [];
+      setAllFiles(files);
+    } catch (error) {
+      console.error("Error loading files:", error);
+      message.error("Ошибка загрузки файлов");
+    }
+  }, [employeeId, message]);
 
   // Загрузить файлы при инициализации и при изменении employeeId
   useEffect(() => {
     if (employeeId) {
       fetchAllFiles();
     }
-  }, [employeeId]);
-
-  // Загрузить все файлы и обновить счетчики по типам
-  const fetchAllFiles = async () => {
-    setLoading(true);
-    try {
-      const response = await employeeService.getFiles(employeeId);
-      const files = response?.data || response || [];
-      setAllFiles(files);
-
-      // Подсчитываем файлы по типам документов
-      const counts = {};
-      DOCUMENT_TYPES.forEach(docType => {
-        counts[docType.value] = files.filter(f => f.documentType === docType.value).length;
-      });
-      setFileCounts(counts);
-    } catch (error) {
-      console.error('Error loading files:', error);
-      message.error('Ошибка загрузки файлов');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Предотвращаем автоматическую загрузку через компонент Upload
-  const handleUpload = async (file, documentType) => {
-    return false;
-  };
+  }, [employeeId, fetchAllFiles]);
 
   // Получить файлы для конкретного типа документа
   const getFilesForType = (documentType) => {
-    return allFiles.filter(f => f.documentType === documentType);
+    return allFiles.filter((f) => f.documentType === documentType);
   };
 
   // Компонент для рендеринга одного типа документа
@@ -83,9 +93,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
       <div key={docType.value} className="document-uploader-item">
         <div className="document-uploader-header">
           <span className="document-uploader-label">
-            <Tooltip title={docType.label}>
-              {docType.label}
-            </Tooltip>
+            <Tooltip title={docType.label}>{docType.label}</Tooltip>
           </span>
 
           {!readonly ? (
@@ -96,17 +104,21 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
                 beforeUpload={(file) => {
                   // Проверка типа файла
                   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-                    message.error(`❌ ${file.name}: неподдерживаемый тип файла\n✅ Поддерживаются: ${SUPPORTED_FORMATS}`);
+                    message.error(
+                      `❌ ${file.name}: неподдерживаемый тип файла\n✅ Поддерживаются: ${SUPPORTED_FORMATS}`,
+                    );
                     return Upload.LIST_IGNORE;
                   }
-                  
+
                   // Проверка размера файла (макс. 100 МБ)
                   const fileSizeMB = file.size / 1024 / 1024;
                   if (fileSizeMB > 100) {
-                    message.error(`❌ ${file.name}: размер файла ${fileSizeMB.toFixed(2)}MB превышает максимум 100MB`);
+                    message.error(
+                      `❌ ${file.name}: размер файла ${fileSizeMB.toFixed(2)}MB превышает максимум 100MB`,
+                    );
                     return Upload.LIST_IGNORE;
                   }
-                  
+
                   return false;
                 }}
                 onChange={(info) => handleChange(info, docType.value)}
@@ -118,7 +130,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
                   loading={uploadingTypes[docType.value]}
                   className="document-uploader-button"
                 >
-                  {uploadingTypes[docType.value] ? 'Загруз.' : 'Загрузить'}
+                  {uploadingTypes[docType.value] ? "Загруз." : "Загрузить"}
                 </Button>
               </Upload>
 
@@ -127,7 +139,9 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
                   <Spin size="small" />
                 ) : (
                   <>
-                    <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                    <CheckCircleOutlined
+                      style={{ color: "#52c41a", marginRight: 4 }}
+                    />
                     {filesOfType.length}
                   </>
                 )}
@@ -135,7 +149,9 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
             </>
           ) : (
             <span className="document-uploader-count">
-              <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+              <CheckCircleOutlined
+                style={{ color: "#52c41a", marginRight: 4 }}
+              />
               {filesOfType.length}
             </span>
           )}
@@ -148,15 +164,19 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
               size="small"
               dataSource={filesOfType}
               renderItem={(file) => {
-                const displayName = file.fileName || file.file_name || file.filename || file.original_name || file.originalName || 'Неизвестный файл';
-                
+                const displayName =
+                  file.fileName ||
+                  file.file_name ||
+                  file.filename ||
+                  file.original_name ||
+                  file.originalName ||
+                  "Неизвестный файл";
+
                 return (
                   <List.Item>
                     <List.Item.Meta
                       title={
-                        <span style={{ fontSize: '12px' }}>
-                          {displayName}
-                        </span>
+                        <span style={{ fontSize: "12px" }}>{displayName}</span>
                       }
                     />
                     {!readonly && (
@@ -180,7 +200,12 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
                           okText="Да"
                           cancelText="Отмена"
                         >
-                          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                          />
                         </Popconfirm>
                       </Space>
                     )}
@@ -208,8 +233,8 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
     }
 
     // Создаем уникальный ключ для этой загрузки (по размерам файлов)
-    const uploadKey = fileList.map(f => `${f.name}_${f.size}`).join('|');
-    
+    const uploadKey = fileList.map((f) => `${f.name}_${f.size}`).join("|");
+
     // Если эта загрузка уже в процессе, выходим
     if (uploadingRef.current.has(uploadKey)) {
       return;
@@ -219,25 +244,27 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
     uploadingRef.current.add(uploadKey);
 
     // Показываем индикатор загрузки
-    setUploadingTypes(prev => ({ ...prev, [documentType]: true }));
+    setUploadingTypes((prev) => ({ ...prev, [documentType]: true }));
 
     try {
       const formData = new FormData();
-      
+
       // Добавляем все выбранные файлы
-      fileList.forEach(fileObj => {
+      fileList.forEach((fileObj) => {
         const actualFile = fileObj.originFileObj || fileObj;
-        formData.append('files', actualFile);
+        formData.append("files", actualFile);
       });
-      
+
       // Добавляем тип документа
-      formData.append('documentType', documentType);
+      formData.append("documentType", documentType);
 
       // Загружаем файлы
       await employeeService.uploadFiles(employeeId, formData);
-      
-      message.success(`${DOCUMENT_TYPES.find(d => d.value === documentType)?.label} загружен(ы)`);
-      
+
+      message.success(
+        `${DOCUMENT_TYPES.find((d) => d.value === documentType)?.label} загружен(ы)`,
+      );
+
       // Небольшая задержка чтобы сервер обновил имена файлов
       setTimeout(() => {
         fetchAllFiles();
@@ -251,7 +278,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
       console.error(`Error uploading ${documentType}:`, error);
       message.error(`Ошибка загрузки файла`);
     } finally {
-      setUploadingTypes(prev => ({ ...prev, [documentType]: false }));
+      setUploadingTypes((prev) => ({ ...prev, [documentType]: false }));
       // Удаляем из отслеживания
       uploadingRef.current.delete(uploadKey);
     }
@@ -261,65 +288,71 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
   const handleDeleteFile = async (fileId) => {
     try {
       await employeeService.deleteFile(employeeId, fileId);
-      message.success('Файл удален');
+      message.success("Файл удален");
       await fetchAllFiles();
       if (onFilesUpdated) {
         onFilesUpdated();
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
-      message.error('Ошибка удаления файла');
+      console.error("Error deleting file:", error);
+      message.error("Ошибка удаления файла");
     }
   };
 
   // Скачать файл
   const handleDownloadFile = async (file) => {
     try {
-      const downloadLink = await employeeService.getFileDownloadLink(employeeId, file.id);
-      
+      const downloadLink = await employeeService.getFileDownloadLink(
+        employeeId,
+        file.id,
+      );
+
       // Извлекаем URL из ответа
       const url = downloadLink?.data?.downloadUrl || downloadLink?.downloadUrl;
-      
-      if (url && typeof url === 'string') {
-        window.open(url, '_blank');
+
+      if (url && typeof url === "string") {
+        window.open(url, "_blank");
       } else {
-        console.error('❌ No download URL found in response:', downloadLink);
-        message.error('Ошибка при получении ссылки скачивания');
+        console.error("❌ No download URL found in response:", downloadLink);
+        message.error("Ошибка при получении ссылки скачивания");
       }
     } catch (error) {
-      console.error('Error downloading file:', error);
-      message.error('Ошибка скачивания файла');
+      console.error("Error downloading file:", error);
+      message.error("Ошибка скачивания файла");
     }
   };
 
   // Просмотр файла
   const handleViewFile = async (file) => {
     try {
-      const viewLink = await employeeService.getFileViewLink(employeeId, file.id);
-      
+      const viewLink = await employeeService.getFileViewLink(
+        employeeId,
+        file.id,
+      );
+
       // Извлекаем URL из ответа
       const url = viewLink?.data?.viewUrl || viewLink?.viewUrl;
-      
-      if (url && typeof url === 'string') {
+
+      if (url && typeof url === "string") {
         // Открываем модальное окно с просмотром
         setViewingFile({
           url,
-          mimeType: file.mimeType || 'application/pdf',
-          fileName: file.fileName
+          mimeType: file.mimeType || "application/pdf",
+          fileName: file.fileName,
         });
         setViewerVisible(true);
       } else {
-        console.error('❌ No view URL found in response:', viewLink);
-        message.error('Ошибка при получении ссылки просмотра');
+        console.error("❌ No view URL found in response:", viewLink);
+        message.error("Ошибка при получении ссылки просмотра");
       }
     } catch (error) {
-      console.error('Error viewing file:', error);
-      message.error('Ошибка просмотра файла');
+      console.error("Error viewing file:", error);
+      message.error("Ошибка просмотра файла");
     }
   };
 
   return (
-    <div style={{ padding: '16px 0' }}>
+    <div style={{ padding: "16px 0" }}>
       <style>{`
         .document-uploader-column {
           display: flex;
@@ -376,22 +409,25 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
         }
       `}</style>
 
-      <div style={{
-        marginBottom: 16,
-        padding: '10px 12px',
-        backgroundColor: '#f0f5ff',
-        borderRadius: 4,
-        fontSize: '12px',
-        color: '#1890ff',
-        border: '1px solid #b3d8ff'
-      }}>
-        ℹ️ Укажите тип документа и выберите файл (поддерживаемые форматы: {SUPPORTED_FORMATS})
+      <div
+        style={{
+          marginBottom: 16,
+          padding: "10px 12px",
+          backgroundColor: "#f0f5ff",
+          borderRadius: 4,
+          fontSize: "12px",
+          color: "#1890ff",
+          border: "1px solid #b3d8ff",
+        }}
+      >
+        ℹ️ Укажите тип документа и выберите файл (поддерживаемые форматы:{" "}
+        {SUPPORTED_FORMATS})
       </div>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={8}>
           <div className="document-uploader-column">
-            {DOCUMENT_TYPES.slice(0, 4).map(docType => (
+            {DOCUMENT_TYPES.slice(0, 4).map((docType) => (
               <DocumentTypeItem key={docType.value} docType={docType} />
             ))}
           </div>
@@ -399,7 +435,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
 
         <Col xs={24} sm={12} lg={8}>
           <div className="document-uploader-column">
-            {DOCUMENT_TYPES.slice(4, 8).map(docType => (
+            {DOCUMENT_TYPES.slice(4, 8).map((docType) => (
               <DocumentTypeItem key={docType.value} docType={docType} />
             ))}
           </div>
@@ -407,7 +443,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
 
         <Col xs={24} sm={12} lg={8}>
           <div className="document-uploader-column">
-            {DOCUMENT_TYPES.slice(8).map(docType => (
+            {DOCUMENT_TYPES.slice(8).map((docType) => (
               <DocumentTypeItem key={docType.value} docType={docType} />
             ))}
           </div>
@@ -429,4 +465,3 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
 };
 
 export default DocumentTypeUploader;
-
