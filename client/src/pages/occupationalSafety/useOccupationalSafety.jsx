@@ -508,9 +508,7 @@ const useOccupationalSafety = () => {
 
   const handleDownloadInstructionFile = async (instruction) => {
     try {
-      const response = await otService.downloadInstructionFile(
-        instruction.fileId,
-      );
+      const response = await otService.downloadInstructionFile(instruction.id);
       const url = response.data?.data?.url;
       if (url) {
         window.open(url, "_blank");
