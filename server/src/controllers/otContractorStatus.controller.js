@@ -7,6 +7,7 @@ import { AppError } from "../middleware/errorHandler.js";
 import {
   assertOtAccess,
   assertCounterpartySiteAccess,
+  getDefaultCounterpartyId,
 } from "../utils/otAccess.js";
 import {
   getEffectiveStatusesBulk,
@@ -27,6 +28,7 @@ export const getOtContractorStatuses = async (req, res, next) => {
     }
 
     let counterpartyIds = [];
+    const defaultCounterpartyId = await getDefaultCounterpartyId();
 
     if (isStaff) {
       if (counterpartyIdQuery) {
@@ -44,6 +46,12 @@ export const getOtContractorStatuses = async (req, res, next) => {
         req.user,
         req.user.counterpartyId,
         constructionSiteId,
+      );
+    }
+
+    if (defaultCounterpartyId) {
+      counterpartyIds = counterpartyIds.filter(
+        (id) => id !== defaultCounterpartyId,
       );
     }
 
@@ -107,12 +115,19 @@ export const getOtContractorStatusSummary = async (req, res, next) => {
       return res.json({ success: true, data: [] });
     }
 
+    const defaultCounterpartyId = await getDefaultCounterpartyId();
     const mappings = await CounterpartyConstructionSiteMapping.findAll({
       where: { constructionSiteId: siteIds },
       attributes: ["counterpartyId", "constructionSiteId"],
     });
 
-    const summaries = await getStatusSummaryForSites(siteIds, mappings);
+    const filteredMappings = defaultCounterpartyId
+      ? mappings.filter(
+          (mapping) => mapping.counterpartyId !== defaultCounterpartyId,
+        )
+      : mappings;
+
+    const summaries = await getStatusSummaryForSites(siteIds, filteredMappings);
 
     res.json({
       success: true,

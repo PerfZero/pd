@@ -66,6 +66,8 @@ export const otService = {
 
   getComments: (params) => api.get("/ot/comments", { params }),
   createComment: (data) => api.post("/ot/comments", data),
+  updateComment: (id, data) => api.patch(`/ot/comments/${id}`, data),
+  deleteComment: (id) => api.delete(`/ot/comments/${id}`),
 };
 
 export default otService;
