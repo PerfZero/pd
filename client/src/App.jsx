@@ -19,6 +19,7 @@ import DirectoriesPage from "./pages/DirectoriesPage";
 import DebugPage from "./pages/DebugPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OccupationalSafetyPage from "./pages/OccupationalSafetyPage";
+import OcrTestPage from "./pages/OcrTestPage";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { useTokenRefresh } from "./hooks/useTokenRefresh";
 import { useAuthBootstrap } from "./hooks/useAuthBootstrap";
@@ -172,6 +173,7 @@ function App() {
 
             {/* Route for regular users (employee profile) */}
             <Route path="my-profile" element={<UserProfilePage />} />
+            <Route path="ocr-test" element={<OcrTestPage />} />
           </Route>
 
           {/* 404 */}
