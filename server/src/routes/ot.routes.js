@@ -43,6 +43,8 @@ import {
 import {
   getOtComments,
   createOtComment,
+  updateOtComment,
+  deleteOtComment,
 } from "../controllers/otComment.controller.js";
 
 const router = express.Router();
@@ -117,5 +119,7 @@ router.post(
 // Comments
 router.get("/comments", getOtComments);
 router.post("/comments", createOtComment);
+router.patch("/comments/:id", updateOtComment);
+router.delete("/comments/:id", deleteOtComment);
 
 export default router;

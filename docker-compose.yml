@@ -58,6 +58,10 @@ services:
       CLOUDRU_S3_BASE_PATH: ""
     ports:
       - "5003:5000"
+    command: >
+      sh -c "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
+      then npm ci; fi;
+      npm run db:migrate && npm run dev"
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,6 +83,10 @@ services:
       VITE_PROXY_TARGET: http://server:5000
     ports:
       - "5173:5173"
+    command: >
+      sh -c "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
+      then npm ci; fi;
+      npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
       - server
     volumes:

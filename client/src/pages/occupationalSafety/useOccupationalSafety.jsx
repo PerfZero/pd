@@ -225,7 +225,10 @@ const useOccupationalSafety = () => {
         if (isStaff) {
           const [sitesResponse, counterpartiesResponse] = await Promise.all([
             constructionSiteService.getAll({ limit: 1000 }),
-            counterpartyService.getAll({ limit: 1000 }),
+            counterpartyService.getAll({
+              limit: 1000,
+              include: "construction_sites",
+            }),
           ]);
 
           const sites =
@@ -443,6 +446,7 @@ const useOccupationalSafety = () => {
           type: "document",
           id: doc.id,
           name: doc.name,
+          description: doc.description,
           status: doc.status || "not_uploaded",
           isRequired: doc.isRequired,
           templateFileId: doc.templateFileId,
@@ -521,7 +525,9 @@ const useOccupationalSafety = () => {
 
   const handleDownloadContractorFile = async (doc) => {
     try {
-      const response = await otService.downloadContractorDocFile(doc.fileId);
+      const response = await otService.downloadContractorDocFile(
+        doc.contractorDocumentId,
+      );
       const url = response.data?.data?.url;
       if (url) {
         window.open(url, "_blank");
@@ -1076,16 +1082,60 @@ const useOccupationalSafety = () => {
   );
 
   const counterpartyOptions = useMemo(() => {
-    const filtered = defaultCounterpartyId
+    let filtered = defaultCounterpartyId
       ? counterparties.filter(
           (counterparty) => counterparty.id !== defaultCounterpartyId,
         )
       : counterparties;
+
+    if (isStaff) {
+      if (!selectedConstructionSiteId) {
+        filtered = [];
+      } else {
+        filtered = filtered.filter((counterparty) =>
+          (counterparty.constructionSites || []).some(
+            (site) => site.id === selectedConstructionSiteId,
+          ),
+        );
+      }
+    }
+
     return filtered.map((counterparty) => ({
       label: counterparty.name || counterparty.id,
       value: counterparty.id,
     }));
-  }, [counterparties, defaultCounterpartyId]);
+  }, [
+    counterparties,
+    defaultCounterpartyId,
+    isStaff,
+    selectedConstructionSiteId,
+  ]);
+
+  useEffect(() => {
+    if (!isStaff) return;
+    if (!selectedConstructionSiteId) {
+      if (selectedCounterpartyId) {
+        setSelectedCounterpartyId(null);
+      }
+      return;
+    }
+
+    if (!selectedCounterpartyId) return;
+
+    const allowedIds = new Set(
+      counterpartyOptions.map((option) => option.value),
+    );
+
+    if (!allowedIds.has(selectedCounterpartyId)) {
+      setSelectedCounterpartyId(null);
+    }
+  }, [
+    isStaff,
+    selectedConstructionSiteId,
+    selectedCounterpartyId,
+    counterpartyOptions,
+    setSelectedCounterpartyId,
+  ]);
 
   const categoryOptions = useMemo(() => {
     const buildOptions = (nodes, depth = 0) =>
@@ -1109,6 +1159,15 @@ const useOccupationalSafety = () => {
   }, [settingsDocuments, selectedCategoryId]);
 
   const settingsCategoryTree = useMemo(() => {
+    const countDocuments = (node) => {
+      const ownDocs = (node.documents || []).length;
+      const childDocs = (node.children || []).reduce(
+        (sum, child) => sum + countDocuments(child),
+        0,
+      );
+      return ownDocs + childDocs;
+    };
+
     const buildTree = (nodes) =>
       (nodes || []).map((node) => ({
         key: node.id,
@@ -1121,7 +1180,12 @@ const useOccupationalSafety = () => {
           >
             <Space size={6}>
               <Text strong>{node.name}</Text>
-              <Text type="secondary">({node.sortOrder || 0})</Text>
+              {node.description && (
+                <Tooltip title={node.description}>
+                  <InfoCircleOutlined />
+                </Tooltip>
+              )}
+              <Text type="secondary">({countDocuments(node)})</Text>
             </Space>
             <Space size={4}>
               <Tooltip title="Редактировать">
@@ -1194,6 +1258,11 @@ const useOccupationalSafety = () => {
       >
         <Space size={8} style={{ minWidth: 0 }}>
           <Text style={{ fontWeight: 500 }}>{node.name}</Text>
+          {node.description && (
+            <Tooltip title={node.description}>
+              <InfoCircleOutlined />
+            </Tooltip>
+          )}
           {node.isRequired && <Tag color="red">Обязательный</Tag>}
         </Space>
         <Space size={6} wrap>

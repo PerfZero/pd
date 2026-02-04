@@ -131,3 +131,98 @@ export const createOtComment = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateOtComment = async (req, res, next) => {
+  try {
+    const access = await assertOtAccess(req.user);
+
+    const { id } = req.params;
+    const { text } = req.body;
+
+    if (!text) {
+      throw new AppError("text обязателен", 400);
+    }
+
+    const comment = await OtComment.findByPk(id);
+
+    if (!comment) {
+      throw new AppError("Комментарий не найден", 404);
+    }
+
+    // Проверка доступа по типу комментария
+    if (comment.type === "contractor") {
+      await assertCounterpartySiteAccess(
+        req.user,
+        comment.counterpartyId,
+        comment.constructionSiteId,
+      );
+    } else if (comment.type === "document") {
+      const doc = await OtContractorDocument.findByPk(
+        comment.contractorDocumentId,
+      );
+      if (!doc) {
+        throw new AppError("Документ подрядчика не найден", 404);
+      }
+      await assertCounterpartyAccess(req.user, doc.counterpartyId);
+    }
+
+    if (!access.isStaff && comment.createdBy !== req.user.id) {
+      throw new AppError("Недостаточно прав", 403);
+    }
+
+    await comment.update({ text });
+
+    res.json({
+      success: true,
+      message: "Комментарий обновлен",
+      data: comment,
+    });
+  } catch (error) {
+    console.error("Error updating OT comment:", error);
+    next(error);
+  }
+};
+
+export const deleteOtComment = async (req, res, next) => {
+  try {
+    const access = await assertOtAccess(req.user);
+
+    const { id } = req.params;
+    const comment = await OtComment.findByPk(id);
+
+    if (!comment) {
+      throw new AppError("Комментарий не найден", 404);
+    }
+
+    // Проверка доступа по типу комментария
+    if (comment.type === "contractor") {
+      await assertCounterpartySiteAccess(
+        req.user,
+        comment.counterpartyId,
+        comment.constructionSiteId,
+      );
+    } else if (comment.type === "document") {
+      const doc = await OtContractorDocument.findByPk(
+        comment.contractorDocumentId,
+      );
+      if (!doc) {
+        throw new AppError("Документ подрядчика не найден", 404);
+      }
+      await assertCounterpartyAccess(req.user, doc.counterpartyId);
+    }
+
+    if (!access.isStaff && comment.createdBy !== req.user.id) {
+      throw new AppError("Недостаточно прав", 403);
+    }
+
+    await comment.destroy();
+
+    res.json({
+      success: true,
+      message: "Комментарий удален",
+    });
+  } catch (error) {
+    console.error("Error deleting OT comment:", error);
+    next(error);
+  }
+};
