@@ -8,94 +8,85 @@ import {
   Upload,
   Alert,
   Divider,
+  Select,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import api from "@/services/api";
 
 const { Title, Text } = Typography;
 
-const DEFAULT_ENDPOINT =
-  "https://ocr.api.cloud.yandex.net/ocr/v1/recognizeText";
+const DEFAULT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "qwen/qwen3-vl-30b-a3b-instruct";
+const DEFAULT_PROMPT =
+  "Распознай текст на изображении паспорта РФ. Верни строго JSON без обрамления. " +
+  "Поля: surname, givenNames, middleName, birthDate, sex, nationality, " +
+  "passportNumber, issueDate, departmentCode, authority, birthPlace, expiryDate.";
+
+const MODEL_OPTIONS = [
+  {
+    label: "Qwen3 VL 30B A3B Instruct",
+    value: "qwen/qwen3-vl-30b-a3b-instruct",
+  },
+  {
+    label: "Qwen3 VL 235B A22B Instruct",
+    value: "qwen/qwen3-vl-235b-a22b-instruct",
+  },
+];
 
 const OcrTestPage = () => {
   const [endpoint, setEndpoint] = useState(DEFAULT_ENDPOINT);
-  const [folderId, setFolderId] = useState("");
-  const [iamToken, setIamToken] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [authType, setAuthType] = useState("bearer");
-  const [languageCodes, setLanguageCodes] = useState("ru");
-  const [model, setModel] = useState("passport");
-  const [mimeType, setMimeType] = useState("JPEG");
-  const [dataLoggingEnabled, setDataLoggingEnabled] = useState(true);
+  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [referer, setReferer] = useState("");
+  const [appTitle, setAppTitle] = useState("");
   const [file, setFile] = useState(null);
   const [customBody, setCustomBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [responseText, setResponseText] = useState("");
+  const [responseContent, setResponseContent] = useState("");
   const [errorText, setErrorText] = useState("");
   const [responseJson, setResponseJson] = useState(null);
 
   useEffect(() => {
-    const storedEndpoint = localStorage.getItem("ocr.endpoint");
-    const storedFolderId = localStorage.getItem("ocr.folderId");
-    const storedIamToken = localStorage.getItem("ocr.iamToken");
-    const storedApiKey = localStorage.getItem("ocr.apiKey");
-    const storedAuthType = localStorage.getItem("ocr.authType");
-    const storedLanguages = localStorage.getItem("ocr.languageCodes");
-    const storedModel = localStorage.getItem("ocr.model");
-    const storedMimeType = localStorage.getItem("ocr.mimeType");
-    const storedLogging = localStorage.getItem("ocr.dataLoggingEnabled");
+    const storedEndpoint = localStorage.getItem("openrouter.endpoint");
+    const storedApiKey = localStorage.getItem("openrouter.apiKey");
+    const storedModel = localStorage.getItem("openrouter.model");
+    const storedPrompt = localStorage.getItem("openrouter.prompt");
+    const storedReferer = localStorage.getItem("openrouter.referer");
+    const storedTitle = localStorage.getItem("openrouter.appTitle");
 
     if (storedEndpoint) setEndpoint(storedEndpoint);
-    if (storedFolderId) setFolderId(storedFolderId);
-    if (storedIamToken) setIamToken(storedIamToken);
     if (storedApiKey) setApiKey(storedApiKey);
-    if (storedAuthType) setAuthType(storedAuthType);
-    if (storedLanguages) setLanguageCodes(storedLanguages);
     if (storedModel) setModel(storedModel);
-    if (storedMimeType) setMimeType(storedMimeType);
-    if (storedLogging) {
-      setDataLoggingEnabled(storedLogging !== "false");
-    }
+    if (storedPrompt) setPrompt(storedPrompt);
+    if (storedReferer) setReferer(storedReferer);
+    if (storedTitle) setAppTitle(storedTitle);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("ocr.endpoint", endpoint);
+    localStorage.setItem("openrouter.endpoint", endpoint);
   }, [endpoint]);
 
   useEffect(() => {
-    localStorage.setItem("ocr.folderId", folderId);
-  }, [folderId]);
-
-  useEffect(() => {
-    localStorage.setItem("ocr.iamToken", iamToken);
-  }, [iamToken]);
-
-  useEffect(() => {
-    localStorage.setItem("ocr.apiKey", apiKey);
+    localStorage.setItem("openrouter.apiKey", apiKey);
   }, [apiKey]);
 
   useEffect(() => {
-    localStorage.setItem("ocr.authType", authType);
-  }, [authType]);
-
-  useEffect(() => {
-    localStorage.setItem("ocr.languageCodes", languageCodes);
-  }, [languageCodes]);
-
-  useEffect(() => {
-    localStorage.setItem("ocr.model", model);
+    localStorage.setItem("openrouter.model", model);
   }, [model]);
 
   useEffect(() => {
-    localStorage.setItem("ocr.mimeType", mimeType);
-  }, [mimeType]);
+    localStorage.setItem("openrouter.prompt", prompt);
+  }, [prompt]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "ocr.dataLoggingEnabled",
-      dataLoggingEnabled ? "true" : "false",
-    );
-  }, [dataLoggingEnabled]);
+    localStorage.setItem("openrouter.referer", referer);
+  }, [referer]);
+
+  useEffect(() => {
+    localStorage.setItem("openrouter.appTitle", appTitle);
+  }, [appTitle]);
 
   const requestBody = useMemo(() => {
     if (customBody?.trim()) {
@@ -105,17 +96,34 @@ const OcrTestPage = () => {
         return null;
       }
     }
-    const langs = languageCodes
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+
     return {
-      mimeType: mimeType || undefined,
-      languageCodes: langs.length ? langs : undefined,
-      model: model || undefined,
-      content: "__BASE64__",
+      model,
+      temperature: 0.2,
+      max_tokens: 1200,
+      messages: [
+        {
+          role: "system",
+          content: "Ты ассистент, который извлекает данные из документов.",
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt || DEFAULT_PROMPT,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: "__IMAGE_URL__",
+              },
+            },
+          ],
+        },
+      ],
     };
-  }, [customBody, languageCodes, model, mimeType]);
+  }, [customBody, model, prompt]);
 
   const handlePickFile = (info) => {
     const picked = info.fileList?.[0]?.originFileObj || null;
@@ -141,48 +149,64 @@ const OcrTestPage = () => {
       reader.readAsDataURL(file);
     });
 
-    const payload = JSON.parse(JSON.stringify(requestBody));
+    const imageUrl = `data:${file.type || "image/jpeg"};base64,${base64}`;
 
-    if (payload && typeof payload === "object") {
-      payload.content = base64;
-    }
+    const replacePlaceholders = (value) => {
+      if (typeof value === "string") {
+        if (value === "__IMAGE_URL__") return imageUrl;
+        if (value === "__BASE64__") return base64;
+        return value;
+      }
+      if (Array.isArray(value)) {
+        return value.map((item) => replacePlaceholders(item));
+      }
+      if (value && typeof value === "object") {
+        return Object.entries(value).reduce((acc, [key, item]) => {
+          acc[key] = replacePlaceholders(item);
+          return acc;
+        }, {});
+      }
+      return value;
+    };
 
-    return payload;
+    return replacePlaceholders(requestBody);
   };
 
   const handleSend = async () => {
     setIsLoading(true);
     setResponseText("");
+    setResponseContent("");
     setErrorText("");
     setResponseJson(null);
     try {
       if (!endpoint?.trim()) {
         throw new Error("Укажите endpoint");
       }
-      if (authType === "bearer" && !iamToken?.trim()) {
-        throw new Error("Укажите IAM Token");
-      }
-      if (authType === "apiKey" && !apiKey?.trim()) {
-        throw new Error("Укажите API Key");
+      if (!apiKey?.trim()) {
+        throw new Error("Укажите OpenRouter API Key");
       }
 
       const payload = await buildPayload();
       const headers = {};
-      if (folderId?.trim()) {
-        headers["x-folder-id"] = folderId.trim();
-      }
-      headers["x-data-logging-enabled"] = dataLoggingEnabled ? "true" : "false";
+      if (referer?.trim()) headers["HTTP-Referer"] = referer.trim();
+      if (appTitle?.trim()) headers["X-Title"] = appTitle.trim();
 
-      const response = await api.post("/ocr/yandex", {
+      const response = await api.post("/ocr/openrouter", {
         endpoint: endpoint.trim(),
-        apiKey: authType === "apiKey" ? apiKey.trim() : undefined,
-        iamToken: authType === "bearer" ? iamToken.trim() : undefined,
+        apiKey: apiKey.trim(),
         headers,
         payload,
       });
+
       const data = response.data?.data || {};
+      const content =
+        data?.choices?.[0]?.message?.content ||
+        data?.choices?.[0]?.text ||
+        "";
+
       setResponseJson(data);
       setResponseText(JSON.stringify(data, null, 2));
+      setResponseContent(content);
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || "Ошибка запроса";
@@ -196,139 +220,49 @@ const OcrTestPage = () => {
   };
 
   const parsedPassport = useMemo(() => {
-    if (!responseJson) return null;
-    const annotation = responseJson?.result?.textAnnotation;
-    const rawText = annotation?.fullText || "";
-    const fullText = rawText.replaceAll("&lt;", "<");
-    const blockLines = Array.isArray(annotation?.blocks)
-      ? annotation.blocks.flatMap((block) =>
-          (block.lines || []).map((line) => line.text || ""),
-        )
-      : [];
-    const linesSource =
-      fullText.trim().length > 0 ? fullText : blockLines.join("\n");
-    const lines = linesSource
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
+    if (!responseContent) return null;
 
-    const mrzLines = lines.filter(
-      (line) =>
-        line.startsWith("P<") || line.startsWith("PN") || line.includes("<<"),
-    );
-    const mrzLine1 = mrzLines[0] || "";
-    const mrzLine2 = mrzLines[1] || "";
+    const extractJson = (raw) => {
+      if (!raw) return null;
+      const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i);
+      if (fenced?.[1]) return fenced[1];
+      const first = raw.indexOf("{");
+      const last = raw.lastIndexOf("}");
+      if (first === -1 || last === -1 || last <= first) return null;
+      return raw.slice(first, last + 1);
+    };
 
-    const parseMrzNames = () => {
-      const normalized = mrzLine1.replaceAll("<", " ").replace(/\s+/g, " ");
-      const payload = normalized.replace(/^P[N<]\s*/i, "");
-      const [surnamePart, givenPart = ""] = payload.split("  ");
+    const jsonText = extractJson(responseContent);
+    if (!jsonText) return null;
+
+    try {
+      const data = JSON.parse(jsonText);
       return {
-        surname: surnamePart?.trim() || "",
-        givenNames: givenPart?.trim() || "",
+        surname: data.surname || "",
+        givenNames: data.givenNames || "",
+        middleName: data.middleName || "",
+        birthDate: data.birthDate || "",
+        sex: data.sex || "",
+        nationality: data.nationality || "",
+        passportNumber: data.passportNumber || "",
+        issueDate: data.issueDate || "",
+        departmentCode: data.departmentCode || "",
+        authority: data.authority || "",
+        birthPlace: data.birthPlace || "",
+        expiryDate: data.expiryDate || "",
       };
-    };
-
-    const parseMrzDates = () => {
-      const normalized = mrzLine2.replaceAll("<", "");
-      if (normalized.length < 20) {
-        return {};
-      }
-      const passportNumber = normalized.slice(0, 9);
-      const nationality = normalized.slice(9, 12);
-      const birthRaw = normalized.slice(13, 19);
-      const sex = normalized.slice(20, 21);
-      const expiryRaw = normalized.slice(21, 27);
-      return {
-        passportNumber,
-        nationality,
-        birthRaw,
-        sex,
-        expiryRaw,
-      };
-    };
-
-    const formatDate = (raw) => {
-      if (!raw || raw.length !== 6) return "";
-      return `${raw.slice(0, 2)}.${raw.slice(2, 4)}.${raw.slice(4, 6)}`;
-    };
-
-    const passportNumberMatch = fullText.match(/\b\d{2}\s?\d{2}\s?\d{6}\b/);
-    const passportNumber = passportNumberMatch
-      ? passportNumberMatch[0].replace(/\s+/g, " ")
-      : "";
-
-    const issueDateMatch = fullText.match(/\b\d{2}\.\d{2}\.\d{4}\b/);
-    const issueDate = issueDateMatch ? issueDateMatch[0] : "";
-
-    const departmentCodeMatch = fullText.match(/\b\d{3}-\d{3}\b/);
-    const departmentCode = departmentCodeMatch ? departmentCodeMatch[0] : "";
-
-    const authority = (() => {
-      const idx = lines.findIndex((line) =>
-        line.toLowerCase().includes("паспорт выдан"),
-      );
-      if (idx === -1) return "";
-      const authorityLines = [];
-      for (let i = idx + 1; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (/\d{2}\.\d{2}\.\d{4}/.test(line)) break;
-        if (authorityLines.length > 3) break;
-        authorityLines.push(line);
-      }
-      return authorityLines.join(" ").trim();
-    })();
-
-    const entities = Array.isArray(annotation?.entities)
-      ? annotation.entities
-      : [];
-    const entityMap = entities.reduce((acc, item) => {
-      if (!item?.name) return acc;
-      acc[item.name] = item.text;
-      return acc;
-    }, {});
-
-    const normalizeEntity = (value) => {
-      if (!value) return "";
-      const trimmed = String(value).trim();
-      if (trimmed === "-" || trimmed === "_") return "";
-      return trimmed;
-    };
-
-    const { surname, givenNames } = parseMrzNames();
-    const mrzData = parseMrzDates();
-
-    return {
-      surname: normalizeEntity(entityMap.surname) || surname || "",
-      givenNames: normalizeEntity(entityMap.name) || givenNames || "",
-      middleName: normalizeEntity(entityMap.middle_name) || "",
-      birthDate:
-        normalizeEntity(entityMap.birth_date) || formatDate(mrzData.birthRaw),
-      sex: normalizeEntity(entityMap.gender) || mrzData.sex || "",
-      nationality:
-        normalizeEntity(entityMap.citizenship) || mrzData.nationality || "",
-      passportNumber:
-        normalizeEntity(entityMap.number) ||
-        passportNumber ||
-        mrzData.passportNumber ||
-        "",
-      issueDate: normalizeEntity(entityMap.issue_date) || issueDate,
-      departmentCode: normalizeEntity(entityMap.subdivision) || departmentCode,
-      authority: normalizeEntity(entityMap.issued_by) || authority,
-      birthPlace: normalizeEntity(entityMap.birth_place) || "",
-      expiryDate:
-        normalizeEntity(entityMap.expiration_date) ||
-        formatDate(mrzData.expiryRaw),
-    };
-  }, [responseJson]);
+    } catch {
+      return null;
+    }
+  }, [responseContent]);
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <Title level={3} style={{ margin: 0 }}>
-        Тест Yandex OCR Vision
+        Тест OpenRouter Vision
       </Title>
       <Text type="secondary">
-        Поля можно заполнять вручную. Запрос отправляется через серверный
+        Загрузите изображение, выберите модель и отправьте запрос через серверный
         прокси.
       </Text>
 
@@ -339,52 +273,31 @@ const OcrTestPage = () => {
             value={endpoint}
             onChange={(event) => setEndpoint(event.target.value)}
           />
-          <Input
-            placeholder="Folder ID (x-folder-id)"
-            value={folderId}
-            onChange={(event) => setFolderId(event.target.value)}
+          <Input.Password
+            placeholder="OpenRouter API Key"
+            value={apiKey}
+            onChange={(event) => setApiKey(event.target.value)}
           />
-          <Input
-            placeholder="Auth Type: bearer | apiKey"
-            value={authType}
-            onChange={(event) => setAuthType(event.target.value)}
-          />
-          {authType === "bearer" ? (
-            <Input.Password
-              placeholder="IAM Token"
-              value={iamToken}
-              onChange={(event) => setIamToken(event.target.value)}
-            />
-          ) : (
-            <Input.Password
-              placeholder="API Key"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-            />
-          )}
-          <Input
-            placeholder="Языки (через запятую), например: ru,en"
-            value={languageCodes}
-            onChange={(event) => setLanguageCodes(event.target.value)}
-          />
-          <Input
-            placeholder="Модель (например: page | handwritten)"
+          <Select
             value={model}
-            onChange={(event) => setModel(event.target.value)}
+            options={MODEL_OPTIONS}
+            onChange={setModel}
           />
           <Input
-            placeholder="MimeType (например: JPEG | PNG | PDF)"
-            value={mimeType}
-            onChange={(event) => setMimeType(event.target.value)}
+            placeholder="HTTP-Referer (опционально)"
+            value={referer}
+            onChange={(event) => setReferer(event.target.value)}
           />
           <Input
-            placeholder="x-data-logging-enabled (true/false)"
-            value={dataLoggingEnabled ? "true" : "false"}
-            onChange={(event) =>
-              setDataLoggingEnabled(
-                event.target.value.trim().toLowerCase() !== "false",
-              )
-            }
+            placeholder="X-Title (опционально)"
+            value={appTitle}
+            onChange={(event) => setAppTitle(event.target.value)}
+          />
+          <Input.TextArea
+            rows={4}
+            placeholder="Промпт"
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
           />
           <Upload
             beforeUpload={() => false}
@@ -399,7 +312,10 @@ const OcrTestPage = () => {
           <Text strong>Кастомное тело запроса (JSON, опционально)</Text>
           <Input.TextArea
             rows={6}
-            placeholder="Оставьте пустым, чтобы использовать шаблон. Если заполните, JSON должен быть валиден."
+            placeholder={
+              "Оставьте пустым, чтобы использовать шаблон. Если заполните, JSON должен быть валиден. " +
+              "Для картинки используйте __IMAGE_URL__ или __BASE64__."
+            }
             value={customBody}
             onChange={(event) => setCustomBody(event.target.value)}
           />
@@ -422,9 +338,28 @@ const OcrTestPage = () => {
         <Alert type="error" message="Ошибка" description={errorText} />
       )}
 
+      {responseContent && (
+        <Card>
+          <Text strong>Ответ модели</Text>
+          <pre
+            style={{
+              marginTop: 8,
+              whiteSpace: "pre-wrap",
+              maxHeight: 320,
+              overflow: "auto",
+              background: "#f7f7f7",
+              padding: 12,
+              borderRadius: 8,
+            }}
+          >
+            {responseContent}
+          </pre>
+        </Card>
+      )}
+
       {responseText && (
         <Card>
-          <Text strong>Ответ</Text>
+          <Text strong>Ответ (raw)</Text>
           <pre
             style={{
               marginTop: 8,
