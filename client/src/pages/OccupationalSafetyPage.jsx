@@ -253,16 +253,6 @@ const OccupationalSafetyPage = () => {
     );
   }
 
-  if (isDefaultCounterpartyUser) {
-    return (
-      <Result
-        status="403"
-        title={t("common.accessDenied")}
-        subTitle={t("ot.defaultCounterpartyDenied")}
-      />
-    );
-  }
-
   return (
     <div style={{ padding: 16 }}>
       <Space

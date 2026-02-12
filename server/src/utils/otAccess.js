@@ -58,9 +58,7 @@ export const assertOtAccess = async (
     throw new AppError("Недостаточно прав", 403);
   }
 
-  const defaultCounterpartyId = await getDefaultCounterpartyId();
-
-  if (!user.counterpartyId || user.counterpartyId === defaultCounterpartyId) {
+  if (!user.counterpartyId) {
     throw new AppError("Доступ запрещен", 403);
   }
 

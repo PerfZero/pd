@@ -13,14 +13,8 @@ const useOtAccessModel = ({
   const isOtEngineer = user?.role === "ot_engineer";
   const isStaff = isAdmin || isOtAdmin || isOtEngineer;
   const canManageSettings = isAdmin || isOtAdmin;
-  const isDefaultCounterpartyUser =
-    user?.role === "user" &&
-    user?.counterpartyId &&
-    user?.counterpartyId === defaultCounterpartyId;
-  const isContractorUser =
-    user?.role === "user" &&
-    user?.counterpartyId &&
-    user?.counterpartyId !== defaultCounterpartyId;
+  const isDefaultCounterpartyUser = false;
+  const isContractorUser = user?.role === "user" && user?.counterpartyId;
 
   const isAllowed = isStaff || isContractorUser;
 
