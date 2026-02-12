@@ -8,11 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+  const fileEnv = loadEnv(mode, process.cwd(), "");
+  const env = { ...fileEnv, ...process.env };
   const devHost = env.VITE_DEV_HOST || "localhost";
   const devPort = Number(env.VITE_DEV_PORT || 5173);
   const proxyTarget = env.VITE_PROXY_TARGET || "http://localhost:5003";
-  const useHttps = env.VITE_DEV_HTTPS !== "false";
+  const useHttps =
+    String(env.VITE_DEV_HTTPS || "false").toLowerCase() === "true";
   const allowedHosts = (env.VITE_ALLOWED_HOSTS || "localhost,127.0.0.1")
     .split(",")
     .map((host) => host.trim())
