@@ -163,22 +163,6 @@ const formatDateForMvd = (value) => {
   return parsed.isValid() ? parsed.format("DD.MM.YYYY") : normalized;
 };
 
-const parseJsonObject = (value) => {
-  const normalized = normalizeString(value);
-  if (!normalized) {
-    return { parsed: {}, isValid: true };
-  }
-  try {
-    const parsed = JSON.parse(normalized);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return { parsed, isValid: true };
-    }
-    return { parsed: {}, isValid: false };
-  } catch {
-    return { parsed: {}, isValid: false };
-  }
-};
-
 const buildMvdParamsFromOcr = (checkType, normalized = {}) => {
   const lastName = normalizeString(normalized.lastName);
   const firstName = normalizeString(normalized.firstName);
@@ -264,14 +248,11 @@ const statusTag = (status) => {
 
 const OcrMvdTestPage = () => {
   const { message } = App.useApp();
-  const [employeeId, setEmployeeId] = useState("");
   const [documentType, setDocumentType] = useState("passport_rf");
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT_BY_TYPE.passport_rf);
-  const [model, setModel] = useState("");
   const [mvdType, setMvdType] = useState(null);
   const [mvdTypes, setMvdTypes] = useState([]);
   const [mvdMetaLoading, setMvdMetaLoading] = useState(false);
-  const [mvdOverridesText, setMvdOverridesText] = useState("{}");
   const [fileList, setFileList] = useState([]);
   const [rows, setRows] = useState([]);
   const [rowsLoading, setRowsLoading] = useState(false);
@@ -323,21 +304,8 @@ const OcrMvdTestPage = () => {
   }, [fetchRuns]);
 
   const runBatch = async () => {
-    const normalizedEmployeeId = normalizeString(employeeId);
-    if (!normalizedEmployeeId) {
-      message.warning("Укажите employeeId для OCR");
-      return;
-    }
-
     if (fileList.length === 0) {
       message.warning("Добавьте хотя бы один файл");
-      return;
-    }
-
-    const { parsed: parsedOverrides, isValid } =
-      parseJsonObject(mvdOverridesText);
-    if (!isValid) {
-      message.warning("MVD overrides должны быть валидным JSON-объектом");
       return;
     }
 
@@ -352,9 +320,9 @@ const OcrMvdTestPage = () => {
           startedAt,
           fileName: uploadFile.name,
           documentType,
-          employeeId: normalizedEmployeeId,
+          employeeId: null,
           promptUsed: prompt,
-          modelUsed: normalizeString(model) || null,
+          modelUsed: null,
           ocrStatus: "error",
           ocrMissingFields: [],
           ocrNormalized: null,
@@ -372,10 +340,8 @@ const OcrMvdTestPage = () => {
         try {
           const response = await ocrService.recognizeDocument({
             documentType,
-            employeeId: normalizedEmployeeId,
             file: uploadFile.originFileObj,
             prompt: normalizeString(prompt) || undefined,
-            model: normalizeString(model) || undefined,
           });
 
           const envelope = getOcrResponseData(response);
@@ -394,8 +360,7 @@ const OcrMvdTestPage = () => {
           baseRow.ocrError = null;
 
           if (mvdType) {
-            const autoParams = buildMvdParamsFromOcr(mvdType, normalized);
-            const mvdParams = { ...autoParams, ...parsedOverrides };
+            const mvdParams = buildMvdParamsFromOcr(mvdType, normalized);
             const missingParams = requiredMvdParams.filter((paramKey) =>
               isEmptyValue(mvdParams[paramKey]),
             );
@@ -549,20 +514,12 @@ const OcrMvdTestPage = () => {
         type="info"
         showIcon
         message="Важно"
-        description="Для прямой загрузки OCR сервер требует employeeId, а файлы должны быть изображениями (jpg/png/webp)."
+        description="Файлы должны быть изображениями (jpg/png/webp)."
       />
 
       <Card title="Настройки прогона">
         <Row gutter={[12, 12]}>
-          <Col xs={24} md={8}>
-            <Text type="secondary">employeeId для доступа</Text>
-            <Input
-              value={employeeId}
-              onChange={(event) => setEmployeeId(event.target.value)}
-              placeholder="Например: 123"
-            />
-          </Col>
-          <Col xs={24} md={8}>
+          <Col xs={24} md={12}>
             <Text type="secondary">Тип OCR документа</Text>
             <Select
               value={documentType}
@@ -572,14 +529,6 @@ const OcrMvdTestPage = () => {
               }}
               options={OCR_DOC_TYPE_OPTIONS}
               style={{ width: "100%" }}
-            />
-          </Col>
-          <Col xs={24} md={8}>
-            <Text type="secondary">OCR модель (опционально)</Text>
-            <Input
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              placeholder="Например: qwen/qwen3-vl-30b-a3b-instruct"
             />
           </Col>
           <Col span={24}>
@@ -614,17 +563,6 @@ const OcrMvdTestPage = () => {
                 value: item.type,
                 label: MVD_TYPE_LABELS[item.type] || item.type,
               }))}
-            />
-          </Col>
-          <Col xs={24} md={14}>
-            <Text type="secondary">
-              MVD overrides JSON (на случай недостающих полей)
-            </Text>
-            <TextArea
-              rows={2}
-              value={mvdOverridesText}
-              onChange={(event) => setMvdOverridesText(event.target.value)}
-              placeholder='{"blankseria":"АБ","blanknumber":"1234567","lbg":"770-001"}'
             />
           </Col>
           {requiredMvdParams.length > 0 && (

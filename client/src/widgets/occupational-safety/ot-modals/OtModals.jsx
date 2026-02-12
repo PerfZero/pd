@@ -34,6 +34,7 @@ const OtModals = ({
   instructionModalOpen,
   onCloseInstructionModal,
   onSubmitInstruction,
+  editingInstruction,
   instructionForm,
   instructionFileList,
   onInstructionFileListChange,
@@ -89,6 +90,7 @@ const OtModals = ({
       instructionModalOpen={instructionModalOpen}
       onCloseInstructionModal={onCloseInstructionModal}
       onSubmitInstruction={onSubmitInstruction}
+      editingInstruction={editingInstruction}
       instructionForm={instructionForm}
       instructionFileList={instructionFileList}
       onInstructionFileListChange={onInstructionFileListChange}

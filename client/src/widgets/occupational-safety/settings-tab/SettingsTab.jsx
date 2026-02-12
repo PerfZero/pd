@@ -14,6 +14,8 @@ const SettingsTab = ({
   settingsInstructions,
   onOpenInstructionModal,
   onDownloadInstructionFile,
+  onEditInstruction,
+  onDeleteInstruction,
 }) => (
   <Space direction="vertical" size={12} style={{ width: "100%" }}>
     <input
@@ -34,6 +36,8 @@ const SettingsTab = ({
       settingsInstructions={settingsInstructions}
       onOpenInstructionModal={onOpenInstructionModal}
       onDownloadInstructionFile={onDownloadInstructionFile}
+      onEditInstruction={onEditInstruction}
+      onDeleteInstruction={onDeleteInstruction}
     />
   </Space>
 );

@@ -149,7 +149,17 @@ const getImageSource = async (req) => {
     ensureFileSize(req.file.size || req.file.buffer?.length || 0);
 
     if (!employeeId) {
-      throw new AppError("Для прямой загрузки OCR требуется employeeId", 400);
+      // Для отладочного OCR-прогона разрешаем admin загружать файл без привязки к сотруднику.
+      if (req.user?.role !== "admin") {
+        throw new AppError("Для прямой загрузки OCR требуется employeeId", 400);
+      }
+
+      return {
+        buffer: req.file.buffer,
+        mimeType: req.file.mimetype,
+        source: "upload",
+        fileRecord: null,
+      };
     }
 
     const employee = await fetchEmployeeWithMappings(employeeId);

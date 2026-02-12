@@ -1,5 +1,10 @@
 import { Card, Space, Typography, Button, Divider, List, Empty } from "antd";
-import { PlusOutlined, DownloadOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -9,6 +14,8 @@ const InstructionsCard = ({
   settingsInstructions,
   onOpenInstructionModal,
   onDownloadInstructionFile,
+  onEditInstruction,
+  onDeleteInstruction,
 }) => (
   <Card size="small">
     <Space direction="vertical" size={8} style={{ width: "100%" }}>
@@ -31,7 +38,7 @@ const InstructionsCard = ({
           onClick={onOpenInstructionModal}
           style={{ flexShrink: 0 }}
         >
-          Редактировать
+          Добавить
         </Button>
       </div>
       {latestInstruction ? (
@@ -47,6 +54,21 @@ const InstructionsCard = ({
               onClick={() => onDownloadInstructionFile(latestInstruction)}
             >
               Скачать инструкцию
+            </Button>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => onEditInstruction(latestInstruction)}
+            >
+              Редактировать
+            </Button>
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => onDeleteInstruction(latestInstruction)}
+            >
+              Удалить
             </Button>
           </Space>
           <Divider style={{ margin: "12px 0" }} />
@@ -66,6 +88,21 @@ const InstructionsCard = ({
                       Скачать
                     </Button>
                   ) : null,
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => onEditInstruction(item)}
+                  >
+                    Редактировать
+                  </Button>,
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => onDeleteInstruction(item)}
+                  >
+                    Удалить
+                  </Button>,
                 ]}
               >
                 <List.Item.Meta

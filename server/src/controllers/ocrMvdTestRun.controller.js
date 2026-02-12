@@ -1,5 +1,5 @@
 import { AppError } from "../middleware/errorHandler.js";
-import { OcrMvdTestRun } from "../models/index.js";
+import { Employee, OcrMvdTestRun } from "../models/index.js";
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -96,9 +96,20 @@ export const createOcrMvdTestRun = async (req, res, next) => {
       throw new AppError("documentType обязателен", 400);
     }
 
+    let employeeId = normalizeString(payload.employeeId);
+    if (employeeId) {
+      const employee = await Employee.findOne({
+        where: { id: employeeId, isDeleted: false },
+        attributes: ["id"],
+      });
+      if (!employee) {
+        employeeId = null;
+      }
+    }
+
     const run = await OcrMvdTestRun.create({
       userId: req.user.id,
-      employeeId: normalizeString(payload.employeeId),
+      employeeId,
       startedAt: normalizeDate(payload.startedAt),
       fileName,
       documentType,

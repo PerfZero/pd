@@ -43,6 +43,11 @@ export const otService = {
     api.post("/ot/instructions", buildFormData(file, data), {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  updateInstruction: (id, file = null, data = {}) =>
+    api.patch(`/ot/instructions/${id}`, buildFormData(file, data), {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  deleteInstruction: (id) => api.delete(`/ot/instructions/${id}`),
   downloadInstructionFile: (id) => api.get(`/ot/instructions/${id}/file`),
 
   getContractorDocs: (params) => api.get("/ot/contractor-docs", { params }),

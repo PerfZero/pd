@@ -25,6 +25,8 @@ import {
 import {
   getOtInstructions,
   createOtInstruction,
+  updateOtInstruction,
+  deleteOtInstruction,
   downloadOtInstructionFile,
 } from "../controllers/otInstruction.controller.js";
 import {
@@ -92,6 +94,13 @@ router.post(
   fixFilenameEncoding,
   createOtInstruction,
 );
+router.patch(
+  "/instructions/:id",
+  upload.single("file"),
+  fixFilenameEncoding,
+  updateOtInstruction,
+);
+router.delete("/instructions/:id", deleteOtInstruction);
 router.get("/instructions/:id/file", downloadOtInstructionFile);
 
 // Contractor documents

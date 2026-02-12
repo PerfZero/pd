@@ -70,6 +70,7 @@ const OccupationalSafetyPage = () => {
     latestInstruction,
     settingsInstructions,
     handleDownloadInstructionFile,
+    handleDeleteInstruction,
     settingsLoading,
     settingsCategoryTree,
     handleSelectSettingsCategoryNode,
@@ -101,8 +102,9 @@ const OccupationalSafetyPage = () => {
     templateFileList,
     handleTemplateFileListChange,
     instructionModalOpen,
-    setInstructionModalOpen,
+    handleCloseInstructionModal,
     handleInstructionSubmit,
+    editingInstruction,
     instructionForm,
     instructionFileList,
     handleInstructionFileListChange,
@@ -231,6 +233,8 @@ const OccupationalSafetyPage = () => {
             settingsInstructions={settingsInstructions}
             onOpenInstructionModal={handleOpenInstructionModal}
             onDownloadInstructionFile={handleDownloadInstructionFile}
+            onEditInstruction={handleOpenInstructionModal}
+            onDeleteInstruction={handleDeleteInstruction}
           />
         ),
       });
@@ -302,8 +306,9 @@ const OccupationalSafetyPage = () => {
         templateFileList={templateFileList}
         onTemplateFileListChange={handleTemplateFileListChange}
         instructionModalOpen={instructionModalOpen}
-        onCloseInstructionModal={() => setInstructionModalOpen(false)}
+        onCloseInstructionModal={handleCloseInstructionModal}
         onSubmitInstruction={handleInstructionSubmit}
+        editingInstruction={editingInstruction}
         instructionForm={instructionForm}
         instructionFileList={instructionFileList}
         onInstructionFileListChange={handleInstructionFileListChange}

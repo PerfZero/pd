@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { message, Form, Grid } from "antd";
+import { message, Form, Grid, Modal } from "antd";
 import { useAuthStore } from "@/store/authStore";
 import settingsService from "@/services/settingsService";
 import otService from "@/services/otService";
@@ -46,6 +46,7 @@ const useOccupationalSafety = () => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [instructionModalOpen, setInstructionModalOpen] = useState(false);
+  const [editingInstruction, setEditingInstruction] = useState(null);
   const [templateUploadingId, setTemplateUploadingId] = useState(null);
   const [templateFileList, setTemplateFileList] = useState([]);
   const [instructionFileList, setInstructionFileList] = useState([]);
@@ -492,9 +493,16 @@ const useOccupationalSafety = () => {
     }
   };
 
-  const handleOpenInstructionModal = () => {
+  const handleOpenInstructionModal = (instruction = null) => {
+    setEditingInstruction(instruction);
     instructionForm.resetFields();
     setInstructionFileList([]);
+    if (instruction) {
+      instructionForm.setFieldsValue({
+        text: instruction.text || "",
+        removeFile: false,
+      });
+    }
     setInstructionModalOpen(true);
   };
 
@@ -502,14 +510,22 @@ const useOccupationalSafety = () => {
     try {
       const values = await instructionForm.validateFields();
       const file = instructionFileList[0]?.originFileObj;
-      await otService.createInstruction(file, values);
-      message.success("Инструкция добавлена");
-      setInstructionModalOpen(false);
+      if (editingInstruction) {
+        await otService.updateInstruction(editingInstruction.id, file, {
+          text: values.text,
+          removeFile: !!values.removeFile,
+        });
+        message.success("Инструкция обновлена");
+      } else {
+        await otService.createInstruction(file, values);
+        message.success("Инструкция добавлена");
+      }
+      handleCloseInstructionModal();
       await loadSettingsData();
     } catch (error) {
       if (error?.errorFields) return;
       console.error("Error creating OT instruction:", error);
-      message.error("Ошибка при добавлении инструкции");
+      message.error("Ошибка при сохранении инструкции");
     }
   };
 
@@ -519,9 +535,46 @@ const useOccupationalSafety = () => {
   );
 
   const handleInstructionFileListChange = useCallback(
-    (fileList) => setInstructionFileList(fileList.slice(-1)),
-    [],
+    (fileList) => {
+      setInstructionFileList(fileList.slice(-1));
+      if (fileList.length > 0) {
+        instructionForm.setFieldValue("removeFile", false);
+      }
+    },
+    [instructionForm],
   );
+
+  const handleCloseInstructionModal = useCallback(() => {
+    setInstructionModalOpen(false);
+    setEditingInstruction(null);
+    setInstructionFileList([]);
+    instructionForm.resetFields();
+  }, [instructionForm]);
+
+  const handleDeleteInstruction = (instruction) => {
+    Modal.confirm({
+      title: "Удалить инструкцию?",
+      content: "Запись будет удалена вместе с прикрепленным файлом.",
+      okText: "Удалить",
+      okType: "danger",
+      cancelText: "Отмена",
+      onOk: async () => {
+        try {
+          await otService.deleteInstruction(instruction.id);
+          message.success("Инструкция удалена");
+
+          if (editingInstruction?.id === instruction.id) {
+            handleCloseInstructionModal();
+          }
+
+          await loadSettingsData();
+        } catch (error) {
+          console.error("Error deleting OT instruction:", error);
+          message.error("Ошибка при удалении инструкции");
+        }
+      },
+    });
+  };
 
   const handleOpenObject = (siteId) => {
     setSelectedConstructionSiteId(siteId);
@@ -751,6 +804,7 @@ const useOccupationalSafety = () => {
     settingsInstructions,
     handleOpenInstructionModal,
     handleDownloadInstructionFile,
+    handleDeleteInstruction,
     categoryModalOpen,
     editingCategory,
     setCategoryModalOpen,
@@ -770,7 +824,9 @@ const useOccupationalSafety = () => {
     handleTemplateFileListChange,
     instructionModalOpen,
     setInstructionModalOpen,
+    handleCloseInstructionModal,
     handleInstructionSubmit,
+    editingInstruction,
     instructionForm,
     instructionFileList,
     handleInstructionFileListChange,
