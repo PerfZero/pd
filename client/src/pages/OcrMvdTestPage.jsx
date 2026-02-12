@@ -246,11 +246,23 @@ const statusTag = (status) => {
   return <Tag>—</Tag>;
 };
 
+const normalizeParamsMap = (params = {}) => {
+  return Object.entries(params).reduce((acc, [key, value]) => {
+    const normalized = normalizeString(value);
+    if (normalized) {
+      acc[key] = normalized;
+    }
+    return acc;
+  }, {});
+};
+
 const OcrMvdTestPage = () => {
   const { message } = App.useApp();
   const [documentType, setDocumentType] = useState("passport_rf");
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT_BY_TYPE.passport_rf);
   const [mvdType, setMvdType] = useState(null);
+  const [mvdParamsMode, setMvdParamsMode] = useState("merge");
+  const [manualMvdParams, setManualMvdParams] = useState({});
   const [mvdTypes, setMvdTypes] = useState([]);
   const [mvdMetaLoading, setMvdMetaLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
@@ -264,6 +276,19 @@ const OcrMvdTestPage = () => {
   );
 
   const requiredMvdParams = selectedMvdMeta?.requiredParams || [];
+
+  useEffect(() => {
+    setManualMvdParams((prev) => {
+      if (!requiredMvdParams.length) return {};
+      const next = {};
+      for (const paramKey of requiredMvdParams) {
+        if (prev[paramKey]) {
+          next[paramKey] = prev[paramKey];
+        }
+      }
+      return next;
+    });
+  }, [requiredMvdParams]);
 
   const fetchMvdMeta = useCallback(async () => {
     try {
@@ -360,7 +385,16 @@ const OcrMvdTestPage = () => {
           baseRow.ocrError = null;
 
           if (mvdType) {
-            const mvdParams = buildMvdParamsFromOcr(mvdType, normalized);
+            const mvdParamsFromOcr = buildMvdParamsFromOcr(mvdType, normalized);
+            const manualParams = normalizeParamsMap(manualMvdParams);
+            let mvdParams = mvdParamsFromOcr;
+
+            if (mvdParamsMode === "manual") {
+              mvdParams = manualParams;
+            } else if (mvdParamsMode === "merge") {
+              mvdParams = { ...mvdParamsFromOcr, ...manualParams };
+            }
+
             const missingParams = requiredMvdParams.filter((paramKey) =>
               isEmptyValue(mvdParams[paramKey]),
             );
@@ -556,7 +590,10 @@ const OcrMvdTestPage = () => {
               allowClear
               loading={mvdMetaLoading}
               value={mvdType}
-              onChange={setMvdType}
+              onChange={(value) => {
+                setMvdType(value);
+                setManualMvdParams({});
+              }}
               placeholder="Без проверки МВД"
               style={{ width: "100%" }}
               options={mvdTypes.map((item) => ({
@@ -565,14 +602,62 @@ const OcrMvdTestPage = () => {
               }))}
             />
           </Col>
+          {mvdType && (
+            <Col xs={24} md={14}>
+              <Text type="secondary">Источник параметров МВД</Text>
+              <Select
+                value={mvdParamsMode}
+                onChange={setMvdParamsMode}
+                style={{ width: "100%" }}
+                options={[
+                  {
+                    value: "merge",
+                    label: "OCR + ручной ввод (приоритет ручного)",
+                  },
+                  { value: "ocr", label: "Только из OCR" },
+                  { value: "manual", label: "Только ручной ввод" },
+                ]}
+              />
+            </Col>
+          )}
           {requiredMvdParams.length > 0 && (
             <Col span={24}>
-              <Text type="secondary">
-                Обязательные параметры выбранного MVD-типа:{" "}
-                {requiredMvdParams
-                  .map((paramKey) => MVD_PARAM_LABELS[paramKey] || paramKey)
-                  .join(", ")}
-              </Text>
+              <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                <Text type="secondary">
+                  Обязательные параметры выбранного MVD-типа:{" "}
+                  {requiredMvdParams
+                    .map((paramKey) => MVD_PARAM_LABELS[paramKey] || paramKey)
+                    .join(", ")}
+                </Text>
+                <Row gutter={[8, 8]}>
+                  {requiredMvdParams.map((paramKey) => (
+                    <Col xs={24} md={12} lg={8} key={paramKey}>
+                      <Text type="secondary">
+                        {MVD_PARAM_LABELS[paramKey] || paramKey}
+                      </Text>
+                      <Input
+                        value={manualMvdParams[paramKey] || ""}
+                        placeholder="Введите вручную"
+                        onChange={(event) =>
+                          setManualMvdParams((prev) => ({
+                            ...prev,
+                            [paramKey]: event.target.value,
+                          }))
+                        }
+                      />
+                    </Col>
+                  ))}
+                </Row>
+                <Space>
+                  <Button
+                    size="small"
+                    onClick={() => setManualMvdParams({})}
+                    disabled={Object.keys(manualMvdParams).length === 0}
+                  >
+                    Очистить ручные параметры МВД
+                  </Button>
+                </Space>
+              </Space>
             </Col>
           )}
         </Row>
