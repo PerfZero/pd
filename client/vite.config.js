@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
     .filter(Boolean);
 
   return {
-    plugins: [react(), basicSsl()],
+    plugins: useHttps ? [react(), basicSsl()] : [react()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -42,6 +42,11 @@ export default defineConfig(({ mode }) => {
           secure: false,
         },
       },
+    },
+    preview: {
+      port: devPort,
+      host: devHost,
+      https: useHttps,
     },
     build: {
       outDir: "dist",
