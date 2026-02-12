@@ -948,13 +948,6 @@ const OcrMvdTestPage = () => {
             label: "MVD (вручную)",
             children: (
               <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <Alert
-                  type="info"
-                  showIcon
-                  message="Ручной режим"
-                  description="Заполняете обязательные поля выбранного MVD-типа и отправляете запрос."
-                />
-
                 <Card title="Параметры МВД">
                   <Row gutter={[12, 12]}>
                     <Col xs={24} md={12}>
@@ -1101,13 +1094,6 @@ const OcrMvdTestPage = () => {
             label: "OCR (по фото)",
             children: (
               <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <Alert
-                  type="info"
-                  showIcon
-                  message="OCR режим"
-                  description="Загружаете фото документа. Сначала OCR, затем при выборе типа — автоматический запрос в МВД по извлеченным полям."
-                />
-
                 <Card title="Настройки OCR">
                   <Row gutter={[12, 12]}>
                     <Col xs={24} md={8}>
