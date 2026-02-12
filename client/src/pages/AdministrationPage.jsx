@@ -24,6 +24,13 @@ const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
 const AdministrationPage = () => {
+  const renderTabLabel = (IconComponent, text) => (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <IconComponent />
+      <span>{text}</span>
+    </span>
+  );
+
   const validDesktopTabKeys = [
     "users",
     "counterparties",
@@ -52,82 +59,42 @@ const AdministrationPage = () => {
   const desktopItems = [
     {
       key: "users",
-      label: (
-        <span>
-          <TeamOutlined />
-          Пользователи
-        </span>
-      ),
+      label: renderTabLabel(TeamOutlined, "Пользователи"),
       children: <UsersPage />,
     },
     {
       key: "counterparties",
-      label: (
-        <span>
-          <ShopOutlined />
-          Контрагенты
-        </span>
-      ),
+      label: renderTabLabel(ShopOutlined, "Контрагенты"),
       children: <CounterpartiesPage />,
     },
     {
       key: "citizenships",
-      label: (
-        <span>
-          <GlobalOutlined />
-          Гражданство
-        </span>
-      ),
+      label: renderTabLabel(GlobalOutlined, "Гражданство"),
       children: <CitizenshipsPage />,
     },
     {
       key: "export",
-      label: (
-        <span>
-          <DownloadOutlined />
-          Выгрузка
-        </span>
-      ),
+      label: renderTabLabel(DownloadOutlined, "Выгрузка"),
       children: <ExportPage />,
     },
     {
       key: "marked-employees",
-      label: (
-        <span>
-          <DeleteOutlined />
-          На удаление
-        </span>
-      ),
+      label: renderTabLabel(DeleteOutlined, "На удаление"),
       children: <MarkedEmployeesPage />,
     },
     {
       key: "trash",
-      label: (
-        <span>
-          <DeleteOutlined />
-          Корзина
-        </span>
-      ),
+      label: renderTabLabel(DeleteOutlined, "Корзина"),
       children: <TrashPage />,
     },
     {
       key: "document-samples",
-      label: (
-        <span>
-          <FileImageOutlined />
-          Образцы документов
-        </span>
-      ),
+      label: renderTabLabel(FileImageOutlined, "Образцы документов"),
       children: <DocumentSamplesPage />,
     },
     {
       key: "settings",
-      label: (
-        <span>
-          <SettingOutlined />
-          Настройки
-        </span>
-      ),
+      label: renderTabLabel(SettingOutlined, "Настройки"),
       children: <SettingsPage />,
     },
   ];
