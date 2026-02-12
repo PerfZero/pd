@@ -176,12 +176,20 @@ const EmployeesPage = () => {
   useEffect(() => {
     const loadCounterparties = async () => {
       try {
-        const { data } = await counterpartyService.getAll({
-          limit: 10000,
-          page: 1,
-        });
-        const counterparties =
-          data?.data?.counterparties || data?.counterparties || [];
+        const isAdmin = user?.role === "admin";
+        const response = isAdmin
+          ? await counterpartyService.getAll({
+              limit: 10000,
+              page: 1,
+            })
+          : await counterpartyService.getAvailable();
+
+        const counterparties = isAdmin
+          ? response?.data?.data?.counterparties ||
+            response?.data?.counterparties ||
+            []
+          : response?.data?.data || [];
+
         const map = {};
         counterparties.forEach((c) => {
           if (c.name) map[c.name] = c.id;
@@ -193,12 +201,10 @@ const EmployeesPage = () => {
           user?.counterpartyId &&
           user.counterpartyId !== defaultCounterpartyId
         ) {
-          const availableResponse = await counterpartyService.getAvailable();
-          if (availableResponse.data.success) {
-            const available = availableResponse.data.data || [];
-            // Если доступно больше одного контрагента, значит есть субподрядчики
-            setHasSubcontractors(available.length > 1);
-          }
+          // Если доступно больше одного контрагента, значит есть субподрядчики
+          setHasSubcontractors(counterparties.length > 1);
+        } else {
+          setHasSubcontractors(false);
         }
       } catch (error) {
         console.warn("Ошибка загрузки контрагентов:", error);

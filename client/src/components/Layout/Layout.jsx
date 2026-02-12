@@ -15,7 +15,7 @@ const Layout = () => {
       {/* Desktop - показываем Sidebar */}
       {!isMobile && <Sidebar />}
 
-      <AntLayout style={{ overflow: "hidden" }}>
+      <AntLayout style={{ overflow: "hidden", borderRadius: 10 }}>
         <Header />
         <Content
           style={{
@@ -23,7 +23,7 @@ const Layout = () => {
             overflowY: "auto", // Скролл в контенте
             overflowX: "hidden",
             background: "#f0f2f5", // Фон как у Ant Design
-            padding: 0, // БЕЗ padding
+            padding: 20,
             margin: 0, // БЕЗ margin
           }}
         >
