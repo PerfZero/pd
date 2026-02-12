@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => {
       port: devPort,
       host: devHost,
       https: useHttps,
+      allowedHosts,
     },
     build: {
       outDir: "dist",
