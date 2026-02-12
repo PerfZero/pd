@@ -44,6 +44,8 @@ const statusText = {
   rejected: "Отклонен",
 };
 
+const normalizeText = (value) => String(value || "").trim();
+
 const getLevelIndent = (depth) => Math.max(0, Math.min(depth || 0, 6)) * 20;
 
 const ContractorDocumentsTable = ({
@@ -372,42 +374,58 @@ const ContractorDocumentsTable = ({
     {
       title: "Контроль",
       key: "control",
-      width: 240,
+      width: 320,
       render: (_, record) => {
         const docRecord = getDocumentPayload(record);
         if (!docRecord) return null;
+        const rejectionComment =
+          docRecord.status === "rejected"
+            ? normalizeText(docRecord.comment)
+            : "";
 
         return (
-          <Space size={6} wrap>
-            <Tag
-              bordered={false}
-              className={
-                docRecord.isRequired ? "ot-tag-required" : "ot-tag-optional"
-              }
-            >
-              {docRecord.isRequired ? "Обязательный" : "Необязательный"}
-            </Tag>
-            <Tooltip title="Комментарии">
-              <Button
-                size="small"
-                icon={<MessageOutlined />}
-                disabled={
-                  !docRecord.contractorDocumentId || !docRecord.fileCount
+          <Space size={6} direction="vertical" style={{ width: "100%" }}>
+            <Space size={6} wrap>
+              <Tag
+                bordered={false}
+                className={
+                  docRecord.isRequired ? "ot-tag-required" : "ot-tag-optional"
                 }
-                onClick={() => onOpenDocumentComments(docRecord)}
-              />
-            </Tooltip>
-            <Tag
-              bordered={false}
-              className={`ot-status-tag ot-status-${docRecord.status}`}
-            >
-              <Space size={4}>
-                {statusIcons[docRecord.status] || statusIcons.not_uploaded}
-                <span>
-                  {statusText[docRecord.status] || statusText.not_uploaded}
-                </span>
-              </Space>
-            </Tag>
+              >
+                {docRecord.isRequired ? "Обязательный" : "Необязательный"}
+              </Tag>
+              <Tooltip title="Комментарии">
+                <Button
+                  size="small"
+                  icon={<MessageOutlined />}
+                  disabled={
+                    !docRecord.contractorDocumentId || !docRecord.fileCount
+                  }
+                  onClick={() => onOpenDocumentComments(docRecord)}
+                />
+              </Tooltip>
+              <Tag
+                bordered={false}
+                className={`ot-status-tag ot-status-${docRecord.status}`}
+              >
+                <Space size={4}>
+                  {statusIcons[docRecord.status] || statusIcons.not_uploaded}
+                  <span>
+                    {statusText[docRecord.status] || statusText.not_uploaded}
+                  </span>
+                </Space>
+              </Tag>
+            </Space>
+            {rejectionComment ? (
+              <Tooltip title={rejectionComment}>
+                <Text type="danger" ellipsis style={{ maxWidth: "100%" }}>
+                  Причина: {rejectionComment}
+                </Text>
+              </Tooltip>
+            ) : null}
+            {docRecord.status === "rejected" && !rejectionComment ? (
+              <Text type="secondary">Причина не указана</Text>
+            ) : null}
           </Space>
         );
       },

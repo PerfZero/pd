@@ -446,9 +446,9 @@ export const rejectOtContractorDocument = async (req, res, next) => {
     await assertOtAccess(req.user, { requireStaff: true });
 
     const { id } = req.params;
-    const { comment } = req.body;
+    const normalizedComment = String(req.body?.comment || "").trim();
 
-    if (!comment) {
+    if (!normalizedComment) {
       throw new AppError("Комментарий обязателен", 400);
     }
 
@@ -468,7 +468,7 @@ export const rejectOtContractorDocument = async (req, res, next) => {
 
     await contractorDocument.update({
       status: "rejected",
-      comment,
+      comment: normalizedComment,
       checkedBy: req.user.id,
       checkedAt: new Date(),
     });
@@ -476,7 +476,7 @@ export const rejectOtContractorDocument = async (req, res, next) => {
     await updateDocumentHistory(
       contractorDocument.id,
       "rejected",
-      comment,
+      normalizedComment,
       req.user.id,
     );
 
