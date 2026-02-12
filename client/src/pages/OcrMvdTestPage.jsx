@@ -10,6 +10,7 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
   Typography,
   Upload,
@@ -21,11 +22,13 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import ocrService from "../services/ocrService";
 import mvdService from "../services/mvdService";
+import ocrService from "../services/ocrService";
 
 const { Text, Title } = Typography;
-const { TextArea } = Input;
+
+const RUN_MODE_MANUAL = "manual";
+const RUN_MODE_OCR = "ocr";
 
 const OCR_DOC_TYPE_OPTIONS = [
   { value: "passport_rf", label: "Паспорт РФ" },
@@ -34,17 +37,6 @@ const OCR_DOC_TYPE_OPTIONS = [
   { value: "visa", label: "Виза" },
   { value: "kig", label: "КИГ" },
 ];
-
-const DEFAULT_PROMPT_BY_TYPE = {
-  passport_rf:
-    "Распознай текст на изображении паспорта РФ. Верни строго JSON без обрамления. Поля: surname, givenNames, middleName, birthDate, sex, nationality, passportSeries, passportNumber, issueDate, departmentCode, authority, birthPlace, expiryDate.",
-  foreign_passport:
-    "Распознай текст на изображении паспорта иностранного гражданина. Верни строго JSON без обрамления. Поля: surname, givenNames, middleName, birthDate, sex, nationality, passportNumber, issueDate, expiryDate, authority, birthPlace.",
-  patent:
-    "Распознай текст на изображении патента на работу. Верни строго JSON без обрамления. Поля: patentNumber, issueDate, expiryDate, region, authority, surname, givenNames, middleName, birthDate, nationality.",
-  visa: "Распознай текст на изображении визы. Верни строго JSON без обрамления. Поля: visaNumber, issueDate, expiryDate, visaType, entries, surname, givenNames, nationality, birthDate.",
-  kig: "Распознай текст на изображении карты иностранного гражданина (КИГ). Верни строго JSON без обрамления. Поля: kigNumber, expiryDate, surname, givenNames, middleName, birthDate, nationality.",
-};
 
 const OCR_REQUIRED_FIELDS_BY_TYPE = {
   passport_rf: [
@@ -144,7 +136,20 @@ const MVD_PARAM_LABELS = {
   nomer: "Номер паспорта",
 };
 
+const PASSPORT_RESULT_LABELS = {
+  VALID: "Паспорт действителен",
+  NOT_VALID: "Паспорт недействителен",
+  NOT_FOUND: "Паспорт не найден",
+};
+
+const LEGACY_PASSPORT_REZULTAT_LABELS = {
+  4: "Паспорт недействителен (заменен на новый)",
+  5: "Паспорт недействителен (в связи со смертью владельца)",
+  6: "Паспорт недействителен (числится в розыске)",
+};
+
 const normalizeString = (value) => String(value || "").trim();
+const hasValue = (value) => normalizeString(value) !== "";
 
 const isEmptyValue = (value) => {
   if (value === null || value === undefined) return true;
@@ -161,6 +166,27 @@ const formatDateForMvd = (value) => {
   }
   const parsed = dayjs(normalized);
   return parsed.isValid() ? parsed.format("DD.MM.YYYY") : normalized;
+};
+
+const getOcrResponseData = (response = {}) => response?.data || response || {};
+
+const getOcrNormalized = (response = {}) =>
+  response?.data?.normalized ||
+  response?.normalized ||
+  response?.data?.data?.normalized ||
+  {};
+
+const getOcrRaw = (response = {}) =>
+  response?.data?.raw || response?.raw || response?.data?.data?.raw || null;
+
+const getMvdResponseData = (response = {}) =>
+  response?.data || response || null;
+
+const getOcrDocLabel = (documentType) => {
+  const option = OCR_DOC_TYPE_OPTIONS.find(
+    (item) => item.value === documentType,
+  );
+  return option?.label || documentType || "—";
 };
 
 const buildMvdParamsFromOcr = (checkType, normalized = {}) => {
@@ -222,73 +248,284 @@ const buildMvdParamsFromOcr = (checkType, normalized = {}) => {
   return {};
 };
 
-const getOcrResponseData = (response = {}) =>
-  response?.data || response?.result || {};
-
-const getOcrNormalized = (response = {}) =>
-  response?.data?.normalized ||
-  response?.normalized ||
-  response?.data?.data?.normalized ||
-  {};
-
-const getOcrRaw = (response = {}) =>
-  response?.data?.raw || response?.raw || response?.data?.data?.raw || null;
-
-const getMvdResponseData = (response = {}) =>
-  response?.data || response || null;
-
 const statusTag = (status) => {
   if (status === "ok") return <Tag color="green">OK</Tag>;
   if (status === "partial") return <Tag color="gold">Частично</Tag>;
   if (status === "missing_params")
     return <Tag color="orange">Нет параметров</Tag>;
   if (status === "error") return <Tag color="red">Ошибка</Tag>;
+  if (status === "skipped") return <Tag>Пропущен</Tag>;
   return <Tag>—</Tag>;
 };
 
-const normalizeParamsMap = (params = {}) => {
-  return Object.entries(params).reduce((acc, [key, value]) => {
-    const normalized = normalizeString(value);
-    if (normalized) {
-      acc[key] = normalized;
+const foundTag = (found) => {
+  if (found === true) return <Tag color="red">Найден</Tag>;
+  if (found === false) return <Tag color="green">Не найден</Tag>;
+  return <Tag>—</Tag>;
+};
+
+const extractMvdResultBody = (responsePayload) => {
+  if (!responsePayload || typeof responsePayload !== "object") {
+    return null;
+  }
+
+  const nestedResult = responsePayload?.result;
+  if (
+    nestedResult &&
+    typeof nestedResult === "object" &&
+    !Array.isArray(nestedResult)
+  ) {
+    return nestedResult;
+  }
+
+  return responsePayload;
+};
+
+const formatMvdInquirySummary = (inquiry) => {
+  if (!inquiry || typeof inquiry !== "object" || Array.isArray(inquiry)) {
+    return "";
+  }
+
+  const parts = [];
+  if (hasValue(inquiry.price)) parts.push(`Списание: ${inquiry.price}`);
+  if (hasValue(inquiry.balance)) parts.push(`Баланс: ${inquiry.balance}`);
+  if (hasValue(inquiry.attempts)) parts.push(`Попытки: ${inquiry.attempts}`);
+  if (hasValue(inquiry.speed)) parts.push(`Скорость: ${inquiry.speed}`);
+  return parts.join(" • ");
+};
+
+const humanizeMvdResult = ({ mvdType, responsePayload, mvdError }) => {
+  if (mvdError) {
+    return {
+      humanSummary: mvdError,
+      providerStatus: null,
+      inquirySummary: "",
+    };
+  }
+
+  const responseBody = extractMvdResultBody(responsePayload);
+  if (!responseBody) {
+    return {
+      humanSummary: "Нет данных ответа от МВД",
+      providerStatus: null,
+      inquirySummary: "",
+    };
+  }
+
+  const providerStatus = Number(responseBody.status) || null;
+  const providerError = normalizeString(
+    responseBody.errormsg || responseBody.message || responseBody.error,
+  );
+  const type = normalizeString(mvdType || responsePayload?.type).toLowerCase();
+  let humanSummary = "";
+
+  if (providerStatus && providerStatus !== 200) {
+    if (responseBody.error === "TIME_MAX_CONNECT") {
+      humanSummary =
+        "Источник МВД не вернул ответ за максимальное число попыток (TIME_MAX_CONNECT)";
+    } else {
+      humanSummary = providerError
+        ? `Ошибка источника МВД (${providerStatus}): ${providerError}`
+        : `Ошибка источника МВД (${providerStatus})`;
     }
-    return acc;
-  }, {});
+
+    return {
+      humanSummary,
+      providerStatus,
+      inquirySummary: formatMvdInquirySummary(responseBody.inquiry),
+    };
+  }
+
+  switch (type) {
+    case "rkl":
+    case "rklv2":
+      if (responseBody.found === true) {
+        humanSummary = "Лицо найдено в реестре контролируемых лиц";
+      } else if (responseBody.found === false) {
+        humanSummary = "Лицо не найдено в реестре контролируемых лиц";
+      }
+      break;
+    case "wanted":
+      if (responseBody.found === true) {
+        const countFromApi = Number(responseBody.count);
+        const listCount = Array.isArray(responseBody.result)
+          ? responseBody.result.length
+          : null;
+        const count = Number.isFinite(countFromApi) ? countFromApi : listCount;
+        humanSummary = Number.isFinite(count)
+          ? `Лицо найдено в базе розыска (совпадений: ${count})`
+          : "Лицо найдено в базе розыска";
+      } else if (responseBody.found === false) {
+        humanSummary = "Лицо не найдено в базе розыска";
+      }
+      break;
+    case "patent":
+    case "patentv2": {
+      const statusPatent = normalizeString(responseBody.statusPatent);
+      if (responseBody.found === false) {
+        humanSummary = "Патент не найден";
+      } else if (responseBody.found === true && responseBody.valid === true) {
+        humanSummary = "Патент найден и действителен";
+      } else if (responseBody.found === true && responseBody.valid === false) {
+        humanSummary = "Патент найден, но недействителен";
+      }
+      if (statusPatent) {
+        humanSummary = humanSummary
+          ? `${humanSummary} (${statusPatent})`
+          : `Статус патента: ${statusPatent}`;
+      }
+      break;
+    }
+    case "chekpassportv2": {
+      const passportResult = normalizeString(responseBody.result).toUpperCase();
+      if (PASSPORT_RESULT_LABELS[passportResult]) {
+        humanSummary = PASSPORT_RESULT_LABELS[passportResult];
+      }
+      if (!humanSummary && hasValue(responseBody.rezultat)) {
+        humanSummary =
+          LEGACY_PASSPORT_REZULTAT_LABELS[responseBody.rezultat] ||
+          `Код результата: ${responseBody.rezultat}`;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  const description = normalizeString(
+    responseBody.description || responseBody.info,
+  );
+
+  if (!humanSummary && providerError) {
+    humanSummary = providerError;
+  }
+  if (!humanSummary && description) {
+    humanSummary = description;
+  }
+  if (!humanSummary) {
+    humanSummary = providerStatus
+      ? `Запрос обработан (status ${providerStatus})`
+      : "Ответ от МВД получен";
+  }
+  if (description && !humanSummary.includes(description)) {
+    humanSummary = `${humanSummary}. ${description}`;
+  }
+
+  return {
+    humanSummary,
+    providerStatus,
+    inquirySummary: formatMvdInquirySummary(responseBody.inquiry),
+  };
+};
+
+const mapRunToRow = (run) => {
+  const responsePayload = run.mvdResult || null;
+  const responseBody = extractMvdResultBody(responsePayload);
+  const { humanSummary, providerStatus, inquirySummary } = humanizeMvdResult({
+    mvdType: run.mvdType,
+    responsePayload,
+    mvdError: run.mvdError,
+  });
+
+  const mode =
+    normalizeString(run.documentType) === "mvd_manual"
+      ? RUN_MODE_MANUAL
+      : RUN_MODE_OCR;
+
+  return {
+    key:
+      run.id ||
+      run.key ||
+      `${run.startedAt || Date.now()}-${run.fileName || "run"}`,
+    id: run.id || null,
+    mode,
+    startedAt: run.startedAt || run.createdAt || new Date().toISOString(),
+    fileName: run.fileName || "-",
+    documentType: run.documentType || null,
+    employeeId: run.employeeId || null,
+    promptUsed: run.promptUsed || null,
+    modelUsed: run.modelUsed || null,
+    ocrStatus: run.ocrStatus || null,
+    ocrMissingFields: Array.isArray(run.ocrMissingFields)
+      ? run.ocrMissingFields
+      : [],
+    ocrNormalized: run.ocrNormalized || null,
+    ocrRaw: run.ocrRaw || null,
+    ocrError: run.ocrError || null,
+    ocrProvider: run.ocrProvider || null,
+    mvdType: run.mvdType || null,
+    mvdStatus: run.mvdStatus || null,
+    found: responseBody?.found,
+    providerStatus,
+    humanSummary,
+    inquirySummary,
+    requestPayload: {
+      type: run.mvdType || null,
+      params: run.mvdParams || {},
+    },
+    mvdParams: run.mvdParams || null,
+    mvdMissingParams: Array.isArray(run.mvdMissingParams)
+      ? run.mvdMissingParams
+      : [],
+    responsePayload,
+    mvdError: run.mvdError || null,
+  };
 };
 
 const OcrMvdTestPage = () => {
   const { message } = App.useApp();
-  const [documentType, setDocumentType] = useState("passport_rf");
-  const [prompt, setPrompt] = useState(DEFAULT_PROMPT_BY_TYPE.passport_rf);
-  const [mvdType, setMvdType] = useState(null);
-  const [mvdParamsMode, setMvdParamsMode] = useState("merge");
-  const [manualMvdParams, setManualMvdParams] = useState({});
+
+  const [activeTab, setActiveTab] = useState(RUN_MODE_MANUAL);
+
   const [mvdTypes, setMvdTypes] = useState([]);
   const [mvdMetaLoading, setMvdMetaLoading] = useState(false);
-  const [fileList, setFileList] = useState([]);
+
+  const [manualMvdType, setManualMvdType] = useState(null);
+  const [manualParams, setManualParams] = useState({});
+  const [manualRunning, setManualRunning] = useState(false);
+
+  const [ocrDocumentType, setOcrDocumentType] = useState("passport_rf");
+  const [ocrMvdType, setOcrMvdType] = useState(null);
+  const [ocrFileList, setOcrFileList] = useState([]);
+  const [ocrRunning, setOcrRunning] = useState(false);
+
   const [rows, setRows] = useState([]);
   const [rowsLoading, setRowsLoading] = useState(false);
-  const [running, setRunning] = useState(false);
 
-  const selectedMvdMeta = useMemo(
-    () => mvdTypes.find((item) => item.type === mvdType) || null,
-    [mvdType, mvdTypes],
+  const manualMeta = useMemo(
+    () => mvdTypes.find((item) => item.type === manualMvdType) || null,
+    [manualMvdType, mvdTypes],
   );
 
-  const requiredMvdParams = selectedMvdMeta?.requiredParams || [];
+  const ocrMeta = useMemo(
+    () => mvdTypes.find((item) => item.type === ocrMvdType) || null,
+    [ocrMvdType, mvdTypes],
+  );
+
+  const manualRequiredParams = manualMeta?.requiredParams || [];
+  const ocrRequiredMvdParams = ocrMeta?.requiredParams || [];
+
+  const manualRows = useMemo(
+    () => rows.filter((item) => item.mode === RUN_MODE_MANUAL),
+    [rows],
+  );
+
+  const ocrRows = useMemo(
+    () => rows.filter((item) => item.mode === RUN_MODE_OCR),
+    [rows],
+  );
 
   useEffect(() => {
-    setManualMvdParams((prev) => {
-      if (!requiredMvdParams.length) return {};
+    setManualParams((prev) => {
       const next = {};
-      for (const paramKey of requiredMvdParams) {
-        if (prev[paramKey]) {
-          next[paramKey] = prev[paramKey];
+      for (const key of manualRequiredParams) {
+        if (hasValue(prev[key])) {
+          next[key] = prev[key];
         }
       }
       return next;
     });
-  }, [requiredMvdParams]);
+  }, [manualRequiredParams]);
 
   const fetchMvdMeta = useCallback(async () => {
     try {
@@ -296,57 +533,146 @@ const OcrMvdTestPage = () => {
       const response = await mvdService.getMeta();
       const supported = response?.data?.supportedTypes || [];
       setMvdTypes(supported);
-      return supported;
     } catch (error) {
       message.error(error?.userMessage || "Не удалось загрузить типы МВД");
-      return [];
     } finally {
       setMvdMetaLoading(false);
     }
   }, [message]);
 
-  useEffect(() => {
-    fetchMvdMeta();
-  }, [fetchMvdMeta]);
-
-  const fetchRuns = useCallback(async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       setRowsLoading(true);
-      const response = await ocrService.listDebugRuns({ limit: 200 });
+      const response = await ocrService.listDebugRuns({ limit: 300 });
       const runs = response?.data?.runs || [];
-      setRows(Array.isArray(runs) ? runs : []);
+      setRows(Array.isArray(runs) ? runs.map(mapRunToRow) : []);
     } catch (error) {
-      message.error(
-        error?.userMessage || "Не удалось загрузить историю прогонов",
-      );
+      message.error(error?.userMessage || "Не удалось загрузить историю");
     } finally {
       setRowsLoading(false);
     }
   }, [message]);
 
   useEffect(() => {
-    fetchRuns();
-  }, [fetchRuns]);
+    fetchMvdMeta();
+    fetchHistory();
+  }, [fetchMvdMeta, fetchHistory]);
 
-  const runBatch = async () => {
-    if (fileList.length === 0) {
+  const runManualMvdCheck = async () => {
+    if (!manualMvdType) {
+      message.warning("Выберите тип проверки МВД");
+      return;
+    }
+
+    const normalizedParams = Object.entries(manualParams).reduce(
+      (acc, [key, value]) => {
+        const normalized = normalizeString(value);
+        if (normalized) acc[key] = normalized;
+        return acc;
+      },
+      {},
+    );
+
+    const missing = manualRequiredParams.filter(
+      (key) => !normalizedParams[key],
+    );
+    if (missing.length) {
+      message.warning(
+        `Заполните обязательные поля: ${missing
+          .map((key) => MVD_PARAM_LABELS[key] || key)
+          .join(", ")}`,
+      );
+      return;
+    }
+
+    setManualRunning(true);
+    const startedAt = new Date().toISOString();
+
+    try {
+      const response = await mvdService.check({
+        type: manualMvdType,
+        params: normalizedParams,
+      });
+
+      const payloadToSave = {
+        startedAt,
+        fileName: "manual_mvd_check",
+        documentType: "mvd_manual",
+        promptUsed: null,
+        modelUsed: null,
+        ocrStatus: "skipped",
+        ocrMissingFields: [],
+        ocrNormalized: null,
+        ocrRaw: null,
+        ocrError: null,
+        ocrProvider: null,
+        mvdType: manualMvdType,
+        mvdStatus: "ok",
+        mvdParams: normalizedParams,
+        mvdMissingParams: [],
+        mvdResult: getMvdResponseData(response),
+        mvdError: null,
+      };
+
+      const persisted = await ocrService.createDebugRun(payloadToSave);
+      const persistedRun = persisted?.data || payloadToSave;
+      setRows((prev) => [mapRunToRow(persistedRun), ...prev]);
+      message.success("Проверка МВД выполнена");
+    } catch (error) {
+      const payloadToSave = {
+        startedAt,
+        fileName: "manual_mvd_check",
+        documentType: "mvd_manual",
+        promptUsed: null,
+        modelUsed: null,
+        ocrStatus: "skipped",
+        ocrMissingFields: [],
+        ocrNormalized: null,
+        ocrRaw: null,
+        ocrError: null,
+        ocrProvider: null,
+        mvdType: manualMvdType,
+        mvdStatus: "error",
+        mvdParams: normalizedParams,
+        mvdMissingParams: [],
+        mvdResult: error?.response?.data || null,
+        mvdError: error?.userMessage || "Не удалось выполнить проверку МВД",
+      };
+
+      try {
+        const persisted = await ocrService.createDebugRun(payloadToSave);
+        const persistedRun = persisted?.data || payloadToSave;
+        setRows((prev) => [mapRunToRow(persistedRun), ...prev]);
+      } catch {
+        setRows((prev) => [mapRunToRow(payloadToSave), ...prev]);
+      }
+
+      message.error(error?.userMessage || "Не удалось выполнить проверку МВД");
+    } finally {
+      setManualRunning(false);
+    }
+  };
+
+  const runOcrBatch = async () => {
+    if (ocrFileList.length === 0) {
       message.warning("Добавьте хотя бы один файл");
       return;
     }
 
-    setRunning(true);
+    setOcrRunning(true);
     let successCount = 0;
-
     try {
-      for (const uploadFile of fileList) {
+      for (const uploadFile of ocrFileList) {
         const startedAt = new Date().toISOString();
-        const baseRow = {
-          key: `${startedAt}-${uploadFile.uid}`,
+        const fileName = uploadFile?.name || "uploaded_file";
+        const fileObj = uploadFile?.originFileObj;
+
+        const rowPayload = {
           startedAt,
-          fileName: uploadFile.name,
-          documentType,
+          fileName,
+          documentType: ocrDocumentType,
           employeeId: null,
-          promptUsed: prompt,
+          promptUsed: null,
           modelUsed: null,
           ocrStatus: "error",
           ocrMissingFields: [],
@@ -354,8 +680,8 @@ const OcrMvdTestPage = () => {
           ocrRaw: null,
           ocrError: null,
           ocrProvider: null,
-          mvdType: mvdType || null,
-          mvdStatus: mvdType ? "missing_params" : null,
+          mvdType: ocrMvdType || null,
+          mvdStatus: ocrMvdType ? "missing_params" : null,
           mvdParams: null,
           mvdMissingParams: [],
           mvdResult: null,
@@ -363,96 +689,85 @@ const OcrMvdTestPage = () => {
         };
 
         try {
+          if (!fileObj) {
+            throw new Error("Файл не подготовлен для отправки");
+          }
+
           const response = await ocrService.recognizeDocument({
-            documentType,
-            file: uploadFile.originFileObj,
-            prompt: normalizeString(prompt) || undefined,
+            documentType: ocrDocumentType,
+            file: fileObj,
           });
 
-          const envelope = getOcrResponseData(response);
-          const normalized = getOcrNormalized(response);
-          const raw = getOcrRaw(response);
-          const expected = OCR_REQUIRED_FIELDS_BY_TYPE[documentType] || [];
-          const missingFields = expected.filter((fieldKey) =>
-            isEmptyValue(normalized?.[fieldKey]),
+          const ocrEnvelope = getOcrResponseData(response);
+          const ocrNormalized = getOcrNormalized(response);
+          const ocrRaw = getOcrRaw(response);
+
+          const expectedOcrFields =
+            OCR_REQUIRED_FIELDS_BY_TYPE[ocrDocumentType] || [];
+          const missingOcrFields = expectedOcrFields.filter((fieldKey) =>
+            isEmptyValue(ocrNormalized?.[fieldKey]),
           );
 
-          baseRow.ocrStatus = missingFields.length === 0 ? "ok" : "partial";
-          baseRow.ocrMissingFields = missingFields;
-          baseRow.ocrNormalized = normalized;
-          baseRow.ocrRaw = raw;
-          baseRow.ocrProvider = envelope?.provider || null;
-          baseRow.ocrError = null;
+          rowPayload.ocrStatus =
+            missingOcrFields.length === 0 ? "ok" : "partial";
+          rowPayload.ocrMissingFields = missingOcrFields;
+          rowPayload.ocrNormalized = ocrNormalized;
+          rowPayload.ocrRaw = ocrRaw;
+          rowPayload.ocrProvider = ocrEnvelope?.provider || null;
 
-          if (mvdType) {
-            const mvdParamsFromOcr = buildMvdParamsFromOcr(mvdType, normalized);
-            const manualParams = normalizeParamsMap(manualMvdParams);
-            let mvdParams = mvdParamsFromOcr;
-
-            if (mvdParamsMode === "manual") {
-              mvdParams = manualParams;
-            } else if (mvdParamsMode === "merge") {
-              mvdParams = { ...mvdParamsFromOcr, ...manualParams };
-            }
-
-            const missingParams = requiredMvdParams.filter((paramKey) =>
+          if (ocrMvdType) {
+            const mvdParams = buildMvdParamsFromOcr(ocrMvdType, ocrNormalized);
+            const missingMvdParams = ocrRequiredMvdParams.filter((paramKey) =>
               isEmptyValue(mvdParams[paramKey]),
             );
 
-            baseRow.mvdParams = mvdParams;
-            baseRow.mvdMissingParams = missingParams;
+            rowPayload.mvdParams = mvdParams;
+            rowPayload.mvdMissingParams = missingMvdParams;
 
-            if (missingParams.length > 0) {
-              baseRow.mvdStatus = "missing_params";
+            if (missingMvdParams.length > 0) {
+              rowPayload.mvdStatus = "missing_params";
             } else {
               try {
                 const mvdResponse = await mvdService.check({
-                  type: mvdType,
+                  type: ocrMvdType,
                   params: mvdParams,
                 });
-                baseRow.mvdStatus = "ok";
-                baseRow.mvdResult = getMvdResponseData(mvdResponse);
-                baseRow.mvdError = null;
+                rowPayload.mvdStatus = "ok";
+                rowPayload.mvdResult = getMvdResponseData(mvdResponse);
+                rowPayload.mvdError = null;
               } catch (mvdError) {
-                baseRow.mvdStatus = "error";
-                baseRow.mvdError =
+                rowPayload.mvdStatus = "error";
+                rowPayload.mvdError =
                   mvdError?.userMessage || "Не удалось выполнить проверку МВД";
               }
             }
           }
 
           successCount += 1;
-        } catch (ocrError) {
-          baseRow.ocrStatus = "error";
-          baseRow.ocrError =
-            ocrError?.userMessage || "Не удалось выполнить OCR";
+        } catch (error) {
+          rowPayload.ocrStatus = "error";
+          rowPayload.ocrError =
+            error?.userMessage || error?.message || "Ошибка OCR";
         }
 
         try {
-          const persisted = await ocrService.createDebugRun(baseRow);
-          const persistedRow = persisted?.data || baseRow;
-          setRows((prev) => [
-            { ...persistedRow, key: persistedRow?.key || baseRow.key },
-            ...prev,
-          ]);
-        } catch (persistError) {
-          setRows((prev) => [baseRow, ...prev]);
-          message.warning(
-            persistError?.userMessage ||
-              "Не удалось сохранить результат в историю",
-          );
+          const persisted = await ocrService.createDebugRun(rowPayload);
+          const persistedRun = persisted?.data || rowPayload;
+          setRows((prev) => [mapRunToRow(persistedRun), ...prev]);
+        } catch {
+          setRows((prev) => [mapRunToRow(rowPayload), ...prev]);
         }
       }
 
       message.success(
-        `Обработка завершена. Успешных OCR: ${successCount} из ${fileList.length}.`,
+        `Обработка завершена. Успешных OCR: ${successCount} из ${ocrFileList.length}`,
       );
     } finally {
-      setRunning(false);
+      setOcrRunning(false);
     }
   };
 
-  const clearRows = async () => {
+  const clearHistory = async () => {
     try {
       await ocrService.clearDebugRuns();
       setRows([]);
@@ -462,7 +777,71 @@ const OcrMvdTestPage = () => {
     }
   };
 
-  const tableColumns = [
+  const manualColumns = [
+    {
+      title: "Время",
+      dataIndex: "startedAt",
+      width: 95,
+      render: (value) => dayjs(value).format("HH:mm:ss"),
+    },
+    {
+      title: "Тип",
+      dataIndex: "mvdType",
+      width: 120,
+      render: (value) => MVD_TYPE_LABELS[value] || value,
+    },
+    {
+      title: "Статус",
+      dataIndex: "mvdStatus",
+      width: 110,
+      render: (value) => statusTag(value),
+    },
+    {
+      title: "Результат",
+      dataIndex: "found",
+      width: 120,
+      render: (value) => foundTag(value),
+    },
+    {
+      title: "Код",
+      dataIndex: "providerStatus",
+      width: 80,
+      render: (value) => value || "—",
+    },
+    {
+      title: "Запрос",
+      dataIndex: "requestPayload",
+      ellipsis: true,
+      render: (value) => (
+        <Text ellipsis style={{ maxWidth: 320, display: "inline-block" }}>
+          {JSON.stringify(value)}
+        </Text>
+      ),
+    },
+    {
+      title: "Ответ (человеческий)",
+      dataIndex: "humanSummary",
+      ellipsis: true,
+      render: (_, record) => (
+        <Space size={0} direction="vertical" style={{ maxWidth: 420 }}>
+          <Text ellipsis style={{ maxWidth: 420, display: "inline-block" }}>
+            {record.humanSummary}
+          </Text>
+          {record.inquirySummary ? (
+            <Text
+              type="secondary"
+              ellipsis
+              style={{ maxWidth: 420, display: "inline-block" }}
+            >
+              {record.inquirySummary}
+            </Text>
+          ) : null}
+        </Space>
+      ),
+    },
+  ];
+
+  const ocrColumns = [
     {
       title: "Время",
       dataIndex: "startedAt",
@@ -473,19 +852,26 @@ const OcrMvdTestPage = () => {
       title: "Файл",
       dataIndex: "fileName",
       ellipsis: true,
+      width: 180,
+    },
+    {
+      title: "OCR документ",
+      dataIndex: "documentType",
+      width: 180,
+      render: (value) => getOcrDocLabel(value),
     },
     {
       title: "OCR",
       dataIndex: "ocrStatus",
       width: 110,
-      render: (status) => statusTag(status),
+      render: (value) => statusTag(value),
     },
     {
       title: "Поля OCR",
       dataIndex: "ocrMissingFields",
-      width: 220,
+      width: 230,
       render: (missingFields = []) => {
-        if (missingFields.length === 0) {
+        if (!Array.isArray(missingFields) || missingFields.length === 0) {
           return <Text type="success">Все заполнены</Text>;
         }
         return (
@@ -501,24 +887,33 @@ const OcrMvdTestPage = () => {
     {
       title: "MVD",
       dataIndex: "mvdStatus",
-      width: 130,
-      render: (status) => statusTag(status),
+      width: 120,
+      render: (value) => statusTag(value),
     },
     {
-      title: "Параметры МВД",
-      dataIndex: "mvdMissingParams",
-      width: 260,
-      render: (missingParams = []) => {
-        if (missingParams.length === 0) {
-          return <Text type="secondary">Готово</Text>;
+      title: "Ответ МВД",
+      dataIndex: "humanSummary",
+      ellipsis: true,
+      render: (_, record) => {
+        if (!record.mvdType) {
+          return <Text type="secondary">Без проверки МВД</Text>;
         }
+
         return (
-          <Text type="warning">
-            Нет:{" "}
-            {missingParams
-              .map((paramKey) => MVD_PARAM_LABELS[paramKey] || paramKey)
-              .join(", ")}
-          </Text>
+          <Space size={0} direction="vertical" style={{ maxWidth: 400 }}>
+            <Text ellipsis style={{ maxWidth: 400, display: "inline-block" }}>
+              {record.humanSummary}
+            </Text>
+            {record.inquirySummary ? (
+              <Text
+                type="secondary"
+                ellipsis
+                style={{ maxWidth: 400, display: "inline-block" }}
+              >
+                {record.inquirySummary}
+              </Text>
+            ) : null}
+          </Space>
         );
       },
     },
@@ -536,247 +931,356 @@ const OcrMvdTestPage = () => {
     >
       <div>
         <Title level={4} style={{ marginBottom: 0 }}>
-          OCR + МВД тест документов
+          MVD / OCR тест документов
         </Title>
         <Text type="secondary">
-          Тестовый прогон по вашим файлам: OCR распознавание, проверка
-          обязательных полей и опциональная проверка МВД.
+          Две вкладки: ручной запрос в МВД и OCR по фото с опциональной
+          проверкой МВД.
         </Text>
       </div>
 
-      <Alert
-        type="info"
-        showIcon
-        message="Важно"
-        description="Файлы должны быть изображениями (jpg/png/webp)."
-      />
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: RUN_MODE_MANUAL,
+            label: "MVD (вручную)",
+            children: (
+              <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Ручной режим"
+                  description="Заполняете обязательные поля выбранного MVD-типа и отправляете запрос."
+                />
 
-      <Card title="Настройки прогона">
-        <Row gutter={[12, 12]}>
-          <Col xs={24} md={12}>
-            <Text type="secondary">Тип OCR документа</Text>
-            <Select
-              value={documentType}
-              onChange={(nextType) => {
-                setDocumentType(nextType);
-                setPrompt(DEFAULT_PROMPT_BY_TYPE[nextType] || "");
-              }}
-              options={OCR_DOC_TYPE_OPTIONS}
-              style={{ width: "100%" }}
-            />
-          </Col>
-          <Col span={24}>
-            <Space style={{ marginBottom: 4 }}>
-              <Text type="secondary">Промпт OCR</Text>
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                onClick={() =>
-                  setPrompt(DEFAULT_PROMPT_BY_TYPE[documentType] || "")
-                }
-              >
-                Сбросить по типу
-              </Button>
-            </Space>
-            <TextArea
-              rows={4}
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-            />
-          </Col>
-          <Col xs={24} md={10}>
-            <Text type="secondary">Тип проверки МВД (опционально)</Text>
-            <Select
-              allowClear
-              loading={mvdMetaLoading}
-              value={mvdType}
-              onChange={(value) => {
-                setMvdType(value);
-                setManualMvdParams({});
-              }}
-              placeholder="Без проверки МВД"
-              style={{ width: "100%" }}
-              options={mvdTypes.map((item) => ({
-                value: item.type,
-                label: MVD_TYPE_LABELS[item.type] || item.type,
-              }))}
-            />
-          </Col>
-          {mvdType && (
-            <Col xs={24} md={14}>
-              <Text type="secondary">Источник параметров МВД</Text>
-              <Select
-                value={mvdParamsMode}
-                onChange={setMvdParamsMode}
-                style={{ width: "100%" }}
-                options={[
-                  {
-                    value: "merge",
-                    label: "OCR + ручной ввод (приоритет ручного)",
-                  },
-                  { value: "ocr", label: "Только из OCR" },
-                  { value: "manual", label: "Только ручной ввод" },
-                ]}
-              />
-            </Col>
-          )}
-          {requiredMvdParams.length > 0 && (
-            <Col span={24}>
-              <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                <Text type="secondary">
-                  Обязательные параметры выбранного MVD-типа:{" "}
-                  {requiredMvdParams
-                    .map((paramKey) => MVD_PARAM_LABELS[paramKey] || paramKey)
-                    .join(", ")}
-                </Text>
-                <Row gutter={[8, 8]}>
-                  {requiredMvdParams.map((paramKey) => (
-                    <Col xs={24} md={12} lg={8} key={paramKey}>
-                      <Text type="secondary">
-                        {MVD_PARAM_LABELS[paramKey] || paramKey}
-                      </Text>
-                      <Input
-                        value={manualMvdParams[paramKey] || ""}
-                        placeholder="Введите вручную"
-                        onChange={(event) =>
-                          setManualMvdParams((prev) => ({
-                            ...prev,
-                            [paramKey]: event.target.value,
-                          }))
-                        }
+                <Card title="Параметры МВД">
+                  <Row gutter={[12, 12]}>
+                    <Col xs={24} md={12}>
+                      <Text type="secondary">Тип проверки МВД</Text>
+                      <Select
+                        value={manualMvdType}
+                        allowClear
+                        loading={mvdMetaLoading}
+                        onChange={(value) => {
+                          setManualMvdType(value);
+                          setManualParams({});
+                        }}
+                        placeholder="Выберите тип"
+                        style={{ width: "100%" }}
+                        options={mvdTypes.map((item) => ({
+                          value: item.type,
+                          label: MVD_TYPE_LABELS[item.type] || item.type,
+                        }))}
                       />
                     </Col>
-                  ))}
-                </Row>
-                <Space>
-                  <Button
-                    size="small"
-                    onClick={() => setManualMvdParams({})}
-                    disabled={Object.keys(manualMvdParams).length === 0}
-                  >
-                    Очистить ручные параметры МВД
-                  </Button>
-                </Space>
-              </Space>
-            </Col>
-          )}
-        </Row>
-      </Card>
 
-      <Card title="Файлы и запуск">
-        <Space direction="vertical" style={{ width: "100%" }} size={12}>
-          <Upload
-            multiple
-            accept="image/*"
-            beforeUpload={() => false}
-            fileList={fileList}
-            onChange={({ fileList: nextFileList }) => setFileList(nextFileList)}
-          >
-            <Button icon={<UploadOutlined />}>Выбрать изображения</Button>
-          </Upload>
-
-          <Space wrap>
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              onClick={runBatch}
-              loading={running}
-            >
-              Запустить OCR/MVD
-            </Button>
-            <Button
-              icon={<ClearOutlined />}
-              onClick={clearRows}
-              disabled={rows.length === 0}
-            >
-              Очистить таблицу
-            </Button>
-          </Space>
-        </Space>
-      </Card>
-
-      <Card
-        title={`Результаты (${rows.length})`}
-        bodyStyle={{ padding: 0 }}
-        extra={
-          <Text type="secondary">
-            Новые результаты добавляются в начало таблицы
-          </Text>
-        }
-      >
-        <Table
-          columns={tableColumns}
-          dataSource={rows}
-          loading={rowsLoading}
-          size="small"
-          pagination={{ pageSize: 10, showSizeChanger: true }}
-          scroll={{ x: 1200 }}
-          expandable={{
-            expandedRowRender: (record) => (
-              <Row gutter={12}>
-                <Col xs={24} lg={8}>
-                  <Text strong>OCR normalized</Text>
-                  <pre
-                    style={{
-                      marginTop: 6,
-                      padding: 8,
-                      background: "#fafafa",
-                      border: "1px solid #f0f0f0",
-                      borderRadius: 4,
-                      maxHeight: 260,
-                      overflow: "auto",
-                    }}
-                  >
-                    {JSON.stringify(record.ocrNormalized, null, 2)}
-                  </pre>
-                </Col>
-                <Col xs={24} lg={8}>
-                  <Text strong>OCR raw</Text>
-                  <pre
-                    style={{
-                      marginTop: 6,
-                      padding: 8,
-                      background: "#fafafa",
-                      border: "1px solid #f0f0f0",
-                      borderRadius: 4,
-                      maxHeight: 260,
-                      overflow: "auto",
-                    }}
-                  >
-                    {JSON.stringify(record.ocrRaw, null, 2)}
-                  </pre>
-                </Col>
-                <Col xs={24} lg={8}>
-                  <Text strong>MVD result</Text>
-                  <pre
-                    style={{
-                      marginTop: 6,
-                      padding: 8,
-                      background: "#fafafa",
-                      border: "1px solid #f0f0f0",
-                      borderRadius: 4,
-                      maxHeight: 260,
-                      overflow: "auto",
-                    }}
-                  >
-                    {JSON.stringify(
-                      {
-                        mvdType: record.mvdType,
-                        mvdParams: record.mvdParams,
-                        mvdResult: record.mvdResult,
-                        mvdError: record.mvdError,
-                        ocrError: record.ocrError,
-                      },
-                      null,
-                      2,
+                    {manualRequiredParams.length > 0 && (
+                      <Col span={24}>
+                        <Text type="secondary">
+                          Обязательные параметры:{" "}
+                          {manualRequiredParams
+                            .map((key) => MVD_PARAM_LABELS[key] || key)
+                            .join(", ")}
+                        </Text>
+                      </Col>
                     )}
-                  </pre>
-                </Col>
-              </Row>
+
+                    {manualRequiredParams.map((paramKey) => (
+                      <Col xs={24} md={12} lg={8} key={paramKey}>
+                        <Text type="secondary">
+                          {MVD_PARAM_LABELS[paramKey] || paramKey}
+                        </Text>
+                        <Input
+                          value={manualParams[paramKey] || ""}
+                          placeholder="Введите значение"
+                          onChange={(event) =>
+                            setManualParams((prev) => ({
+                              ...prev,
+                              [paramKey]: event.target.value,
+                            }))
+                          }
+                        />
+                      </Col>
+                    ))}
+                  </Row>
+
+                  <Space style={{ marginTop: 12 }} wrap>
+                    <Button
+                      type="primary"
+                      icon={<PlayCircleOutlined />}
+                      onClick={runManualMvdCheck}
+                      loading={manualRunning}
+                      disabled={!manualMvdType}
+                    >
+                      Отправить в МВД
+                    </Button>
+                    <Button
+                      icon={<ClearOutlined />}
+                      onClick={() => setManualParams({})}
+                    >
+                      Очистить поля
+                    </Button>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={fetchHistory}
+                      loading={rowsLoading}
+                    >
+                      Обновить таблицу
+                    </Button>
+                    <Button icon={<ClearOutlined />} onClick={clearHistory}>
+                      Очистить таблицу
+                    </Button>
+                  </Space>
+                </Card>
+
+                <Card
+                  title={`История ручных запросов (${manualRows.length})`}
+                  bodyStyle={{ padding: 0 }}
+                >
+                  <Table
+                    columns={manualColumns}
+                    dataSource={manualRows}
+                    loading={rowsLoading}
+                    size="small"
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    scroll={{ x: 1200 }}
+                    expandable={{
+                      expandedRowRender: (record) => (
+                        <Row gutter={12}>
+                          <Col xs={24} lg={12}>
+                            <Text strong>Request</Text>
+                            <pre
+                              style={{
+                                marginTop: 6,
+                                padding: 8,
+                                background: "#fafafa",
+                                border: "1px solid #f0f0f0",
+                                borderRadius: 4,
+                                maxHeight: 320,
+                                overflow: "auto",
+                              }}
+                            >
+                              {JSON.stringify(record.requestPayload, null, 2)}
+                            </pre>
+                          </Col>
+                          <Col xs={24} lg={12}>
+                            <Text strong>Response</Text>
+                            <pre
+                              style={{
+                                marginTop: 6,
+                                padding: 8,
+                                background: "#fafafa",
+                                border: "1px solid #f0f0f0",
+                                borderRadius: 4,
+                                maxHeight: 320,
+                                overflow: "auto",
+                              }}
+                            >
+                              {JSON.stringify(
+                                {
+                                  response: record.responsePayload,
+                                  error: record.mvdError,
+                                },
+                                null,
+                                2,
+                              )}
+                            </pre>
+                          </Col>
+                        </Row>
+                      ),
+                    }}
+                  />
+                </Card>
+              </Space>
             ),
-          }}
-        />
-      </Card>
+          },
+          {
+            key: RUN_MODE_OCR,
+            label: "OCR (по фото)",
+            children: (
+              <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                <Alert
+                  type="info"
+                  showIcon
+                  message="OCR режим"
+                  description="Загружаете фото документа. Сначала OCR, затем при выборе типа — автоматический запрос в МВД по извлеченным полям."
+                />
+
+                <Card title="Настройки OCR">
+                  <Row gutter={[12, 12]}>
+                    <Col xs={24} md={8}>
+                      <Text type="secondary">Тип OCR документа</Text>
+                      <Select
+                        value={ocrDocumentType}
+                        onChange={setOcrDocumentType}
+                        style={{ width: "100%" }}
+                        options={OCR_DOC_TYPE_OPTIONS}
+                      />
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                      <Text type="secondary">
+                        Тип проверки МВД (опционально)
+                      </Text>
+                      <Select
+                        allowClear
+                        loading={mvdMetaLoading}
+                        value={ocrMvdType}
+                        onChange={setOcrMvdType}
+                        placeholder="Без проверки МВД"
+                        style={{ width: "100%" }}
+                        options={mvdTypes.map((item) => ({
+                          value: item.type,
+                          label: MVD_TYPE_LABELS[item.type] || item.type,
+                        }))}
+                      />
+                    </Col>
+
+                    {ocrRequiredMvdParams.length > 0 && (
+                      <Col span={24}>
+                        <Text type="secondary">
+                          Параметры МВД будут собраны автоматически из OCR.
+                          Обязательные поля:{" "}
+                          {ocrRequiredMvdParams
+                            .map((key) => MVD_PARAM_LABELS[key] || key)
+                            .join(", ")}
+                        </Text>
+                      </Col>
+                    )}
+                  </Row>
+                </Card>
+
+                <Card title="Файлы и запуск">
+                  <Space
+                    direction="vertical"
+                    style={{ width: "100%" }}
+                    size={12}
+                  >
+                    <Upload
+                      multiple
+                      accept="image/*"
+                      beforeUpload={() => false}
+                      fileList={ocrFileList}
+                      onChange={({ fileList }) => setOcrFileList(fileList)}
+                    >
+                      <Button icon={<UploadOutlined />}>
+                        Выбрать изображения
+                      </Button>
+                    </Upload>
+
+                    <Space wrap>
+                      <Button
+                        type="primary"
+                        icon={<PlayCircleOutlined />}
+                        onClick={runOcrBatch}
+                        loading={ocrRunning}
+                      >
+                        Запустить OCR/MVD
+                      </Button>
+                      <Button
+                        icon={<ClearOutlined />}
+                        onClick={() => setOcrFileList([])}
+                      >
+                        Очистить список файлов
+                      </Button>
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={fetchHistory}
+                        loading={rowsLoading}
+                      >
+                        Обновить таблицу
+                      </Button>
+                      <Button icon={<ClearOutlined />} onClick={clearHistory}>
+                        Очистить таблицу
+                      </Button>
+                    </Space>
+                  </Space>
+                </Card>
+
+                <Card
+                  title={`История OCR прогонов (${ocrRows.length})`}
+                  bodyStyle={{ padding: 0 }}
+                >
+                  <Table
+                    columns={ocrColumns}
+                    dataSource={ocrRows}
+                    loading={rowsLoading}
+                    size="small"
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    scroll={{ x: 1300 }}
+                    expandable={{
+                      expandedRowRender: (record) => (
+                        <Row gutter={12}>
+                          <Col xs={24} lg={8}>
+                            <Text strong>OCR normalized</Text>
+                            <pre
+                              style={{
+                                marginTop: 6,
+                                padding: 8,
+                                background: "#fafafa",
+                                border: "1px solid #f0f0f0",
+                                borderRadius: 4,
+                                maxHeight: 320,
+                                overflow: "auto",
+                              }}
+                            >
+                              {JSON.stringify(record.ocrNormalized, null, 2)}
+                            </pre>
+                          </Col>
+                          <Col xs={24} lg={8}>
+                            <Text strong>OCR raw</Text>
+                            <pre
+                              style={{
+                                marginTop: 6,
+                                padding: 8,
+                                background: "#fafafa",
+                                border: "1px solid #f0f0f0",
+                                borderRadius: 4,
+                                maxHeight: 320,
+                                overflow: "auto",
+                              }}
+                            >
+                              {JSON.stringify(record.ocrRaw, null, 2)}
+                            </pre>
+                          </Col>
+                          <Col xs={24} lg={8}>
+                            <Text strong>MVD result</Text>
+                            <pre
+                              style={{
+                                marginTop: 6,
+                                padding: 8,
+                                background: "#fafafa",
+                                border: "1px solid #f0f0f0",
+                                borderRadius: 4,
+                                maxHeight: 320,
+                                overflow: "auto",
+                              }}
+                            >
+                              {JSON.stringify(
+                                {
+                                  mvdType: record.mvdType,
+                                  mvdParams: record.mvdParams,
+                                  mvdResult: record.responsePayload,
+                                  mvdError: record.mvdError,
+                                  ocrError: record.ocrError,
+                                },
+                                null,
+                                2,
+                              )}
+                            </pre>
+                          </Col>
+                        </Row>
+                      ),
+                    }}
+                  />
+                </Card>
+              </Space>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 };
