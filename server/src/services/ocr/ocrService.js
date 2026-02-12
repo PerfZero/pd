@@ -7,7 +7,7 @@ const DEFAULT_OPENROUTER_MODEL = "qwen/qwen3-vl-30b-a3b-instruct";
 const DEFAULT_PASSPORT_RF_PROMPT =
   "Распознай текст на изображении паспорта РФ. Верни строго JSON без обрамления. " +
   "Поля: surname, givenNames, middleName, birthDate, sex, nationality, " +
-  "passportNumber, issueDate, departmentCode, authority, birthPlace, expiryDate.";
+  "passportSeries, passportNumber, issueDate, departmentCode, authority, birthPlace, expiryDate.";
 const DEFAULT_FOREIGN_PASSPORT_PROMPT =
   "Распознай текст на изображении паспорта иностранного гражданина. " +
   "Верни строго JSON без обрамления. Поля: surname, givenNames, middleName, " +

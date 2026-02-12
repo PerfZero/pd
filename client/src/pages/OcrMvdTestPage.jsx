@@ -37,7 +37,7 @@ const OCR_DOC_TYPE_OPTIONS = [
 
 const DEFAULT_PROMPT_BY_TYPE = {
   passport_rf:
-    "Распознай текст на изображении паспорта РФ. Верни строго JSON без обрамления. Поля: surname, givenNames, middleName, birthDate, sex, nationality, passportNumber, issueDate, departmentCode, authority, birthPlace, expiryDate.",
+    "Распознай текст на изображении паспорта РФ. Верни строго JSON без обрамления. Поля: surname, givenNames, middleName, birthDate, sex, nationality, passportSeries, passportNumber, issueDate, departmentCode, authority, birthPlace, expiryDate.",
   foreign_passport:
     "Распознай текст на изображении паспорта иностранного гражданина. Верни строго JSON без обрамления. Поля: surname, givenNames, middleName, birthDate, sex, nationality, passportNumber, issueDate, expiryDate, authority, birthPlace.",
   patent:
