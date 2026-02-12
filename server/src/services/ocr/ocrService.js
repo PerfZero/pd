@@ -272,6 +272,48 @@ const normalizeDigits = (value, maxLength = 64) => {
   return normalized || null;
 };
 
+const normalizePassportDepartmentCode = (value) => {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (digits.length === 6) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}`;
+  }
+  if (digits.length === 10) {
+    const departmentDigits = digits.slice(4, 10);
+    return `${departmentDigits.slice(0, 3)}-${departmentDigits.slice(3, 6)}`;
+  }
+  return trimmed;
+};
+
+const extractPassportSeriesFallback = ({
+  departmentCodeRaw,
+  passportNumberCombined,
+}) => {
+  const departmentDigits = String(departmentCodeRaw || "").replace(
+    /[^\d]/g,
+    "",
+  );
+  if (departmentDigits.length === 4) {
+    return departmentDigits;
+  }
+  if (departmentDigits.length === 10) {
+    return departmentDigits.slice(0, 4);
+  }
+
+  const combinedDigits = String(passportNumberCombined || "").replace(
+    /[^\d]/g,
+    "",
+  );
+  if (combinedDigits.length >= 10) {
+    return combinedDigits.slice(0, 4);
+  }
+
+  return null;
+};
+
 const splitPassportNumber = (combinedValue) => {
   if (!combinedValue) {
     return { series: null, number: null };
@@ -315,14 +357,38 @@ const normalizePassportRf = (parsedJson = {}) => {
     "passportSeries",
     "passport_series",
     "series",
+    "seria",
+    "passportSeria",
+    "passport_seria",
+    "docseria",
   ]);
   const explicitNumber = valueFrom(parsedJson, [
     "passportNumberOnly",
     "passport_number_only",
     "numberOnly",
     "number_only",
+    "nomer",
+    "passportNomer",
+    "passport_nomer",
+    "docnumber",
+    "documentNumber",
+    "document_number",
+  ]);
+  const departmentCodeRaw = valueFrom(parsedJson, [
+    "departmentCode",
+    "department_code",
+    "passportDepartmentCode",
   ]);
   const split = splitPassportNumber(passportNumberCombined || "");
+  const seriesFallback = extractPassportSeriesFallback({
+    departmentCodeRaw,
+    passportNumberCombined,
+  });
+  const normalizedSeries = normalizeDigits(
+    explicitSeries || split.series || seriesFallback,
+    4,
+  );
+  const normalizedNumber = normalizeDigits(explicitNumber || split.number, 6);
 
   return {
     lastName: valueFrom(parsedJson, ["surname", "lastName", "last_name"]),
@@ -339,10 +405,8 @@ const normalizePassportRf = (parsedJson = {}) => {
     citizenship: normalizeCitizenship(
       valueFrom(parsedJson, ["nationality", "citizenship"]),
     ),
-    passportSeries:
-      (explicitSeries || split.series || null)?.slice(0, 4) || null,
-    passportNumber:
-      (explicitNumber || split.number || null)?.slice(0, 6) || null,
+    passportSeries: normalizedSeries,
+    passportNumber: normalizedNumber,
     passportIssuedAt: normalizeDate(
       valueFrom(parsedJson, ["issueDate", "issue_date", "passportIssueDate"]),
     ),
@@ -351,11 +415,9 @@ const normalizePassportRf = (parsedJson = {}) => {
       "issuedBy",
       "passportIssuedBy",
     ]),
-    passportDepartmentCode: valueFrom(parsedJson, [
-      "departmentCode",
-      "department_code",
-      "passportDepartmentCode",
-    ]),
+    passportDepartmentCode: departmentCodeRaw
+      ? normalizePassportDepartmentCode(departmentCodeRaw)
+      : null,
     birthPlace: valueFrom(parsedJson, ["birthPlace", "birth_place"]),
     passportExpiryDate: normalizeDate(
       valueFrom(parsedJson, [
