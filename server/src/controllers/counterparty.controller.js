@@ -576,18 +576,9 @@ export const getCounterpartyConstructionSites = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Проверка прав доступа
-    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
-    
-    if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Доступ запрещен'
-      });
-    }
-    
-    if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
-      // user (не default) может получать объекты для своего контрагента и своих субподрядчиков
+    // Проверка прав доступа:
+    // user может получать объекты только для своего контрагента и своих субподрядчиков
+    if (req.user.role === 'user') {
       const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
         where: { parentCounterpartyId: req.user.counterpartyId },
         attributes: ['childCounterpartyId']

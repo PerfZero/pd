@@ -230,6 +230,29 @@ export const useReferencesStore = create((set, get) => ({
 
       return data;
     } catch (error) {
+      const status = error?.response?.status;
+
+      // Для неактивных/неавторизованных пользователей публичные настройки не критичны.
+      // Возвращаем безопасный fallback, чтобы UI не падал из-за 401/403.
+      if (status === 401 || status === 403) {
+        const fallback = {
+          defaultCounterpartyId: null,
+          employeeFormConfigDefault: null,
+          employeeFormConfigExternal: null,
+        };
+
+        set({
+          settings: fallback,
+          formConfigDefault: null,
+          formConfigExternal: null,
+          settingsError: null,
+          settingsLoading: false,
+          settingsLastFetch: Date.now(),
+        });
+
+        return fallback;
+      }
+
       console.error("Error loading settings:", error);
       set({ settingsError: error, settingsLoading: false });
       throw error;
