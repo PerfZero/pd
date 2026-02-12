@@ -56,9 +56,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
     isOtEngineer ||
     isOtAdmin ||
     user?.role === "admin" ||
-    (user?.role === "user" &&
-      user?.counterpartyId &&
-      user?.counterpartyId !== defaultCounterpartyId);
+    user?.role === "user";
 
   if (showOtMenu) {
     topMenuItems.push({
