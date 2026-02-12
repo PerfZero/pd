@@ -1,0 +1,110 @@
+{
+  "common": {
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "edit": "Tahrirlash",
+    "close": "Yopish",
+    "logout": "Hisobdan chiqish",
+    "profile": "Profil",
+    "search": "Qidirish",
+    "reset": "Qayta tiklash",
+    "columns": "Ustunlar",
+    "add": "Qo'shish",
+    "loading": "Yuklanmoqda...",
+    "instruction": "Yo'riqnoma",
+    "portalTitle": "Ruxsatnomalarni boshqarish portali",
+    "copyright": "© 2025 PassDesk. Barcha huquqlar himoyalangan.",
+    "accessDenied": "Kirish taqiqlangan",
+    "yes": "Ha",
+    "no": "Yo'q"
+  },
+  "menu": {
+    "employees": "Xodimlar",
+    "ot": "Mehnat muhofazasi",
+    "skud": "SKUD",
+    "administration": "Administratsiya",
+    "references": "Ma'lumotnomalar",
+    "counterparties": "Kontragentlar",
+    "constructionSites": "Obyektlar",
+    "contracts": "Shartnomalar",
+    "directories": "Bo'limlar",
+    "settings": "Sozlamalar",
+    "users": "Foydalanuvchilar"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "ot_admin": "MM administratori",
+    "ot_engineer": "MM muhandisi",
+    "manager": "Menejer",
+    "user": "Foydalanuvchi"
+  },
+  "auth": {
+    "login": "Kirish",
+    "register": "Ro'yxatdan o'tish",
+    "email": "Email",
+    "password": "Parol",
+    "confirmPassword": "Parolni tasdiqlash",
+    "fullName": "F.I.Sh.",
+    "loginButton": "Kirish",
+    "registerButton": "Ro'yxatdan o'tish",
+    "loginSuccess": "Muvaffaqiyatli kirdingiz!",
+    "registrationSuccess": "Ro'yxatdan o'tish muvaffaqiyatli! Sizning UIN: {{uin}}",
+    "alreadyHaveAccount": "Hisobingiz bormi?",
+    "loginLink": "Kirish",
+    "loginError": "Kirishda xatolik. Qayta urinib ko'ring.",
+    "registrationError": "Ro'yxatdan o'tishda xatolik. Qayta urinib ko'ring.",
+    "invalidEmail": "To'g'ri email kiriting",
+    "emailRequired": "Emailni kiriting",
+    "passwordRequired": "Parolni kiriting",
+    "passwordMin": "Parol kamida 8 ta belgidan iborat bo'lishi kerak",
+    "fullNameRequired": "F.I.Sh. kiriting",
+    "fullNameCyrillic": "F.I.Sh. faqat kirill harflarida bo'lishi kerak",
+    "fullNameMinWords": "Familiya va ismni kiriting (kamida 2 so'z)",
+    "confirmPasswordRequired": "Parolni tasdiqlang",
+    "passwordsNotMatch": "Parollar mos kelmaydi",
+    "networkError": "Serverga ulanib bo'lmadi. Server ishga tushganini tekshiring.",
+    "invalidCredentials": "Email yoki parol noto'g'ri",
+    "accountDisabled": "Kirish taqiqlangan. Hisobingiz o'chirilgan bo'lishi mumkin."
+  },
+  "profile": {
+    "title": "Foydalanuvchi profili",
+    "uin": "UIN",
+    "notActivated": "Foydalanuvchi faollashtirilmagan. Administratorga murojaat qiling",
+    "registrationDate": "Ro'yxatdan o'tgan sana",
+    "changePassword": "Parolni o'zgartirish",
+    "changePasswordTitle": "Parolni o'zgartirish",
+    "currentPassword": "Joriy parol",
+    "newPassword": "Yangi parol",
+    "confirmNewPassword": "Yangi parolni tasdiqlash",
+    "passwordChanged": "Parol muvaffaqiyatli o'zgartirildi",
+    "profileUpdated": "Profil muvaffaqiyatli yangilandi",
+    "saveError": "Profilni saqlashda xatolik",
+    "passwordChangeError": "Parolni o'zgartirishda xatolik",
+    "language": "Interfeys tili",
+    "languageHint": "Pudratchilar uchun mavjud"
+  },
+  "languages": {
+    "ru": "Ruscha",
+    "uz": "O'zbekcha",
+    "tj": "Tojikcha",
+    "kz": "Qozoqcha"
+  },
+  "employees": {
+    "title": "Xodimlar",
+    "requestExcel": "Excel ariza",
+    "importExcel": "Excel importi",
+    "security": "Bloklash",
+    "addEmployee": "Xodim qo'shish"
+  },
+  "ot": {
+    "title": "Mehnat muhofazasi",
+    "accessDenied": "Bo'lim faqat pudratchilar, MM muhandislari va MM administratorlariga ochiq",
+    "defaultCounterpartyDenied": "Standart kontragent uchun bo'lim yopiq",
+    "tabs": {
+      "all": "Barcha obyektlar",
+      "object": "Obyekt",
+      "contractor": "Pudratchi",
+      "settings": "Sozlamalar"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "common": {
+    "save": "Нигоҳ доштан",
+    "cancel": "Бекор кардан",
+    "edit": "Таҳрир кардан",
+    "close": "Пӯшидан",
+    "logout": "Баромадан аз ҳисоб",
+    "profile": "Профил",
+    "search": "Ҷустуҷӯ",
+    "reset": "Аз нав танзим кардан",
+    "columns": "Сутунҳо",
+    "add": "Илова кардан",
+    "loading": "Бор шуда истодааст...",
+    "instruction": "Дастурамал",
+    "portalTitle": "Портали идоракунии рухсатномаҳо",
+    "copyright": "© 2025 PassDesk. Ҳама ҳуқуқҳо ҳифз шудаанд.",
+    "accessDenied": "Дастрасӣ манъ аст",
+    "yes": "Ҳа",
+    "no": "Не"
+  },
+  "menu": {
+    "employees": "Кормандон",
+    "ot": "Ҳифзи меҳнат",
+    "skud": "СКУД",
+    "administration": "Маъмурият",
+    "references": "Маълумотномаҳо",
+    "counterparties": "Контрагентҳо",
+    "constructionSites": "Объектҳо",
+    "contracts": "Шартномаҳо",
+    "directories": "Шуъбаҳо",
+    "settings": "Танзимот",
+    "users": "Истифодабарандагон"
+  },
+  "roles": {
+    "admin": "Администратор",
+    "ot_admin": "Администратори ҲМ",
+    "ot_engineer": "Муҳандиси ҲМ",
+    "manager": "Менеҷер",
+    "user": "Истифодабаранда"
+  },
+  "auth": {
+    "login": "Даромад",
+    "register": "Сабти ном",
+    "email": "Email",
+    "password": "Рамз",
+    "confirmPassword": "Тасдиқи рамз",
+    "fullName": "Ному насаб",
+    "loginButton": "Даромадан",
+    "registerButton": "Сабти ном",
+    "loginSuccess": "Даромад муваффақ шуд!",
+    "registrationSuccess": "Сабти ном муваффақ шуд! УИН-и шумо: {{uin}}",
+    "alreadyHaveAccount": "Ҳисоб доред?",
+    "loginLink": "Даромадан",
+    "loginError": "Хатои даромад. Аз нав кӯшиш кунед.",
+    "registrationError": "Хатои сабти ном. Аз нав кӯшиш кунед.",
+    "invalidEmail": "Email-и дурустро ворид кунед",
+    "emailRequired": "Email-ро ворид кунед",
+    "passwordRequired": "Рамзро ворид кунед",
+    "passwordMin": "Рамз ҳадди ақал 8 аломат дошта бошад",
+    "fullNameRequired": "Ному насабро ворид кунед",
+    "fullNameCyrillic": "Ному насаб танҳо бо ҳарфҳои кириллӣ",
+    "fullNameMinWords": "Насаб ва номро ворид кунед (ҳадди ақал 2 калима)",
+    "confirmPasswordRequired": "Рамзро тасдиқ кунед",
+    "passwordsNotMatch": "Рамзҳо мувофиқат намекунанд",
+    "networkError": "Ба сервер пайваст шудан нашуд. Оғози серверро санҷед.",
+    "invalidCredentials": "Email ё рамз нодуруст аст",
+    "accountDisabled": "Дастрасӣ манъ аст. Ҳисоби шумо метавонад ғайрифаъол бошад."
+  },
+  "profile": {
+    "title": "Профили корбар",
+    "uin": "УИН",
+    "notActivated": "Корбар фаъол нашудааст. Ба администратор муроҷиат кунед",
+    "registrationDate": "Санаи бақайдгирӣ",
+    "changePassword": "Иваз кардани рамз",
+    "changePasswordTitle": "Иваз кардани рамз",
+    "currentPassword": "Рамзи ҷорӣ",
+    "newPassword": "Рамзи нав",
+    "confirmNewPassword": "Тасдиқи рамзи нав",
+    "passwordChanged": "Рамз бомуваффақият иваз шуд",
+    "profileUpdated": "Профил бомуваффақият нав шуд",
+    "saveError": "Хатои нигоҳдории профил",
+    "passwordChangeError": "Хатои иваз кардани рамз",
+    "language": "Забони интерфейс",
+    "languageHint": "Барои пудратчиён дастрас"
+  },
+  "languages": {
+    "ru": "Русӣ",
+    "uz": "Ӯзбекӣ",
+    "tj": "Тоҷикӣ",
+    "kz": "Қазоқӣ"
+  },
+  "employees": {
+    "title": "Кормандон",
+    "requestExcel": "Дархости Excel",
+    "importExcel": "Воридоти Excel",
+    "security": "Блок кардан",
+    "addEmployee": "Иловаи корманд"
+  },
+  "ot": {
+    "title": "Ҳифзи меҳнат",
+    "accessDenied": "Бахш танҳо барои пудратчиён, муҳандисони ҲМ ва администраторони ҲМ дастрас аст",
+    "defaultCounterpartyDenied": "Барои контрагенти пешфарз дастрасӣ баста аст",
+    "tabs": {
+      "all": "Ҳама объектҳо",
+      "object": "Объект",
+      "contractor": "Пудратчӣ",
+      "settings": "Танзимот"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+ALTER TABLE files
+  ADD COLUMN IF NOT EXISTS ocr_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS ocr_verified_at TIMESTAMPTZ NULL,
+  ADD COLUMN IF NOT EXISTS ocr_provider VARCHAR(64) NULL,
+  ADD COLUMN IF NOT EXISTS ocr_result_json JSONB NULL;
+
+CREATE INDEX IF NOT EXISTS idx_files_ocr_verified ON files (ocr_verified);

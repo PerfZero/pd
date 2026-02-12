@@ -1,0 +1,6 @@
+{
+  "errors": {
+    "unauthorized": "Avtorizatsiya talab qilinadi",
+    "forbidden": "Ruxsat yetarli emas"
+  }
+}

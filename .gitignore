@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Secrets
+*.pfx
+
+# Build outputs
+dist/
+build/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database
+*.sqlite
+*.db
+
+# Uploads (для локальной разработки)
+uploads/
+temp/
+
+# Coverage
+coverage/
+*.lcov
+
+# Production
+.vercel
+.netlify
+
+# Local repository hygiene (avoid accidental commits of ad-hoc files)
+.beads/
+*.extracted.txt
+/*.txt
+/*.pdf
+/*.jpg
+/*.jpeg
+/*.png
+/*.webp
+/*.heic
+
+# Skip local docs/script experiments
+/Docs/
+/scripts/deepl-translate.js
+/scripts/deepl-*.js
+
+# Keep local-only workspace notes/config
+/.cursorrules
+/AGENTS.md
+/CLAUDE.md
+/SECURITY_REVIEW.md
+/db-audit-questions.txt
+/employee-form-modal-plan.txt
+/frontend-audit.txt

@@ -1,0 +1,110 @@
+{
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "edit": "Редактировать",
+    "close": "Закрыть",
+    "logout": "Выйти из аккаунта",
+    "profile": "Профиль",
+    "search": "Поиск",
+    "reset": "Сбросить",
+    "columns": "Колонки",
+    "add": "Добавить",
+    "loading": "Загрузка...",
+    "instruction": "Инструкция",
+    "portalTitle": "Портал управления пропусками",
+    "copyright": "© 2025 PassDesk. Все права защищены.",
+    "accessDenied": "Доступ запрещен",
+    "yes": "Да",
+    "no": "Нет"
+  },
+  "menu": {
+    "employees": "Сотрудники",
+    "ot": "Охрана труда",
+    "skud": "СКУД",
+    "administration": "Администрирование",
+    "references": "Справочники",
+    "counterparties": "Контрагенты",
+    "constructionSites": "Объекты",
+    "contracts": "Договора",
+    "directories": "Подразделения",
+    "settings": "Настройки",
+    "users": "Пользователи"
+  },
+  "roles": {
+    "admin": "Администратор",
+    "ot_admin": "Администратор ОТ",
+    "ot_engineer": "Инженер ОТ",
+    "manager": "Менеджер",
+    "user": "Пользователь"
+  },
+  "auth": {
+    "login": "Вход",
+    "register": "Регистрация",
+    "email": "Email",
+    "password": "Пароль",
+    "confirmPassword": "Подтверждение пароля",
+    "fullName": "ФИО",
+    "loginButton": "Войти",
+    "registerButton": "Зарегистрироваться",
+    "loginSuccess": "Вход выполнен успешно!",
+    "registrationSuccess": "Регистрация прошла успешно! Ваш УИН: {{uin}}",
+    "alreadyHaveAccount": "Уже есть аккаунт?",
+    "loginLink": "Войти",
+    "loginError": "Ошибка входа. Попробуйте снова.",
+    "registrationError": "Ошибка регистрации. Попробуйте снова.",
+    "invalidEmail": "Введите корректный email",
+    "emailRequired": "Пожалуйста, введите email",
+    "passwordRequired": "Пожалуйста, введите пароль",
+    "passwordMin": "Пароль должен содержать минимум 8 символов",
+    "fullNameRequired": "Пожалуйста, введите ФИО",
+    "fullNameCyrillic": "ФИО должно содержать только русские буквы",
+    "fullNameMinWords": "Введите фамилию и имя (минимум 2 слова)",
+    "confirmPasswordRequired": "Пожалуйста, подтвердите пароль",
+    "passwordsNotMatch": "Пароли не совпадают",
+    "networkError": "Не удается подключиться к серверу. Проверьте, что сервер запущен.",
+    "invalidCredentials": "Неверный email или пароль",
+    "accountDisabled": "Доступ запрещен. Ваш аккаунт может быть деактивирован."
+  },
+  "profile": {
+    "title": "Профиль пользователя",
+    "uin": "УИН",
+    "notActivated": "Пользователь не активирован. Обратитесь к администратору",
+    "registrationDate": "Дата регистрации",
+    "changePassword": "Сменить пароль",
+    "changePasswordTitle": "Смена пароля",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirmNewPassword": "Подтверждение нового пароля",
+    "passwordChanged": "Пароль успешно изменен",
+    "profileUpdated": "Профиль успешно обновлен",
+    "saveError": "Ошибка сохранения профиля",
+    "passwordChangeError": "Ошибка смены пароля",
+    "language": "Язык интерфейса",
+    "languageHint": "Доступно для подрядчиков"
+  },
+  "languages": {
+    "ru": "Русский",
+    "uz": "Узбекский",
+    "tj": "Таджикский",
+    "kz": "Казахский"
+  },
+  "employees": {
+    "title": "Сотрудники",
+    "requestExcel": "Заявка Excel",
+    "importExcel": "Импорт из Excel",
+    "security": "Блокировка",
+    "addEmployee": "Добавить сотрудника"
+  },
+  "ot": {
+    "title": "Охрана труда",
+    "accessDenied": "Раздел доступен только для подрядчиков, инженеров ОТ и администраторов ОТ",
+    "defaultCounterpartyDenied": "Для контрагента по умолчанию доступ к разделу закрыт",
+    "tabs": {
+      "all": "Все объекты",
+      "object": "Объект",
+      "contractor": "Подрядчик",
+      "settings": "Настройки"
+    }
+  }
+}

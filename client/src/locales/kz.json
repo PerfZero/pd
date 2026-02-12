@@ -1,0 +1,110 @@
+{
+  "common": {
+    "save": "Сақтау",
+    "cancel": "Бас тарту",
+    "edit": "Өңдеу",
+    "close": "Жабу",
+    "logout": "Шығу",
+    "profile": "Профиль",
+    "search": "Іздеу",
+    "reset": "Қалпына келтіру",
+    "columns": "Бағандар",
+    "add": "Қосу",
+    "loading": "Жүктелуде...",
+    "instruction": "Нұсқаулық",
+    "portalTitle": "Рұқсатнамаларды басқару порталы",
+    "copyright": "© 2025 PassDesk. Барлық құқықтар қорғалған.",
+    "accessDenied": "Қол жеткізуге тыйым салынған",
+    "yes": "Иә",
+    "no": "Жоқ"
+  },
+  "menu": {
+    "employees": "Қызметкерлер",
+    "ot": "Еңбек қауіпсіздігі",
+    "skud": "СКУД",
+    "administration": "Әкімшілендіру",
+    "references": "Анықтамалар",
+    "counterparties": "Контрагенттер",
+    "constructionSites": "Нысандар",
+    "contracts": "Келісімшарттар",
+    "directories": "Бөлімдер",
+    "settings": "Баптаулар",
+    "users": "Пайдаланушылар"
+  },
+  "roles": {
+    "admin": "Әкімші",
+    "ot_admin": "ЕҚ әкімшісі",
+    "ot_engineer": "ЕҚ инженері",
+    "manager": "Менеджер",
+    "user": "Пайдаланушы"
+  },
+  "auth": {
+    "login": "Кіру",
+    "register": "Тіркелу",
+    "email": "Email",
+    "password": "Құпиясөз",
+    "confirmPassword": "Құпиясөзді растау",
+    "fullName": "Т.А.Ә.",
+    "loginButton": "Кіру",
+    "registerButton": "Тіркелу",
+    "loginSuccess": "Кіру сәтті орындалды!",
+    "registrationSuccess": "Тіркелу сәтті! Сіздің УИН: {{uin}}",
+    "alreadyHaveAccount": "Аккаунтыңыз бар ма?",
+    "loginLink": "Кіру",
+    "loginError": "Кіру қатесі. Қайта көріңіз.",
+    "registrationError": "Тіркелу қатесі. Қайта көріңіз.",
+    "invalidEmail": "Дұрыс email енгізіңіз",
+    "emailRequired": "Email енгізіңіз",
+    "passwordRequired": "Құпиясөзді енгізіңіз",
+    "passwordMin": "Құпиясөз кемінде 8 таңбадан тұруы керек",
+    "fullNameRequired": "Т.А.Ә. енгізіңіз",
+    "fullNameCyrillic": "Т.А.Ә. тек кирилл әріптерімен болуы керек",
+    "fullNameMinWords": "Тегі мен атын енгізіңіз (кемінде 2 сөз)",
+    "confirmPasswordRequired": "Құпиясөзді растаңыз",
+    "passwordsNotMatch": "Құпиясөздер сәйкес келмейді",
+    "networkError": "Серверге қосылу мүмкін емес. Сервердің іске қосылғанын тексеріңіз.",
+    "invalidCredentials": "Email немесе құпиясөз дұрыс емес",
+    "accountDisabled": "Қол жеткізуге тыйым салынған. Аккаунтыңыз өшірілген болуы мүмкін."
+  },
+  "profile": {
+    "title": "Пайдаланушы профилі",
+    "uin": "УИН",
+    "notActivated": "Пайдаланушы белсендірілмеген. Әкімшіге хабарласыңыз",
+    "registrationDate": "Тіркелген күні",
+    "changePassword": "Құпиясөзді өзгерту",
+    "changePasswordTitle": "Құпиясөзді өзгерту",
+    "currentPassword": "Ағымдағы құпиясөз",
+    "newPassword": "Жаңа құпиясөз",
+    "confirmNewPassword": "Жаңа құпиясөзді растау",
+    "passwordChanged": "Құпиясөз сәтті өзгертілді",
+    "profileUpdated": "Профиль сәтті жаңартылды",
+    "saveError": "Профильді сақтау қатесі",
+    "passwordChangeError": "Құпиясөзді өзгерту қатесі",
+    "language": "Интерфейс тілі",
+    "languageHint": "Мердігерлер үшін қолжетімді"
+  },
+  "languages": {
+    "ru": "Орысша",
+    "uz": "Өзбекше",
+    "tj": "Тәжікше",
+    "kz": "Қазақша"
+  },
+  "employees": {
+    "title": "Қызметкерлер",
+    "requestExcel": "Excel өтінім",
+    "importExcel": "Excel импорт",
+    "security": "Бұғаттау",
+    "addEmployee": "Қызметкер қосу"
+  },
+  "ot": {
+    "title": "Еңбек қауіпсіздігі",
+    "accessDenied": "Бөлім тек мердігерлерге, ЕҚ инженерлері мен әкімшілеріне қолжетімді",
+    "defaultCounterpartyDenied": "Әдепкі контрагент үшін қолжетімділік жабық",
+    "tabs": {
+      "all": "Барлық нысандар",
+      "object": "Нысан",
+      "contractor": "Мердігер",
+      "settings": "Баптаулар"
+    }
+  }
+}
