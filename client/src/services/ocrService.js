@@ -54,6 +54,23 @@ export const ocrService = {
     });
     return response.data;
   },
+
+  listDebugRuns: async ({ limit = 100 } = {}) => {
+    const response = await api.get("/ocr/debug/runs", {
+      params: { limit },
+    });
+    return response.data;
+  },
+
+  createDebugRun: async (payload) => {
+    const response = await api.post("/ocr/debug/runs", payload);
+    return response.data;
+  },
+
+  clearDebugRuns: async () => {
+    const response = await api.delete("/ocr/debug/runs");
+    return response.data;
+  },
 };
 
 export default ocrService;

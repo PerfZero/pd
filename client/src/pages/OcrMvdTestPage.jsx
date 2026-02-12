@@ -274,6 +274,7 @@ const OcrMvdTestPage = () => {
   const [mvdOverridesText, setMvdOverridesText] = useState("{}");
   const [fileList, setFileList] = useState([]);
   const [rows, setRows] = useState([]);
+  const [rowsLoading, setRowsLoading] = useState(false);
   const [running, setRunning] = useState(false);
 
   const selectedMvdMeta = useMemo(
@@ -301,6 +302,25 @@ const OcrMvdTestPage = () => {
   useEffect(() => {
     fetchMvdMeta();
   }, [fetchMvdMeta]);
+
+  const fetchRuns = useCallback(async () => {
+    try {
+      setRowsLoading(true);
+      const response = await ocrService.listDebugRuns({ limit: 200 });
+      const runs = response?.data?.runs || [];
+      setRows(Array.isArray(runs) ? runs : []);
+    } catch (error) {
+      message.error(
+        error?.userMessage || "Не удалось загрузить историю прогонов",
+      );
+    } finally {
+      setRowsLoading(false);
+    }
+  }, [message]);
+
+  useEffect(() => {
+    fetchRuns();
+  }, [fetchRuns]);
 
   const runBatch = async () => {
     const normalizedEmployeeId = normalizeString(employeeId);
@@ -409,7 +429,20 @@ const OcrMvdTestPage = () => {
             ocrError?.userMessage || "Не удалось выполнить OCR";
         }
 
-        setRows((prev) => [baseRow, ...prev]);
+        try {
+          const persisted = await ocrService.createDebugRun(baseRow);
+          const persistedRow = persisted?.data || baseRow;
+          setRows((prev) => [
+            { ...persistedRow, key: persistedRow?.key || baseRow.key },
+            ...prev,
+          ]);
+        } catch (persistError) {
+          setRows((prev) => [baseRow, ...prev]);
+          message.warning(
+            persistError?.userMessage ||
+              "Не удалось сохранить результат в историю",
+          );
+        }
       }
 
       message.success(
@@ -417,6 +450,16 @@ const OcrMvdTestPage = () => {
       );
     } finally {
       setRunning(false);
+    }
+  };
+
+  const clearRows = async () => {
+    try {
+      await ocrService.clearDebugRuns();
+      setRows([]);
+      message.success("История очищена");
+    } catch (error) {
+      message.error(error?.userMessage || "Не удалось очистить историю");
     }
   };
 
@@ -618,7 +661,11 @@ const OcrMvdTestPage = () => {
             >
               Запустить OCR/MVD
             </Button>
-            <Button icon={<ClearOutlined />} onClick={() => setRows([])}>
+            <Button
+              icon={<ClearOutlined />}
+              onClick={clearRows}
+              disabled={rows.length === 0}
+            >
               Очистить таблицу
             </Button>
           </Space>
@@ -637,6 +684,7 @@ const OcrMvdTestPage = () => {
         <Table
           columns={tableColumns}
           dataSource={rows}
+          loading={rowsLoading}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: true }}
           scroll={{ x: 1200 }}

@@ -41,6 +41,7 @@ import SkudCard from "./SkudCard.js";
 import SkudAccessEvent from "./SkudAccessEvent.js";
 import SkudSyncJob from "./SkudSyncJob.js";
 import SkudQrToken from "./SkudQrToken.js";
+import OcrMvdTestRun from "./OcrMvdTestRun.js";
 
 // Define associations
 
@@ -60,6 +61,25 @@ User.hasMany(UnauthorizedAccessLog, {
   as: "unauthorizedAccessLogs",
 });
 UnauthorizedAccessLog.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+// User -> OCR/MVD debug runs
+User.hasMany(OcrMvdTestRun, {
+  foreignKey: "user_id",
+  as: "ocrMvdTestRuns",
+});
+OcrMvdTestRun.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+Employee.hasMany(OcrMvdTestRun, {
+  foreignKey: "employee_id",
+  as: "ocrMvdTestRuns",
+});
+OcrMvdTestRun.belongsTo(Employee, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
 
 // User -> RefreshToken (сессии)
 User.hasMany(RefreshToken, { foreignKey: "user_id", as: "refreshTokens" });
@@ -822,4 +842,5 @@ export {
   SkudAccessEvent,
   SkudSyncJob,
   SkudQrToken,
+  OcrMvdTestRun,
 };
