@@ -25,7 +25,7 @@ const { useBreakpoint } = Grid;
 
 const AdministrationPage = () => {
   const renderTabLabel = (IconComponent, text) => (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
       <IconComponent />
       <span>{text}</span>
     </span>
