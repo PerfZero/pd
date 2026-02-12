@@ -14,6 +14,7 @@ import {
   FileExcelOutlined,
   ClearOutlined,
   SyncOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import {
@@ -684,6 +685,13 @@ const EmployeesPage = () => {
         {/* На десктопе показываем действия справа */}
         {!isMobile && (
           <Space size="middle">
+            <EmployeeActions
+              onAdd={handleAdd}
+              onRequest={handleRequest}
+              onImport={() => setIsImportModalOpen(true)}
+              onSecurity={() => setIsSecurityModalOpen(true)}
+              canExport={canExport}
+            />
             <Dropdown
               trigger={["click"]}
               popupRender={() => (
@@ -717,15 +725,8 @@ const EmployeesPage = () => {
                 </div>
               )}
             >
-              <Button type="default">{t("common.columns")}</Button>
+              <Button type="default" icon={<MoreOutlined />} />
             </Dropdown>
-            <EmployeeActions
-              onAdd={handleAdd}
-              onRequest={handleRequest}
-              onImport={() => setIsImportModalOpen(true)}
-              onSecurity={() => setIsSecurityModalOpen(true)}
-              canExport={canExport}
-            />
           </Space>
         )}
       </div>
