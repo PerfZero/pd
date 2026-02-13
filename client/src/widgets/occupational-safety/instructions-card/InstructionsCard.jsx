@@ -43,9 +43,9 @@ const InstructionsCard = ({
       </div>
       {latestInstruction ? (
         <>
-          <Text type="secondary">
+          {/* <Text type="secondary">
             {latestInstruction.text || "Инструкция без текста"}
-          </Text>
+          </Text>*/}
           <Space wrap>
             <Button
               size="small"
