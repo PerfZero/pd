@@ -175,9 +175,8 @@ const ObjectTab = ({
                             onClick={() => onTempAdmit(item.counterparty?.id)}
                             disabled={!item.counterparty?.id}
                             style={{
-                              background: "#faad14",
                               borderColor: "#faad14",
-                              color: "#fff",
+                              color: "#d48806",
                             }}
                           >
                             Временно допустить
@@ -187,9 +186,8 @@ const ObjectTab = ({
                             onClick={() => onManualAdmit(item.counterparty?.id)}
                             disabled={!item.counterparty?.id}
                             style={{
-                              background: "#52c41a",
                               borderColor: "#52c41a",
-                              color: "#fff",
+                              color: "#389e0d",
                             }}
                           >
                             Допустить

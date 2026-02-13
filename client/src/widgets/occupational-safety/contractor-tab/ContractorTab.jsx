@@ -190,9 +190,8 @@ const ContractorTab = ({
               onClick={() => onTempAdmit?.(selectedCounterpartyId)}
               disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
               style={{
-                background: "#faad14",
                 borderColor: "#faad14",
-                color: "#fff",
+                color: "#d48806",
               }}
             >
               Временно допустить
@@ -202,9 +201,8 @@ const ContractorTab = ({
               onClick={() => onManualAdmit?.(selectedCounterpartyId)}
               disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
               style={{
-                background: "#52c41a",
                 borderColor: "#52c41a",
-                color: "#fff",
+                color: "#389e0d",
               }}
             >
               Допустить
