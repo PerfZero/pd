@@ -60,10 +60,25 @@ const useOtSettingsTree = ({
           categoryId: node.id,
           categoryName: node.name,
           title: (
-            <Space style={{ width: "100%", justifyContent: "space-between" }}>
-              <Space size={6}>
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                minWidth: 0,
+              }}
+            >
+              <Space size={6} style={{ minWidth: 0, flex: 1 }}>
                 <FolderOpenOutlined style={{ color: "#2f5fba" }} />
-                <Text strong>{node.name}</Text>
+                <Text
+                  strong
+                  style={{ minWidth: 0, flex: 1 }}
+                  ellipsis={{ tooltip: node.name }}
+                >
+                  {node.name}
+                </Text>
                 {node.description && (
                   <Tooltip title={node.description}>
                     <InfoCircleOutlined />
@@ -71,7 +86,7 @@ const useOtSettingsTree = ({
                 )}
                 <Text type="secondary">({countDocuments(node)})</Text>
               </Space>
-              <Space size={4} wrap>
+              <Space size={4} wrap style={{ flexShrink: 0 }}>
                 <Tooltip title="Добавить подкатегорию">
                   <Button
                     size="small"
@@ -131,7 +146,7 @@ const useOtSettingsTree = ({
                   />
                 </Tooltip>
               </Space>
-            </Space>
+            </div>
           ),
           children: categoryChildren,
         };
