@@ -264,7 +264,12 @@ const OccupationalSafetyPage = () => {
           {t("ot.title")}
         </Title>
         {isStaff ? (
-          <Tabs items={tabs} activeKey={activeTab} onChange={setActiveTab} />
+          <Tabs
+            className="ot-sticky-tabs"
+            items={tabs}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+          />
         ) : (
           tabs[0]?.children
         )}
