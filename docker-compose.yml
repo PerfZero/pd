@@ -31,6 +31,20 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  server_sync:
+    image: alpine:3.20
+    container_name: passdesk_server_sync
+    command: >
+      sh -c "apk add --no-cache rsync >/dev/null &&
+      while true; do
+      rsync -a --delete --exclude node_modules /source/ /target/ || true;
+      sleep 1;
+      done"
+    volumes:
+      - ./server:/source:ro,cached
+      - server_src:/target
+    restart: unless-stopped
+
   server:
     build:
       context: ./server
@@ -77,18 +91,36 @@ services:
       MVD_API_TOKEN: ${MVD_API_TOKEN:-}
       MVD_API_URL: ${MVD_API_URL:-https://api-cloud.ru/api/mvd.php}
       MVD_API_TIMEOUT_MS: ${MVD_API_TIMEOUT_MS:-120000}
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5003:5000"
     command: >
-      sh -c "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
+      sh -c "until [ -f package.json ]; do echo 'Waiting for synced server sources...'; sleep 1; done;
+      if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
       then npm ci; fi;
       npm run db:migrate && npm run dev"
     depends_on:
       postgres:
         condition: service_healthy
+      server_sync:
+        condition: service_started
     volumes:
-      - ./server:/app
+      - server_src:/app
       - server_node_modules:/app/node_modules
+    restart: unless-stopped
+
+  client_sync:
+    image: alpine:3.20
+    container_name: passdesk_client_sync
+    command: >
+      sh -c "apk add --no-cache rsync >/dev/null &&
+      while true; do
+      rsync -a --delete --exclude node_modules --exclude dist /source/ /target/ || true;
+      sleep 1;
+      done"
+    volumes:
+      - ./client:/source:ro,cached
+      - client_src:/target
     restart: unless-stopped
 
   client:
@@ -102,20 +134,29 @@ services:
       VITE_DEV_HTTPS: "false"
       VITE_ALLOWED_HOSTS: pd.devdenis.ru,localhost,127.0.0.1
       VITE_PROXY_TARGET: http://server:5000
+      VITE_USE_POLLING: "true"
+      VITE_POLLING_INTERVAL: "150"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "150"
+      WATCHPACK_POLLING: "true"
     ports:
       - "5173:5173"
     command: >
-      sh -c "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
+      sh -c "until [ -f package.json ]; do echo 'Waiting for synced client sources...'; sleep 1; done;
+      if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
       then npm ci; fi;
       npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
       - server
+      - client_sync
     volumes:
-      - ./client:/app
+      - client_src:/app
       - client_node_modules:/app/node_modules
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  server_src:
   server_node_modules:
+  client_src:
   client_node_modules:

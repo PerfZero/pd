@@ -15,6 +15,18 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = env.VITE_PROXY_TARGET || "http://localhost:5003";
   const useHttps =
     String(env.VITE_DEV_HTTPS || "false").toLowerCase() === "true";
+  const usePolling =
+    String(
+      env.VITE_USE_POLLING ??
+        env.CHOKIDAR_USEPOLLING ??
+        env.WATCHPACK_POLLING ??
+        "false",
+    ).toLowerCase() === "true";
+  const pollingInterval = Number(
+    env.VITE_POLLING_INTERVAL ?? env.CHOKIDAR_INTERVAL ?? 150,
+  );
+  const useHmrOverlay =
+    String(env.VITE_HMR_OVERLAY ?? "true").toLowerCase() === "true";
   const allowedHosts = (env.VITE_ALLOWED_HOSTS || "localhost,127.0.0.1")
     .split(",")
     .map((host) => host.trim())
@@ -37,6 +49,15 @@ export default defineConfig(({ mode }) => {
       host: devHost, // localhost для разработки, VPS использует production build
       https: useHttps, // Включить HTTPS с самоподписанным сертификатом (basicSsl плагин)
       allowedHosts,
+      watch: usePolling
+        ? {
+            usePolling: true,
+            interval: pollingInterval,
+          }
+        : undefined,
+      hmr: {
+        overlay: useHmrOverlay,
+      },
       proxy: {
         "/api": {
           target: proxyTarget, // Проксируем на локальный бэкенд
