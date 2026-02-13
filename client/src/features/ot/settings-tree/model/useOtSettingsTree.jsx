@@ -79,11 +79,7 @@ const useOtSettingsTree = ({
                     <InfoCircleOutlined />
                   </Tooltip>
                 )}
-                <Tooltip title="Количество документов в категории и подпунктах">
-                  <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
-                    документов: {countDocuments(node)}
-                  </Text>
-                </Tooltip>
+                <Text type="secondary">({countDocuments(node)})</Text>
               </Space>
               <Space size={4} wrap>
                 <Tooltip title="Добавить подкатегорию">
