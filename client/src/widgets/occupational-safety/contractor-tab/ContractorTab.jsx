@@ -88,9 +88,6 @@ const ContractorTab = ({
               <Text strong>Инструкции</Text>
               {latestInstruction ? (
                 <>
-                  <Text type="secondary">
-                    {latestInstruction.text || "Инструкция без текста"}
-                  </Text>
                   <Button
                     size="small"
                     icon={<DownloadOutlined />}
