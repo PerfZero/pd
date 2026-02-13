@@ -1,5 +1,11 @@
-import { Button, List, Modal, Space, Tag, Tooltip } from "antd";
-import { DeleteOutlined, EditOutlined, FileAddOutlined } from "@ant-design/icons";
+import { Button, List, Modal, Space, Tag, Tooltip, Typography } from "antd";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  FileAddOutlined,
+} from "@ant-design/icons";
+
+const { Text } = Typography;
 
 const CategoryDocumentsModal = ({
   categoryDocumentsModalOpen,
@@ -62,7 +68,16 @@ const CategoryDocumentsModal = ({
           ]}
         >
           <List.Item.Meta
-            title={<span>{doc.name}</span>}
+            style={{ minWidth: 0 }}
+            title={
+              <Text
+                strong
+                style={{ display: "block", width: "100%" }}
+                ellipsis={{ tooltip: doc.name }}
+              >
+                {doc.name}
+              </Text>
+            }
             description={
               <Space direction="vertical" size={2}>
                 {doc.isRequired && (

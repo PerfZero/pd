@@ -106,9 +106,16 @@ const CategoryDocumentsCard = ({
             ]}
           >
             <List.Item.Meta
+              style={{ minWidth: 0 }}
               title={
-                <Space>
-                  <Text strong>{doc.name}</Text>
+                <Space style={{ width: "100%", minWidth: 0 }} size={8}>
+                  <Text
+                    strong
+                    style={{ minWidth: 0, flex: 1 }}
+                    ellipsis={{ tooltip: doc.name }}
+                  >
+                    {doc.name}
+                  </Text>
                   <Tag color={doc.isRequired ? "red" : "default"}>
                     {doc.isRequired ? "Обязательный" : "Необязательный"}
                   </Tag>
