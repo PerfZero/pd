@@ -107,12 +107,12 @@ const useOtSettingsTree = ({
                   >
                     ({countDocuments(node)})
                   </Text>
+                  {node.description && (
+                    <Tooltip title={node.description}>
+                      <InfoCircleOutlined style={{ flexShrink: 0 }} />
+                    </Tooltip>
+                  )}
                 </div>
-                {node.description && (
-                  <Tooltip title={node.description}>
-                    <InfoCircleOutlined />
-                  </Tooltip>
-                )}
               </div>
               <Space size={4} wrap style={{ flexShrink: 0 }}>
                 <Tooltip title="Добавить подкатегорию">
