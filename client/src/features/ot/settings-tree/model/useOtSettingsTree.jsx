@@ -60,15 +60,32 @@ const useOtSettingsTree = ({
           categoryId: node.id,
           categoryName: node.name,
           title: (
-            <Space style={{ width: "100%", justifyContent: "space-between" }}>
-              <Space size={6}>
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
                 <FolderOpenOutlined style={{ color: "#2f5fba" }} />
                 <Text
                   strong
                   style={{
-                    display: "inline-block",
-                    maxWidth: "min(42vw, 360px)",
-                    verticalAlign: "bottom",
+                    display: "block",
+                    flex: 1,
+                    minWidth: 0,
                   }}
                   ellipsis={{ tooltip: node.name }}
                 >
@@ -79,9 +96,14 @@ const useOtSettingsTree = ({
                     <InfoCircleOutlined />
                   </Tooltip>
                 )}
-                <Text type="secondary">({countDocuments(node)})</Text>
-              </Space>
-              <Space size={4} wrap>
+                <Text
+                  type="secondary"
+                  style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                >
+                  ({countDocuments(node)})
+                </Text>
+              </div>
+              <Space size={4} wrap style={{ flexShrink: 0 }}>
                 <Tooltip title="Добавить подкатегорию">
                   <Button
                     size="small"
@@ -141,7 +163,7 @@ const useOtSettingsTree = ({
                   />
                 </Tooltip>
               </Space>
-            </Space>
+            </div>
           ),
           children: categoryChildren,
         };
