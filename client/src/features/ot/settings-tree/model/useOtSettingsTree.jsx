@@ -80,28 +80,39 @@ const useOtSettingsTree = ({
                 }}
               >
                 <FolderOpenOutlined style={{ color: "#2f5fba" }} />
-                <Text
-                  strong
+                <div
                   style={{
-                    display: "block",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                     flex: 1,
                     minWidth: 0,
                   }}
-                  ellipsis={{ tooltip: node.name }}
                 >
-                  {node.name}
-                </Text>
+                  <Text
+                    strong
+                    style={{
+                      display: "inline-block",
+                      minWidth: 0,
+                      maxWidth: "100%",
+                      flex: "0 1 auto",
+                    }}
+                    ellipsis={{ tooltip: node.name }}
+                  >
+                    {node.name}
+                  </Text>
+                  <Text
+                    type="secondary"
+                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                  >
+                    ({countDocuments(node)})
+                  </Text>
+                </div>
                 {node.description && (
                   <Tooltip title={node.description}>
                     <InfoCircleOutlined />
                   </Tooltip>
                 )}
-                <Text
-                  type="secondary"
-                  style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-                >
-                  ({countDocuments(node)})
-                </Text>
               </div>
               <Space size={4} wrap style={{ flexShrink: 0 }}>
                 <Tooltip title="Добавить подкатегорию">
