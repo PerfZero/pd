@@ -80,6 +80,11 @@ services:
       MVD_API_URL: ${MVD_API_URL:-https://api-cloud.ru/api/mvd.php}
       MVD_API_TIMEOUT_MS: ${MVD_API_TIMEOUT_MS:-120000}
 
+      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_LINK_CODE_TTL_MINUTES: ${TELEGRAM_LINK_CODE_TTL_MINUTES:-10}
+      TELEGRAM_EXPIRY_CHECK_INTERVAL_MS: ${TELEGRAM_EXPIRY_CHECK_INTERVAL_MS:-3600000}
+
     command: >
       sh -c "npm ci --omit=dev && npm run db:migrate && npm run start"
     depends_on:
