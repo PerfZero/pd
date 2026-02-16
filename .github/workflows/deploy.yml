@@ -22,7 +22,10 @@ jobs:
           script: |
             set -e
             cd /opt/apps/passdesk
-            git pull --rebase origin main
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            git clean -fd
             docker compose up -d --build
             bash server/scripts/apply-sql-migrations.sh
             docker compose ps
