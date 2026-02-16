@@ -54,6 +54,19 @@ const MobileUsersPage = () => {
     }
   }, [message]);
 
+  const upsertUser = useCallback((userPayload) => {
+    if (!userPayload?.id) return;
+    setUsers((prev) => {
+      const index = prev.findIndex((item) => item.id === userPayload.id);
+      if (index === -1) {
+        return [userPayload, ...prev];
+      }
+      const next = [...prev];
+      next[index] = { ...next[index], ...userPayload };
+      return next;
+    });
+  }, []);
+
   // Загрузить контрагентов
   const fetchCounterparties = useCallback(async () => {
     try {
@@ -103,9 +116,10 @@ const MobileUsersPage = () => {
   // Переключить статус пользователя
   const handleToggleStatus = async (id) => {
     try {
-      await userService.toggleStatus(id);
+      const response = await userService.toggleStatus(id);
+      upsertUser(response?.data?.user);
       message.success("Статус пользователя изменен");
-      fetchUsers();
+      await fetchUsers();
     } catch (error) {
       message.error(
         error.response?.data?.message || "Ошибка изменения статуса",
@@ -126,16 +140,18 @@ const MobileUsersPage = () => {
       const values = await form.validateFields();
 
       if (editingUser) {
-        await userService.update(editingUser.id, values);
+        const response = await userService.update(editingUser.id, values);
+        upsertUser(response?.data?.user);
         message.success("Пользователь обновлен");
       } else {
-        await userService.create(values);
+        const response = await userService.create(values);
+        upsertUser(response?.data?.user);
         message.success("Пользователь создан");
       }
 
       setIsModalOpen(false);
       form.resetFields();
-      fetchUsers();
+      await fetchUsers();
     } catch (error) {
       if (error.errorFields) {
         return;

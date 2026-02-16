@@ -19,6 +19,9 @@ import {
 
 const { Text } = Typography;
 
+const getUserFullName = (user) =>
+  [user?.lastName, user?.firstName].filter(Boolean).join(" ").trim() || "-";
+
 /**
  * Мобильный список пользователей (карточки)
  * Используется на устройствах с маленьким экраном
@@ -113,7 +116,7 @@ const MobileUsersList = ({
                   strong
                   style={{ fontSize: 13, display: "block", marginBottom: 2 }}
                 >
-                  {user.lastName} {user.firstName}
+                  {getUserFullName(user)}
                 </Text>
 
                 {/* Контрагент */}
@@ -283,7 +286,7 @@ const UserDrawer = ({
             style={{ backgroundColor: "#2563eb", marginBottom: 12 }}
           />
           <Text strong style={{ display: "block", fontSize: 16 }}>
-            {user.lastName} {user.firstName}
+            {getUserFullName(user)}
           </Text>
           <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
             {user.email}

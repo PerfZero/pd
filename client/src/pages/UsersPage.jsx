@@ -46,6 +46,9 @@ const compareNullableText = (left, right) =>
     sensitivity: "base",
   });
 
+const getUserFullName = (user) =>
+  [user?.lastName, user?.firstName].filter(Boolean).join(" ").trim() || "-";
+
 const UsersPage = () => {
   const { message } = App.useApp();
   const [users, setUsers] = useState([]);
@@ -79,6 +82,23 @@ const UsersPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const upsertUser = (userPayload) => {
+    if (!userPayload?.id) return;
+    setUsers((prev) => {
+      const index = prev.findIndex((item) => item.id === userPayload.id);
+      if (index === -1) {
+        return [userPayload, ...prev];
+      }
+      const next = [...prev];
+      next[index] = { ...next[index], ...userPayload };
+      return next;
+    });
+  };
+
+  const removeUser = (id) => {
+    setUsers((prev) => prev.filter((item) => item.id !== id));
   };
 
   const fetchCounterparties = async () => {
@@ -140,16 +160,9 @@ const UsersPage = () => {
     {
       title: "ФИО",
       key: "fullName",
-      render: (_, record) => (
-        <span>
-          {record.lastName} {record.firstName}
-        </span>
-      ),
+      render: (_, record) => <span>{getUserFullName(record)}</span>,
       sorter: (a, b) =>
-        compareNullableText(
-          `${a.lastName || ""} ${a.firstName || ""}`,
-          `${b.lastName || ""} ${b.firstName || ""}`,
-        ),
+        compareNullableText(getUserFullName(a), getUserFullName(b)),
     },
     {
       title: "Роль",
@@ -296,9 +309,10 @@ const UsersPage = () => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await userService.toggleStatus(id);
+      const response = await userService.toggleStatus(id);
+      upsertUser(response?.data?.user);
       message.success("Статус пользователя изменен");
-      fetchUsers();
+      await fetchUsers();
     } catch (error) {
       message.error(
         error.response?.data?.message || "Ошибка изменения статуса",
@@ -309,8 +323,9 @@ const UsersPage = () => {
   const handleDelete = async (id) => {
     try {
       await userService.delete(id);
+      removeUser(id);
       message.success("Пользователь удален");
-      fetchUsers();
+      await fetchUsers();
     } catch (error) {
       message.error(
         error.response?.data?.message || "Ошибка удаления пользователя",
@@ -323,15 +338,17 @@ const UsersPage = () => {
       const values = await form.validateFields();
 
       if (editingUser) {
-        await userService.update(editingUser.id, values);
+        const response = await userService.update(editingUser.id, values);
+        upsertUser(response?.data?.user);
         message.success("Пользователь обновлен");
       } else {
-        await userService.create(values);
+        const response = await userService.create(values);
+        upsertUser(response?.data?.user);
         message.success("Пользователь создан");
       }
 
       setIsModalOpen(false);
-      fetchUsers();
+      await fetchUsers();
     } catch (error) {
       if (error.errorFields) {
         // Validation error
