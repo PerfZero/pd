@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import * as employeeController from "../controllers/employee.controller.js";
 import * as employeeFileController from "../controllers/employeeFile.controller.js";
 import * as employeeDocumentTypeController from "../controllers/employeeDocumentType.controller.js";
+import * as employeeDocumentsTableController from "../controllers/employeeDocumentsTable.controller.js";
 
 const router = express.Router();
 
@@ -140,6 +141,22 @@ router.post(
   importRateLimiter,
   employeeController.importEmployees,
 ); // Финальный импорт
+
+router.get(
+  "/documents/table",
+  authorize("admin", "manager", "user"),
+  employeeDocumentsTableController.getCounterpartyDocumentsTable,
+);
+router.get(
+  "/documents/export/zip",
+  authorize("admin", "manager", "user"),
+  employeeDocumentsTableController.downloadCounterpartyDocumentsZip,
+);
+router.get(
+  "/documents/export/excel",
+  authorize("admin", "manager", "user"),
+  employeeDocumentsTableController.exportCounterpartyDocumentsExcel,
+);
 
 // Общие маршруты
 // Если есть activeOnly=true, используем отдельный контроллер для выгрузки

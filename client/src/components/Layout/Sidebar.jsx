@@ -72,6 +72,11 @@ const Sidebar = () => {
       icon: <TeamOutlined />,
       label: t("menu.employees"),
     },
+    {
+      key: "/counterparty-documents",
+      icon: <FileTextOutlined />,
+      label: t("menu.counterpartyDocuments"),
+    },
   ];
 
   if (showOtMenu) {
@@ -104,6 +109,11 @@ const Sidebar = () => {
       key: "/employees",
       icon: <UserOutlined />,
       label: t("menu.employees"),
+    },
+    {
+      key: "/counterparty-documents",
+      icon: <FileTextOutlined />,
+      label: t("menu.counterpartyDocuments"),
     },
     {
       key: "/ot",

@@ -60,6 +60,12 @@ const DocumentType = sequelize.define(
       defaultValue: true,
       field: "is_active",
     },
+    isRequired: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_required",
+    },
     createdAt: {
       type: DataTypes.DATE,
       field: "created_at",

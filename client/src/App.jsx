@@ -13,6 +13,7 @@ import PassesPage from "./pages/PassesPage";
 import CounterpartiesPage from "./pages/CounterpartiesPage";
 import ConstructionSitesPage from "./pages/ConstructionSitesPage";
 import ContractsPage from "./pages/ContractsPage";
+import CounterpartyDocumentsPage from "./pages/CounterpartyDocumentsPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import AdministrationPage from "./pages/AdministrationPage";
 import DirectoriesPage from "./pages/DirectoriesPage";
@@ -131,6 +132,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <ContractsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="counterparty-documents"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "user"]}>
+                  <CounterpartyDocumentsPage />
                 </ProtectedRoute>
               }
             />

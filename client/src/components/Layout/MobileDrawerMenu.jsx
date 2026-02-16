@@ -6,6 +6,7 @@ import {
   SettingOutlined,
   TeamOutlined,
   SafetyCertificateOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import settingsService from "@/services/settingsService";
@@ -49,6 +50,11 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       key: "/employees",
       icon: <TeamOutlined />,
       label: t("menu.employees"),
+    });
+    topMenuItems.push({
+      key: "/counterparty-documents",
+      icon: <FileTextOutlined />,
+      label: t("menu.counterpartyDocuments"),
     });
   }
 

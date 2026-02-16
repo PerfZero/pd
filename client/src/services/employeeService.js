@@ -124,6 +124,30 @@ export const employeeService = {
     });
   },
 
+  // Таблица документов контрагента
+  getDocumentsTable: async (params = {}) => {
+    const response = await api.get("/employees/documents/table", { params });
+    return response.data;
+  },
+
+  // Скачать ZIP всех документов (по текущим фильтрам)
+  downloadDocumentsZip: async (params = {}) => {
+    const response = await api.get("/employees/documents/export/zip", {
+      params,
+      responseType: "blob",
+    });
+    return response;
+  },
+
+  // Экспорт метаданных документов в Excel (по текущим фильтрам)
+  exportDocumentsExcel: async (params = {}) => {
+    const response = await api.get("/employees/documents/export/excel", {
+      params,
+      responseType: "blob",
+    });
+    return response;
+  },
+
   // Получить типы документов сотрудника для админки
   getDocumentTypesForAdmin: async () => {
     const response = await api.get("/employees/document-types/admin");

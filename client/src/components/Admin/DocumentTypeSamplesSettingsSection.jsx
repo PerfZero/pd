@@ -173,6 +173,7 @@ const DocumentTypeSamplesSettingsSection = () => {
         description: record.description || "",
         sortOrder: Number(record.sortOrder || 0),
         isActive: Boolean(record.isActive),
+        isRequired: Boolean(record.isRequired),
         highlightedFieldsText: toHighlightedFieldsText(
           record.sampleHighlightedFields,
         ),
@@ -195,6 +196,7 @@ const DocumentTypeSamplesSettingsSection = () => {
           description: values.description || null,
           sortOrder: Number(values.sortOrder || 0),
           isActive: Boolean(values.isActive),
+          isRequired: Boolean(values.isRequired),
           sampleHighlightedFields: parseHighlightedFields(
             values.highlightedFieldsText,
           ),
@@ -263,6 +265,17 @@ const DocumentTypeSamplesSettingsSection = () => {
           <Tag color="default">Нет</Tag>
         ),
       width: 110,
+    },
+    {
+      title: "Обязательный",
+      key: "required",
+      render: (_, record) =>
+        record.isRequired ? (
+          <Tag color="red">Да</Tag>
+        ) : (
+          <Tag color="default">Нет</Tag>
+        ),
+      width: 130,
     },
     {
       title: "Действия",
@@ -367,6 +380,14 @@ const DocumentTypeSamplesSettingsSection = () => {
           </Form.Item>
 
           <Form.Item name="isActive" label="Активен" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+
+          <Form.Item
+            name="isRequired"
+            label="Обязательный документ"
+            valuePropName="checked"
+          >
             <Switch />
           </Form.Item>
 

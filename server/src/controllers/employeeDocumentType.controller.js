@@ -2,6 +2,7 @@ import { DocumentType } from "../models/index.js";
 import storageProvider from "../config/storage.js";
 import { sanitizeFileName } from "../utils/transliterate.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { QueryTypes } from "sequelize";
 
 const SAMPLE_FILE_MAX_AGE_SECONDS = 60 * 60;
 const ALLOWED_SAMPLE_MIME_TYPES = new Set([
@@ -11,6 +12,46 @@ const ALLOWED_SAMPLE_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+
+let hasDocumentTypeRequiredColumnCache = null;
+
+const hasDocumentTypeRequiredColumn = async () => {
+  if (hasDocumentTypeRequiredColumnCache !== null) {
+    return hasDocumentTypeRequiredColumnCache;
+  }
+
+  const rows = await DocumentType.sequelize.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'document_types'
+          AND column_name = 'is_required'
+      ) AS exists
+    `,
+    { type: QueryTypes.SELECT },
+  );
+
+  hasDocumentTypeRequiredColumnCache = Boolean(rows?.[0]?.exists);
+  return hasDocumentTypeRequiredColumnCache;
+};
+
+const getDocumentTypeAttributes = (hasRequiredColumn) => [
+  "id",
+  "code",
+  "name",
+  "description",
+  "sampleUrl",
+  "sampleMimeType",
+  "sampleFilePath",
+  "sampleOriginalName",
+  "sampleHighlightedFields",
+  "sortOrder",
+  "isActive",
+  ...(hasRequiredColumn ? ["isRequired"] : []),
+  "updatedAt",
+];
 
 const normalizeHighlightedFields = (value) => {
   if (!Array.isArray(value)) {
@@ -61,6 +102,7 @@ const formatDocumentType = async (item) => ({
   ),
   sortOrder: item.sortOrder,
   isActive: item.isActive,
+  isRequired: Boolean(item?.isRequired),
   updatedAt: item.updatedAt,
 });
 
@@ -69,22 +111,10 @@ const formatDocumentType = async (item) => ({
  */
 export const getEmployeeDocumentTypes = async (_req, res, next) => {
   try {
+    const hasRequiredColumn = await hasDocumentTypeRequiredColumn();
     const documentTypes = await DocumentType.findAll({
       where: { isActive: true },
-      attributes: [
-        "id",
-        "code",
-        "name",
-        "description",
-        "sampleUrl",
-        "sampleMimeType",
-        "sampleFilePath",
-        "sampleOriginalName",
-        "sampleHighlightedFields",
-        "sortOrder",
-        "isActive",
-        "updatedAt",
-      ],
+      attributes: getDocumentTypeAttributes(hasRequiredColumn),
       order: [
         ["sortOrder", "ASC"],
         ["name", "ASC"],
@@ -107,21 +137,9 @@ export const getEmployeeDocumentTypes = async (_req, res, next) => {
  */
 export const getEmployeeDocumentTypesForAdmin = async (_req, res, next) => {
   try {
+    const hasRequiredColumn = await hasDocumentTypeRequiredColumn();
     const documentTypes = await DocumentType.findAll({
-      attributes: [
-        "id",
-        "code",
-        "name",
-        "description",
-        "sampleUrl",
-        "sampleMimeType",
-        "sampleFilePath",
-        "sampleOriginalName",
-        "sampleHighlightedFields",
-        "sortOrder",
-        "isActive",
-        "updatedAt",
-      ],
+      attributes: getDocumentTypeAttributes(hasRequiredColumn),
       order: [
         ["sortOrder", "ASC"],
         ["name", "ASC"],
@@ -145,10 +163,19 @@ export const getEmployeeDocumentTypesForAdmin = async (_req, res, next) => {
 export const updateEmployeeDocumentType = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, sortOrder, isActive, sampleHighlightedFields } =
-      req.body;
+    const hasRequiredColumn = await hasDocumentTypeRequiredColumn();
+    const {
+      name,
+      description,
+      sortOrder,
+      isActive,
+      isRequired,
+      sampleHighlightedFields,
+    } = req.body;
 
-    const documentType = await DocumentType.findByPk(id);
+    const documentType = await DocumentType.findByPk(id, {
+      attributes: getDocumentTypeAttributes(hasRequiredColumn),
+    });
     if (!documentType) {
       throw new AppError("Тип документа не найден", 404);
     }
@@ -179,6 +206,10 @@ export const updateEmployeeDocumentType = async (req, res, next) => {
       documentType.isActive = Boolean(isActive);
     }
 
+    if (isRequired !== undefined && hasRequiredColumn) {
+      documentType.isRequired = Boolean(isRequired);
+    }
+
     if (sampleHighlightedFields !== undefined) {
       documentType.sampleHighlightedFields = normalizeHighlightedFields(
         sampleHighlightedFields,
@@ -204,6 +235,7 @@ export const uploadEmployeeDocumentTypeSample = async (req, res, next) => {
   try {
     const { id } = req.params;
     const file = req.file;
+    const hasRequiredColumn = await hasDocumentTypeRequiredColumn();
 
     if (!file) {
       throw new AppError("Файл образца не передан", 400);
@@ -216,7 +248,9 @@ export const uploadEmployeeDocumentTypeSample = async (req, res, next) => {
       );
     }
 
-    const documentType = await DocumentType.findByPk(id);
+    const documentType = await DocumentType.findByPk(id, {
+      attributes: getDocumentTypeAttributes(hasRequiredColumn),
+    });
     if (!documentType) {
       throw new AppError("Тип документа не найден", 404);
     }
@@ -266,8 +300,11 @@ export const uploadEmployeeDocumentTypeSample = async (req, res, next) => {
 export const deleteEmployeeDocumentTypeSample = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const hasRequiredColumn = await hasDocumentTypeRequiredColumn();
 
-    const documentType = await DocumentType.findByPk(id);
+    const documentType = await DocumentType.findByPk(id, {
+      attributes: getDocumentTypeAttributes(hasRequiredColumn),
+    });
     if (!documentType) {
       throw new AppError("Тип документа не найден", 404);
     }
