@@ -100,8 +100,7 @@ services:
       - "5003:5000"
     command: >
       sh -c "until [ -f package.json ]; do echo 'Waiting for synced server sources...'; sleep 1; done;
-      if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
-      then npm ci; fi;
+      npm ci;
       npm run db:migrate && npm run dev"
     depends_on:
       postgres:
@@ -147,8 +146,7 @@ services:
       - "5173:5173"
     command: >
       sh -c "until [ -f package.json ]; do echo 'Waiting for synced client sources...'; sleep 1; done;
-      if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ];
-      then npm ci; fi;
+      npm ci;
       npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
       - server

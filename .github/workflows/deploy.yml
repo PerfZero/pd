@@ -26,6 +26,5 @@ jobs:
             git checkout main
             git reset --hard origin/main
             git clean -fd
-            docker compose up -d --build
-            bash server/scripts/apply-sql-migrations.sh
+            docker compose up -d --build --force-recreate
             docker compose ps
