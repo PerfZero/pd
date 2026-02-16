@@ -22,6 +22,7 @@ import OcrMvdTestPage from "./pages/OcrMvdTestPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OccupationalSafetyPage from "./pages/OccupationalSafetyPage";
 import SkudAdministrationPage from "./pages/SkudAdministrationPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { useTokenRefresh } from "./hooks/useTokenRefresh";
 import { useAuthBootstrap } from "./hooks/useAuthBootstrap";
@@ -140,6 +141,22 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin", "manager", "user"]}>
                   <CounterpartyDocumentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="analytics"
+              element={
+                <ProtectedRoute
+                  allowedRoles={[
+                    "admin",
+                    "manager",
+                    "user",
+                    "ot_engineer",
+                    "ot_admin",
+                  ]}
+                >
+                  <AnalyticsPage />
                 </ProtectedRoute>
               }
             />

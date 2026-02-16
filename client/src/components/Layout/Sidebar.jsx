@@ -11,6 +11,7 @@ import {
   ControlOutlined,
   BookOutlined,
   SafetyCertificateOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import settingsService from "@/services/settingsService";
@@ -35,6 +36,7 @@ const Sidebar = () => {
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const isOtEngineer = user?.role === "ot_engineer";
   const isOtAdmin = user?.role === "ot_admin";
+  const isManager = user?.role === "manager";
 
   // Загрузить defaultCounterpartyId при монтировании
   useEffect(() => {
@@ -77,6 +79,11 @@ const Sidebar = () => {
       icon: <FileTextOutlined />,
       label: t("menu.counterpartyDocuments"),
     },
+    {
+      key: "/analytics",
+      icon: <BarChartOutlined />,
+      label: t("menu.analytics"),
+    },
   ];
 
   if (showOtMenu) {
@@ -114,6 +121,11 @@ const Sidebar = () => {
       key: "/counterparty-documents",
       icon: <FileTextOutlined />,
       label: t("menu.counterpartyDocuments"),
+    },
+    {
+      key: "/analytics",
+      icon: <BarChartOutlined />,
+      label: t("menu.analytics"),
     },
     {
       key: "/ot",
@@ -161,6 +173,11 @@ const Sidebar = () => {
 
   const engineerMenuItems = [
     {
+      key: "/analytics",
+      icon: <BarChartOutlined />,
+      label: t("menu.analytics"),
+    },
+    {
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
       label: t("menu.ot"),
@@ -173,6 +190,18 @@ const Sidebar = () => {
   ];
 
   const otAdminMenuItems = [...engineerMenuItems];
+  const managerMenuItems = [
+    {
+      key: "/counterparty-documents",
+      icon: <FileTextOutlined />,
+      label: t("menu.counterpartyDocuments"),
+    },
+    {
+      key: "/analytics",
+      icon: <BarChartOutlined />,
+      label: t("menu.analytics"),
+    },
+  ];
 
   // Выбираем меню на основе роли пользователя
   let menuItems = [];
@@ -184,6 +213,8 @@ const Sidebar = () => {
     menuItems = [...engineerMenuItems];
   } else if (user?.role === "ot_admin") {
     menuItems = [...otAdminMenuItems];
+  } else if (isManager) {
+    menuItems = [...managerMenuItems];
   }
 
   const handleMenuClick = ({ key }) => {

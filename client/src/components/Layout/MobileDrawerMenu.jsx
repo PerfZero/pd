@@ -7,10 +7,9 @@ import {
   TeamOutlined,
   SafetyCertificateOutlined,
   FileTextOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
-import settingsService from "@/services/settingsService";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -22,24 +21,9 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const location = useLocation();
   const { logout, user } = useAuthStore();
   const { t } = useTranslation();
-  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const isOtEngineer = user?.role === "ot_engineer";
   const isOtAdmin = user?.role === "ot_admin";
-
-  useEffect(() => {
-    const loadDefaultCounterpartyId = async () => {
-      try {
-        const response = await settingsService.getPublicSettings();
-        if (response.success && response.data.defaultCounterpartyId) {
-          setDefaultCounterpartyId(response.data.defaultCounterpartyId);
-        }
-      } catch (error) {
-        console.error("Error loading default counterparty ID:", error);
-      }
-    };
-
-    loadDefaultCounterpartyId();
-  }, []);
+  const isManager = user?.role === "manager";
 
   // Верхняя часть меню (для админов и пользователей)
   const topMenuItems = [];
@@ -51,10 +35,27 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       icon: <TeamOutlined />,
       label: t("menu.employees"),
     });
+  }
+
+  if (user?.role === "admin" || user?.role === "user" || isManager) {
     topMenuItems.push({
       key: "/counterparty-documents",
       icon: <FileTextOutlined />,
       label: t("menu.counterpartyDocuments"),
+    });
+  }
+
+  if (
+    user?.role === "admin" ||
+    user?.role === "user" ||
+    isOtEngineer ||
+    isOtAdmin ||
+    isManager
+  ) {
+    topMenuItems.push({
+      key: "/analytics",
+      icon: <BarChartOutlined />,
+      label: t("menu.analytics"),
     });
   }
 
@@ -69,6 +70,14 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
       label: t("menu.ot"),
+    });
+  }
+
+  if (isOtEngineer || isOtAdmin || user?.role === "admin") {
+    topMenuItems.push({
+      key: "/skud",
+      icon: <SafetyCertificateOutlined />,
+      label: t("menu.skud"),
     });
   }
 
