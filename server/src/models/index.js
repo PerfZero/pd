@@ -42,6 +42,10 @@ import SkudAccessEvent from "./SkudAccessEvent.js";
 import SkudSyncJob from "./SkudSyncJob.js";
 import SkudQrToken from "./SkudQrToken.js";
 import OcrMvdTestRun from "./OcrMvdTestRun.js";
+import TelegramAccount from "./TelegramAccount.js";
+import TelegramLinkCode from "./TelegramLinkCode.js";
+import TelegramCommandLog from "./TelegramCommandLog.js";
+import TelegramNotificationLog from "./TelegramNotificationLog.js";
 
 // Define associations
 
@@ -265,6 +269,43 @@ SkudQrToken.belongsTo(Employee, {
   as: "employee",
 });
 
+// Employee -> Telegram entities
+Employee.hasOne(TelegramAccount, {
+  foreignKey: "employee_id",
+  as: "telegramAccount",
+});
+TelegramAccount.belongsTo(Employee, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
+
+Employee.hasMany(TelegramLinkCode, {
+  foreignKey: "employee_id",
+  as: "telegramLinkCodes",
+});
+TelegramLinkCode.belongsTo(Employee, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
+
+Employee.hasMany(TelegramCommandLog, {
+  foreignKey: "employee_id",
+  as: "telegramCommandLogs",
+});
+TelegramCommandLog.belongsTo(Employee, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
+
+Employee.hasMany(TelegramNotificationLog, {
+  foreignKey: "employee_id",
+  as: "telegramNotificationLogs",
+});
+TelegramNotificationLog.belongsTo(Employee, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
+
 // User -> Pass (выдавший/отозвавший)
 User.hasMany(Pass, { foreignKey: "issued_by", as: "issuedPasses" });
 User.hasMany(Pass, { foreignKey: "revoked_by", as: "revokedPasses" });
@@ -319,6 +360,15 @@ User.hasMany(SkudQrToken, {
 SkudQrToken.belongsTo(User, {
   foreignKey: "issued_by",
   as: "issuer",
+});
+
+User.hasMany(TelegramLinkCode, {
+  foreignKey: "created_by",
+  as: "createdTelegramLinkCodes",
+});
+TelegramLinkCode.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
 });
 
 // User -> File (загрузивший)
@@ -842,5 +892,9 @@ export {
   SkudAccessEvent,
   SkudSyncJob,
   SkudQrToken,
+  TelegramAccount,
+  TelegramLinkCode,
+  TelegramCommandLog,
+  TelegramNotificationLog,
   OcrMvdTestRun,
 };

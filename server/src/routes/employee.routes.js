@@ -8,6 +8,7 @@ import * as employeeController from "../controllers/employee.controller.js";
 import * as employeeFileController from "../controllers/employeeFile.controller.js";
 import * as employeeDocumentTypeController from "../controllers/employeeDocumentType.controller.js";
 import * as employeeDocumentsTableController from "../controllers/employeeDocumentsTable.controller.js";
+import * as telegramController from "../controllers/telegram.controller.js";
 
 const router = express.Router();
 
@@ -100,6 +101,18 @@ router.put(
   validate,
   employeeController.updateMyProfile,
 ); // Обновить свой профиль
+router.get(
+  "/my-profile/telegram",
+  telegramController.getMyTelegramBindingState,
+);
+router.post(
+  "/my-profile/telegram/link-code",
+  telegramController.createMyTelegramLinkCode,
+);
+router.delete(
+  "/my-profile/telegram/link",
+  telegramController.unlinkMyTelegramBinding,
+);
 router.get("/check-inn", employeeController.checkEmployeeByInn); // Проверить наличие сотрудника по ИНН
 router.get("/search", employeeController.searchEmployees); // Поиск
 router.get(

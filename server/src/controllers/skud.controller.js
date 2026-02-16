@@ -24,6 +24,7 @@ import {
   unbindSkudCard,
   validateSkudQrToken,
 } from "../services/skudAccessService.js";
+import { notifyTelegramAccessStatusChanged } from "../services/telegramService.js";
 import {
   checkSkudSettingsConnection,
   getSkudSettings,
@@ -79,6 +80,25 @@ const createSkudAuditLog = async (
     });
   } catch (error) {
     console.error("Failed to write SKUD audit log:", error.message);
+  }
+};
+
+const notifyTelegramStatusSafely = async (state) => {
+  if (!state?.employeeId) return;
+
+  try {
+    await notifyTelegramAccessStatusChanged({
+      employeeId: state.employeeId,
+      status: state.status,
+      statusReason: state.statusReason,
+      reasonCode: state.reasonCode,
+      eventKey: `state:${state.id}:${state.updatedAt?.toISOString?.() || Date.now()}`,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to send Telegram status notification:",
+      error.message,
+    );
   }
 };
 
@@ -225,6 +245,7 @@ export const grantSkudAccess = async (req, res, next) => {
       reasonCode,
       externalEmpId,
     });
+    await notifyTelegramStatusSafely(result.state);
 
     res.status(201).json({
       success: true,
@@ -263,6 +284,7 @@ export const blockSkudAccess = async (req, res, next) => {
       reason,
       reasonCode,
     });
+    await notifyTelegramStatusSafely(result.state);
 
     res.json({
       success: true,
@@ -300,6 +322,7 @@ export const revokeSkudAccess = async (req, res, next) => {
       reason,
       reasonCode,
     });
+    await notifyTelegramStatusSafely(result.state);
 
     res.json({
       success: true,
@@ -343,6 +366,7 @@ export const deleteSkudAccess = async (req, res, next) => {
       reason,
       reasonCode,
     });
+    await notifyTelegramStatusSafely(result.state);
 
     res.json({
       success: true,
@@ -406,6 +430,7 @@ export const batchMutateSkudAccess = async (req, res, next) => {
           success: true,
           state: mapState(result.state),
         });
+        await notifyTelegramStatusSafely(result.state);
       } catch (error) {
         results.push({
           employeeId,

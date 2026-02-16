@@ -10,6 +10,7 @@ import { sequelize } from "./config/database.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import routes from "./routes/index.js";
 import { attachTranslator } from "./middleware/i18n.js";
+import { startTelegramBot } from "./telegram/bot.js";
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -200,6 +201,10 @@ const startServer = async () => {
           `🔗 API (VPS): ${process.env.SERVER_URL}/api/${process.env.API_VERSION || "v1"}`,
         );
       }
+
+      startTelegramBot().catch((error) => {
+        console.error("Telegram bot startup failed:", error.message);
+      });
     });
   } catch (error) {
     console.error("❌ Unable to start server:", error);
