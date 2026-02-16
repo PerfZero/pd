@@ -62,6 +62,15 @@ const normalizeSearch = (value) => {
   return normalized.length > 0 ? normalized : null;
 };
 
+const normalizeIdList = (value) => {
+  if (!value) return [];
+
+  const raw = Array.isArray(value) ? value : String(value).split(",");
+  return [
+    ...new Set(raw.map((item) => String(item || "").trim()).filter(Boolean)),
+  ];
+};
+
 const getAllowedCounterpartyIds = async (user) => {
   if (user.role === "admin" || user.role === "manager") {
     return null;
@@ -151,6 +160,11 @@ const buildDocumentCte = async ({ user, filters }) => {
       OR TRIM(CONCAT_WS(' ', e.last_name, e.first_name, e.middle_name)) ILIKE :employeeSearch
     )`);
     replacements.employeeSearch = `%${filters.employeeSearch}%`;
+  }
+
+  if (Array.isArray(filters.employeeIds) && filters.employeeIds.length > 0) {
+    employeeWhere.push("e.id IN (:employeeIds)");
+    replacements.employeeIds = filters.employeeIds;
   }
 
   const documentWhere = ["dt.is_active = TRUE"];
@@ -299,6 +313,7 @@ const fetchDocumentRows = async ({ req, withPagination }) => {
     documentType: normalizeSearch(req.query.documentType),
     status: normalizeSearch(req.query.status),
     employeeSearch: normalizeSearch(req.query.employeeSearch),
+    employeeIds: normalizeIdList(req.query.employeeIds),
   };
 
   if (filters.status && !DOCUMENT_STATUSES.has(filters.status)) {
@@ -421,15 +436,12 @@ export const exportCounterpartyDocumentsExcel = async (req, res, next) => {
       bookType: "xlsx",
     });
 
-    const fileName = `Документы_контрагента_${new Date().toISOString().split("T")[0]}.xlsx`;
+    const fileName = `counterparty_documents_${new Date().toISOString().split("T")[0]}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(fileName)}"`,
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.send(excelBuffer);
   } catch (error) {
     next(error);
@@ -458,12 +470,9 @@ export const downloadCounterpartyDocumentsZip = async (req, res, next) => {
       }
     });
 
-    const fileName = `Документы_контрагента_${new Date().toISOString().split("T")[0]}.zip`;
+    const fileName = `counterparty_documents_${new Date().toISOString().split("T")[0]}.zip`;
     res.setHeader("Content-Type", "application/zip");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(fileName)}"`,
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
 
     archive.pipe(res);
 

@@ -115,6 +115,7 @@ const CounterpartyDocumentsPage = () => {
     total: 0,
   });
   const [detailsGroupKey, setDetailsGroupKey] = useState(null);
+  const [selectedEmployeeKeys, setSelectedEmployeeKeys] = useState([]);
 
   const currentFilters = useMemo(
     () => ({
@@ -174,6 +175,30 @@ const CounterpartyDocumentsPage = () => {
   const selectedDetailsGroup = useMemo(
     () => groupedItems.find((item) => item.key === detailsGroupKey) || null,
     [groupedItems, detailsGroupKey],
+  );
+
+  const selectedEmployeeIds = useMemo(
+    () =>
+      groupedItems
+        .filter((item) => selectedEmployeeKeys.includes(item.key))
+        .map((item) => item.employeeId),
+    [groupedItems, selectedEmployeeKeys],
+  );
+
+  useEffect(() => {
+    setSelectedEmployeeKeys((prev) =>
+      prev.filter((key) => groupedItems.some((item) => item.key === key)),
+    );
+  }, [groupedItems]);
+
+  const exportFilters = useMemo(
+    () => ({
+      ...currentFilters,
+      ...(selectedEmployeeIds.length > 0
+        ? { employeeIds: selectedEmployeeIds.join(",") }
+        : {}),
+    }),
+    [currentFilters, selectedEmployeeIds],
   );
 
   const loadReferences = useCallback(async () => {
@@ -257,6 +282,7 @@ const CounterpartyDocumentsPage = () => {
     setEmployeeSearchInput("");
     setEmployeeSearch("");
     setDetailsGroupKey(null);
+    setSelectedEmployeeKeys([]);
   };
 
   const handleDownloadDocument = async (row) => {
@@ -301,8 +327,8 @@ const CounterpartyDocumentsPage = () => {
     try {
       setZipLoading(true);
       const response =
-        await employeeService.downloadDocumentsZip(currentFilters);
-      saveBlobResponse(response, "documents.zip");
+        await employeeService.downloadDocumentsZip(exportFilters);
+      saveBlobResponse(response, "counterparty_documents.zip");
       message.success("Архив сформирован");
     } catch (error) {
       console.error("Error exporting documents zip:", error);
@@ -318,8 +344,8 @@ const CounterpartyDocumentsPage = () => {
     try {
       setExcelLoading(true);
       const response =
-        await employeeService.exportDocumentsExcel(currentFilters);
-      saveBlobResponse(response, "documents.xlsx");
+        await employeeService.exportDocumentsExcel(exportFilters);
+      saveBlobResponse(response, "counterparty_documents.xlsx");
       message.success("Excel сформирован");
     } catch (error) {
       console.error("Error exporting documents excel:", error);
@@ -557,15 +583,24 @@ const CounterpartyDocumentsPage = () => {
             loading={zipLoading}
             onClick={handleDownloadZip}
           >
-            Скачать все документы
+            {selectedEmployeeIds.length > 0
+              ? `Скачать ZIP (${selectedEmployeeIds.length})`
+              : "Скачать все документы"}
           </Button>
           <Button
             icon={<FileExcelOutlined />}
             loading={excelLoading}
             onClick={handleExportExcel}
           >
-            Экспортировать в Excel
+            {selectedEmployeeIds.length > 0
+              ? `Excel (${selectedEmployeeIds.length})`
+              : "Экспортировать в Excel"}
           </Button>
+          {selectedEmployeeIds.length > 0 && (
+            <Button onClick={() => setSelectedEmployeeKeys([])}>
+              Снять выбор
+            </Button>
+          )}
         </Space>
 
         <Card size="small">
@@ -575,6 +610,11 @@ const CounterpartyDocumentsPage = () => {
             dataSource={groupedItems}
             columns={columns}
             scroll={{ x: 980 }}
+            rowSelection={{
+              selectedRowKeys: selectedEmployeeKeys,
+              onChange: (keys) => setSelectedEmployeeKeys(keys),
+              preserveSelectedRowKeys: true,
+            }}
             pagination={{
               current: pagination.page,
               pageSize: pagination.limit,
