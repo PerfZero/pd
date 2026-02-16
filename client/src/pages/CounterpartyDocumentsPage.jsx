@@ -480,7 +480,7 @@ const CounterpartyDocumentsPage = () => {
               danger
               icon={<DeleteOutlined />}
               disabled={!row.fileId}
-              loading={deleteLoadingId === row.fileId}
+              loading={Boolean(row.fileId) && deleteLoadingId === row.fileId}
             />
           </Popconfirm>
         </Space>
