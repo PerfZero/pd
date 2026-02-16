@@ -43,6 +43,13 @@ const statusColorMap = {
   expiring: "orange",
 };
 
+const statusLabelMap = {
+  uploaded: "Загружен",
+  not_uploaded: "Не загружен",
+  ocr_verified: "Проверен OCR",
+  expiring: "Срок истекает",
+};
+
 const normalizeDate = (value) => {
   if (!value) return "-";
   const parsed = new Date(value);
@@ -162,7 +169,8 @@ const CounterpartyDocumentsPage = () => {
       } catch (error) {
         console.error("Error loading documents table:", error);
         message.error(
-          error?.response?.data?.message || "Ошибка загрузки таблицы документов",
+          error?.response?.data?.message ||
+            "Ошибка загрузки таблицы документов",
         );
       } finally {
         setTableLoading(false);
@@ -215,7 +223,9 @@ const CounterpartyDocumentsPage = () => {
       window.open(downloadUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
       console.error("Error downloading employee document:", error);
-      message.error(error?.response?.data?.message || "Ошибка скачивания файла");
+      message.error(
+        error?.response?.data?.message || "Ошибка скачивания файла",
+      );
     }
   };
 
@@ -237,7 +247,8 @@ const CounterpartyDocumentsPage = () => {
   const handleDownloadZip = async () => {
     try {
       setZipLoading(true);
-      const response = await employeeService.downloadDocumentsZip(currentFilters);
+      const response =
+        await employeeService.downloadDocumentsZip(currentFilters);
       saveBlobResponse(response, "documents.zip");
       message.success("Архив сформирован");
     } catch (error) {
@@ -319,11 +330,17 @@ const CounterpartyDocumentsPage = () => {
       dataIndex: "statusLabel",
       key: "status",
       width: 150,
-      render: (_, row) => (
-        <Tag color={statusColorMap[row.status] || "default"}>
-          {row.statusLabel || row.status}
-        </Tag>
-      ),
+      render: (_, row) => {
+        const effectiveStatus = row.fileId ? row.status : "not_uploaded";
+        const effectiveLabel = row.fileId
+          ? row.statusLabel || statusLabelMap[row.status] || row.status
+          : statusLabelMap.not_uploaded;
+        return (
+          <Tag color={statusColorMap[effectiveStatus] || "default"}>
+            {effectiveLabel}
+          </Tag>
+        );
+      },
     },
     {
       title: "Действия",

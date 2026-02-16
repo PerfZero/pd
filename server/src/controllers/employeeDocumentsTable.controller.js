@@ -256,7 +256,7 @@ const buildDocumentCte = async ({ user, filters }) => {
       SELECT
         br.*,
         CASE
-          WHEN br.file_id IS NULL THEN 'not_uploaded'
+          WHEN br.file_id IS NULL OR br.file_path IS NULL OR br.file_path = '' THEN 'not_uploaded'
           WHEN br.expiry_date IS NOT NULL
             AND br.expiry_date <= (CURRENT_DATE + (:expiringDays || ' days')::interval)::date
             THEN 'expiring'
