@@ -6,6 +6,7 @@ import {
   Col,
   Grid,
   Input,
+  Modal,
   Popconfirm,
   Row,
   Select,
@@ -113,6 +114,7 @@ const CounterpartyDocumentsPage = () => {
     limit: 50,
     total: 0,
   });
+  const [detailsGroupKey, setDetailsGroupKey] = useState(null);
 
   const currentFilters = useMemo(
     () => ({
@@ -122,6 +124,56 @@ const CounterpartyDocumentsPage = () => {
       employeeSearch,
     }),
     [counterpartyId, documentType, status, employeeSearch],
+  );
+
+  const groupedItems = useMemo(() => {
+    const groups = new Map();
+
+    items.forEach((item) => {
+      const key = `${item.employeeId}::${item.counterpartyId}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          employeeId: item.employeeId,
+          employeeFullName: item.employeeFullName,
+          counterpartyId: item.counterpartyId,
+          counterpartyName: item.counterpartyName,
+          documents: [],
+        });
+      }
+      groups.get(key).documents.push(item);
+    });
+
+    return Array.from(groups.values()).map((group) => {
+      const stats = group.documents.reduce(
+        (acc, doc) => {
+          const effectiveStatus = doc.fileId ? doc.status : "not_uploaded";
+          acc.total += 1;
+          acc.byStatus[effectiveStatus] =
+            (acc.byStatus[effectiveStatus] || 0) + 1;
+          return acc;
+        },
+        {
+          total: 0,
+          byStatus: {
+            uploaded: 0,
+            not_uploaded: 0,
+            ocr_verified: 0,
+            expiring: 0,
+          },
+        },
+      );
+
+      return {
+        ...group,
+        stats,
+      };
+    });
+  }, [items]);
+
+  const selectedDetailsGroup = useMemo(
+    () => groupedItems.find((item) => item.key === detailsGroupKey) || null,
+    [groupedItems, detailsGroupKey],
   );
 
   const loadReferences = useCallback(async () => {
@@ -204,6 +256,7 @@ const CounterpartyDocumentsPage = () => {
     setStatus(undefined);
     setEmployeeSearchInput("");
     setEmployeeSearch("");
+    setDetailsGroupKey(null);
   };
 
   const handleDownloadDocument = async (row) => {
@@ -294,9 +347,40 @@ const CounterpartyDocumentsPage = () => {
       render: (value) => value || "-",
     },
     {
+      title: "Документы",
+      key: "documentsSummary",
+      width: 320,
+      render: (_, row) => (
+        <Space size={[4, 8]} wrap>
+          <Tag color="blue">Всего: {row.stats.total}</Tag>
+          <Tag color="green">OCR: {row.stats.byStatus.ocr_verified || 0}</Tag>
+          <Tag color="orange">Истекает: {row.stats.byStatus.expiring || 0}</Tag>
+          <Tag>Не загружено: {row.stats.byStatus.not_uploaded || 0}</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: "Детали",
+      key: "actions",
+      width: 180,
+      render: (_, row) => (
+        <Button
+          size="small"
+          type="primary"
+          icon={<SearchOutlined />}
+          onClick={() => setDetailsGroupKey(row.key)}
+        >
+          Документы ({row.stats.total})
+        </Button>
+      ),
+    },
+  ];
+
+  const detailsColumns = [
+    {
       title: "Тип документа",
       key: "documentType",
-      width: 220,
+      width: 240,
       render: (_, row) => (
         <Space size={8}>
           <span>{row.documentTypeName || row.documentType || "-"}</span>
@@ -308,7 +392,7 @@ const CounterpartyDocumentsPage = () => {
       title: "Серия/Номер",
       dataIndex: "seriesNumber",
       key: "seriesNumber",
-      width: 180,
+      width: 170,
       render: (value) => value || "-",
     },
     {
@@ -345,7 +429,7 @@ const CounterpartyDocumentsPage = () => {
     {
       title: "Действия",
       key: "actions",
-      width: 160,
+      width: 180,
       fixed: "right",
       render: (_, row) => (
         <Space>
@@ -486,19 +570,17 @@ const CounterpartyDocumentsPage = () => {
 
         <Card size="small">
           <Table
-            rowKey={(row) =>
-              `${row.employeeId}-${row.documentType}-${row.fileId || "empty"}`
-            }
+            rowKey="key"
             loading={tableLoading}
-            dataSource={items}
+            dataSource={groupedItems}
             columns={columns}
-            scroll={{ x: 1400 }}
+            scroll={{ x: 980 }}
             pagination={{
               current: pagination.page,
               pageSize: pagination.limit,
               total: pagination.total,
               showSizeChanger: true,
-              showTotal: (total) => `Всего записей: ${total}`,
+              showTotal: (total) => `Всего строк документов: ${total}`,
             }}
             onChange={(nextPagination) => {
               loadTableData({
@@ -508,6 +590,34 @@ const CounterpartyDocumentsPage = () => {
             }}
           />
         </Card>
+
+        <Modal
+          title={
+            selectedDetailsGroup ? selectedDetailsGroup.employeeFullName : ""
+          }
+          open={Boolean(selectedDetailsGroup)}
+          onCancel={() => setDetailsGroupKey(null)}
+          footer={null}
+          width={1200}
+          destroyOnClose
+        >
+          {selectedDetailsGroup && (
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              <Text type="secondary">
+                Контрагент: {selectedDetailsGroup.counterpartyName || "-"}
+              </Text>
+              <Table
+                rowKey={(row) =>
+                  `${row.employeeId}-${row.documentType}-${row.fileId || "empty"}`
+                }
+                dataSource={selectedDetailsGroup.documents}
+                columns={detailsColumns}
+                pagination={false}
+                scroll={{ x: 1200, y: 520 }}
+              />
+            </Space>
+          )}
+        </Modal>
       </Space>
     </div>
   );
