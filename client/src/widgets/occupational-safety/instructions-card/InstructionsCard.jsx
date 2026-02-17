@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const InstructionsCard = ({
   latestInstruction,
@@ -43,9 +43,6 @@ const InstructionsCard = ({
       </div>
       {latestInstruction ? (
         <>
-          {/* <Text type="secondary">
-            {latestInstruction.text || "Инструкция без текста"}
-          </Text>*/}
           <Space wrap>
             <Button
               size="small"
@@ -81,6 +78,7 @@ const InstructionsCard = ({
                 actions={[
                   item.fileId ? (
                     <Button
+                      key="download"
                       size="small"
                       icon={<DownloadOutlined />}
                       onClick={() => onDownloadInstructionFile(item)}
@@ -89,6 +87,7 @@ const InstructionsCard = ({
                     </Button>
                   ) : null,
                   <Button
+                    key="edit"
                     size="small"
                     icon={<EditOutlined />}
                     onClick={() => onEditInstruction(item)}
@@ -96,6 +95,7 @@ const InstructionsCard = ({
                     Редактировать
                   </Button>,
                   <Button
+                    key="delete"
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
@@ -103,7 +103,7 @@ const InstructionsCard = ({
                   >
                     Удалить
                   </Button>,
-                ]}
+                ].filter(Boolean)}
               >
                 <List.Item.Meta
                   title={dayjs(item.createdAt).format("DD.MM.YYYY HH:mm")}

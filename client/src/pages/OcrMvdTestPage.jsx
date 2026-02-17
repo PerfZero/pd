@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   App,
   Button,
   Card,
@@ -29,6 +28,7 @@ const { Text, Title } = Typography;
 
 const RUN_MODE_MANUAL = "manual";
 const RUN_MODE_OCR = "ocr";
+const EMPTY_ARRAY = [];
 
 const OCR_DOC_TYPE_OPTIONS = [
   { value: "passport_rf", label: "Паспорт РФ" },
@@ -502,8 +502,14 @@ const OcrMvdTestPage = () => {
     [ocrMvdType, mvdTypes],
   );
 
-  const manualRequiredParams = manualMeta?.requiredParams || [];
-  const ocrRequiredMvdParams = ocrMeta?.requiredParams || [];
+  const manualRequiredParams = useMemo(
+    () => manualMeta?.requiredParams || EMPTY_ARRAY,
+    [manualMeta],
+  );
+  const ocrRequiredMvdParams = useMemo(
+    () => ocrMeta?.requiredParams || EMPTY_ARRAY,
+    [ocrMeta],
+  );
 
   const manualRows = useMemo(
     () => rows.filter((item) => item.mode === RUN_MODE_MANUAL),

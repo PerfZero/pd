@@ -536,6 +536,19 @@ const EmployeeFormModal = ({
     }
   }, [defaultCounterpartyId, user?.counterpartyId]);
 
+  const {
+    fetchCitizenships,
+    fetchPositions,
+    fetchDefaultCounterparty,
+    fetchCounterparties,
+  } = useEmployeeReferences({
+    setCitizenships,
+    setPositions,
+    setDefaultCounterpartyId,
+    setAvailableCounterparties,
+    setLoadingCounterparties,
+  });
+
   useEffect(() => {
     const isDefault = user?.counterpartyId === defaultCounterpartyId;
     const config = isDefault
@@ -811,6 +824,10 @@ const EmployeeFormModal = ({
   }, [
     visible,
     employee,
+    fetchCitizenships,
+    fetchPositions,
+    fetchDefaultCounterparty,
+    fetchCounterparties,
     fetchConstructionSites,
     form,
     mvdForm,
@@ -843,19 +860,6 @@ const EmployeeFormModal = ({
     },
     [updateSelectedCitizenship],
   );
-
-  const {
-    fetchCitizenships,
-    fetchPositions,
-    fetchDefaultCounterparty,
-    fetchCounterparties,
-  } = useEmployeeReferences({
-    setCitizenships,
-    setPositions,
-    setDefaultCounterpartyId,
-    setAvailableCounterparties,
-    setLoadingCounterparties,
-  });
 
   // Проверяем, заполнены ли все обязательные поля на вкладке
   // Проверяем, все ли вкладки валидны
@@ -1600,100 +1604,103 @@ const EmployeeFormModal = ({
   };
 
   // Сохранение как черновик
-  const saveDraft = async ({ silent = false, preserveForm = false } = {}) => {
-    try {
-      if (!silent) {
-        setLoading(true);
-      }
-      // Получаем ВСЕ значения, включая скрытые поля
-      const values = form.getFieldsValue(true);
-
-      let formattedValues = {};
-      const uuidFields = ["positionId", "citizenshipId"]; // UUID поля требуют null вместо пустых строк
-
-      Object.keys(values).forEach((key) => {
-        // constructionSiteId обрабатывается отдельно
-        if (key === "constructionSiteId") {
-          return;
+  const saveDraft = useCallback(
+    async ({ silent = false, preserveForm = false } = {}) => {
+      try {
+        if (!silent) {
+          setLoading(true);
         }
+        // Получаем ВСЕ значения, включая скрытые поля
+        const values = form.getFieldsValue(true);
 
-        const value = values[key];
+        let formattedValues = {};
+        const uuidFields = ["positionId", "citizenshipId"]; // UUID поля требуют null вместо пустых строк
 
-        // Обрабатываем чекбоксы статусов отдельно - отправляем как boolean
-        if (key === "isFired" || key === "isInactive") {
-          formattedValues[key] = !!value;
-          return;
-        }
+        Object.keys(values).forEach((key) => {
+          // constructionSiteId обрабатывается отдельно
+          if (key === "constructionSiteId") {
+            return;
+          }
 
-        if (value === "" || value === undefined || value === null) {
-          formattedValues[key] = null;
-        } else if (
-          key === "birthDate" ||
-          key === "passportDate" ||
-          key === "patentIssueDate" ||
-          key === "kigEndDate" ||
-          key === "passportExpiryDate"
-        ) {
-          // Проверяем что это dayjs объект (имеет метод format), а не строка
-          formattedValues[key] =
-            value && value.format ? value.format("YYYY-MM-DD") : null;
-        } else if (key === "phone") {
-          // Убираем форматирование телефона и добавляем + в начало
-          formattedValues[key] = normalizePhoneNumber(value);
-        } else if (key === "kig") {
-          // Убираем пробел из КИГ (АА 1234567 → АА1234567)
-          formattedValues[key] = normalizeKig(value);
-        } else if (key === "patentNumber") {
-          // Убираем пробел из номера патента (01 №1234567890 → 01№1234567890)
-          formattedValues[key] = normalizePatentNumber(value);
-        } else if (key === "inn" || key === "snils") {
-          // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
-          formattedValues[key] = value ? value.replace(/[^\d]/g, "") : null;
-        } else if (key === "passportNumber") {
-          // Обработка номера паспорта в зависимости от типа
-          if (values.passportType === "russian") {
-            // Для российского паспорта: убираем пробелы и символ №, оставляем только цифры
-            formattedValues[key] = normalizeRussianPassportNumber(value);
+          const value = values[key];
+
+          // Обрабатываем чекбоксы статусов отдельно - отправляем как boolean
+          if (key === "isFired" || key === "isInactive") {
+            formattedValues[key] = !!value;
+            return;
+          }
+
+          if (value === "" || value === undefined || value === null) {
+            formattedValues[key] = null;
+          } else if (
+            key === "birthDate" ||
+            key === "passportDate" ||
+            key === "patentIssueDate" ||
+            key === "kigEndDate" ||
+            key === "passportExpiryDate"
+          ) {
+            // Проверяем что это dayjs объект (имеет метод format), а не строка
+            formattedValues[key] =
+              value && value.format ? value.format("YYYY-MM-DD") : null;
+          } else if (key === "phone") {
+            // Убираем форматирование телефона и добавляем + в начало
+            formattedValues[key] = normalizePhoneNumber(value);
+          } else if (key === "kig") {
+            // Убираем пробел из КИГ (АА 1234567 → АА1234567)
+            formattedValues[key] = normalizeKig(value);
+          } else if (key === "patentNumber") {
+            // Убираем пробел из номера патента (01 №1234567890 → 01№1234567890)
+            formattedValues[key] = normalizePatentNumber(value);
+          } else if (key === "inn" || key === "snils") {
+            // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
+            formattedValues[key] = value ? value.replace(/[^\d]/g, "") : null;
+          } else if (key === "passportNumber") {
+            // Обработка номера паспорта в зависимости от типа
+            if (values.passportType === "russian") {
+              // Для российского паспорта: убираем пробелы и символ №, оставляем только цифры
+              formattedValues[key] = normalizeRussianPassportNumber(value);
+            } else {
+              // Для иностранного паспорта: оставляем как есть
+              formattedValues[key] = value;
+            }
+          } else if (uuidFields.includes(key)) {
+            // Для UUID полей - убеждаемся что пустые строки становятся null
+            formattedValues[key] = value && String(value).trim() ? value : null;
           } else {
-            // Для иностранного паспорта: оставляем как есть
             formattedValues[key] = value;
           }
-        } else if (uuidFields.includes(key)) {
-          // Для UUID полей - убеждаемся что пустые строки становятся null
-          formattedValues[key] = value && String(value).trim() ? value : null;
-        } else {
-          formattedValues[key] = value;
-        }
-      });
+        });
 
-      formattedValues.isDraft = true; // Флаг для фронтенда
-      await onSuccess(formattedValues);
+        formattedValues.isDraft = true; // Флаг для фронтенда
+        await onSuccess(formattedValues);
 
-      // При сохранении черновика модальное окно НЕ закрывается
-      // Если это добавление нового сотрудника - сбрасываем форму
-      if (!employee && !preserveForm) {
-        // 🎯 ВАЖНО: очищаем таймер проверки ИНН ДО сброса формы
-        if (innCheckTimeoutRef.current) {
-          clearTimeout(innCheckTimeoutRef.current);
+        // При сохранении черновика модальное окно НЕ закрывается
+        // Если это добавление нового сотрудника - сбрасываем форму
+        if (!employee && !preserveForm) {
+          // 🎯 ВАЖНО: очищаем таймер проверки ИНН ДО сброса формы
+          if (innCheckTimeoutRef.current) {
+            clearTimeout(innCheckTimeoutRef.current);
+          }
+          isFormResetRef.current = true;
+          form.resetFields();
+          setActiveTab("1");
+          setTabsValidation({ 1: false, 2: false, 3: false });
+          setSelectedCitizenship(null);
+          setPassportType(null);
         }
-        isFormResetRef.current = true;
-        form.resetFields();
-        setActiveTab("1");
-        setTabsValidation({ 1: false, 2: false, 3: false });
-        setSelectedCitizenship(null);
-        setPassportType(null);
+        // Если это редактирование - оставляем окно открытым с загруженными данными
+      } catch (error) {
+        console.error("Save draft error:", error);
+        // Ошибка уже показана в родительском компоненте через message.error
+        // Не закрываем модальное окно
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
       }
-      // Если это редактирование - оставляем окно открытым с загруженными данными
-    } catch (error) {
-      console.error("Save draft error:", error);
-      // Ошибка уже показана в родительском компоненте через message.error
-      // Не закрываем модальное окно
-    } finally {
-      if (!silent) {
-        setLoading(false);
-      }
-    }
-  };
+    },
+    [employee, form, onSuccess],
+  );
 
   const handleSaveDraft = async () => {
     await saveDraft({ silent: false, preserveForm: false });
@@ -1738,7 +1745,7 @@ const EmployeeFormModal = ({
         autoSavingRef.current = false;
       }
     }, 600);
-  }, [employee?.id, form]);
+  }, [employee?.id, form, saveDraft]);
 
   useEffect(() => {
     return () => {

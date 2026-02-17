@@ -116,8 +116,6 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
     }
 
     // Проверяем, находится ли контур в краях рамки или внутри
-    const edgeMargin = (frameRight - frameLeft) * 0.15; // 15% ширины рамки как граница края
-
     // Считаем сколько контура в краях (20% по сторонам)
     const edgeLeftPart = Math.max(0, frameLeft - rectLeft);
     const edgeRightPart = Math.max(0, rectRight - frameRight);
@@ -763,7 +761,6 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       edged.delete();
       contours.delete();
       hierarchy.delete();
-      kernel.delete();
       dilateKernel.delete();
 
       if (!docContour) {

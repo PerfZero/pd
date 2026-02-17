@@ -2,7 +2,6 @@ import { useEffect, useMemo } from "react";
 
 const useOtAccessModel = ({
   user,
-  defaultCounterpartyId,
   activeTab,
   setActiveTab,
   selectedConstructionSiteId,

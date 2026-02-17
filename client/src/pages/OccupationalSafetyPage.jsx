@@ -12,7 +12,6 @@ const OccupationalSafetyPage = () => {
   const {
     t,
     isAllowed,
-    isDefaultCounterpartyUser,
     activeTab,
     setActiveTab,
     isStaff,
