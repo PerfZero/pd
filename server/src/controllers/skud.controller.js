@@ -392,52 +392,48 @@ export const batchMutateSkudAccess = async (req, res, next) => {
   try {
     const { action, employeeIds, reason, reasonCode, metadata } = req.body;
     const userId = req.user.id;
+    const mutationByAction = {
+      grant: grantEmployeeAccess,
+      block: blockEmployeeAccess,
+      revoke: revokeEmployeeAccess,
+    };
+    const mutate = mutationByAction[action];
+    if (!mutate) {
+      throw new AppError("Недопустимое действие batch", 400);
+    }
 
     const results = [];
-    for (const employeeId of employeeIds) {
+    const executeMutation = async (employeeId) => {
       try {
-        let result;
-        if (action === "grant") {
-          result = await grantEmployeeAccess({
-            employeeId,
-            reason,
-            reasonCode,
-            metadata,
-            userId,
-          });
-        } else if (action === "block") {
-          result = await blockEmployeeAccess({
-            employeeId,
-            reason,
-            reasonCode,
-            metadata,
-            userId,
-          });
-        } else if (action === "revoke") {
-          result = await revokeEmployeeAccess({
-            employeeId,
-            reason,
-            reasonCode,
-            metadata,
-            userId,
-          });
-        } else {
-          throw new AppError("Недопустимое действие batch", 400);
-        }
-
-        results.push({
+        const result = await mutate({
+          employeeId,
+          reason,
+          reasonCode,
+          metadata,
+          userId,
+        });
+        await notifyTelegramStatusSafely(result.state);
+        return {
           employeeId,
           success: true,
           state: mapState(result.state),
-        });
-        await notifyTelegramStatusSafely(result.state);
+        };
       } catch (error) {
-        results.push({
+        return {
           employeeId,
           success: false,
           error: error.message,
-        });
+        };
       }
+    };
+
+    const concurrency = 10;
+    for (let i = 0; i < employeeIds.length; i += concurrency) {
+      const chunk = employeeIds.slice(i, i + concurrency);
+      const chunkResults = await Promise.all(
+        chunk.map((employeeId) => executeMutation(employeeId)),
+      );
+      results.push(...chunkResults);
     }
 
     const successCount = results.filter((item) => item.success).length;

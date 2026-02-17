@@ -22,6 +22,183 @@ import { generateApplicationDocument } from "../services/documentService.js";
 import EmployeeStatusService from "../services/employeeStatusService.js";
 import { getAccessibleEmployeeIds } from "../utils/permissionUtils.js";
 
+const STATUS_GROUP = "status";
+const PROCESSABLE_STATUSES = new Set(["status_new", "status_tb_passed"]);
+
+const getUniqueIds = (ids = []) => [
+  ...new Set((ids || []).map((id) => String(id)).filter(Boolean)),
+];
+
+const transitionEmployeesToProcessedStatus = async ({
+  employeeIds,
+  userId,
+  transaction,
+}) => {
+  const uniqueEmployeeIds = getUniqueIds(employeeIds);
+  if (uniqueEmployeeIds.length === 0) {
+    return;
+  }
+
+  const [processedStatus, currentMappings] = await Promise.all([
+    Status.findOne({
+      where: { name: "status_processed", group: STATUS_GROUP },
+      transaction,
+    }),
+    EmployeeStatusMapping.findAll({
+      where: {
+        employeeId: { [Op.in]: uniqueEmployeeIds },
+        statusGroup: STATUS_GROUP,
+        isActive: true,
+      },
+      include: [
+        {
+          model: Status,
+          as: "status",
+          attributes: ["id", "name"],
+        },
+      ],
+      transaction,
+    }),
+  ]);
+
+  if (!processedStatus) {
+    console.error("[application] Статус 'status_processed' не найден");
+    return;
+  }
+
+  const employeeIdsToProcess = [];
+  const seen = new Set();
+  for (const mapping of currentMappings) {
+    const employeeId = String(mapping.employeeId);
+    const currentStatusName = mapping?.status?.name;
+    if (PROCESSABLE_STATUSES.has(currentStatusName) && !seen.has(employeeId)) {
+      seen.add(employeeId);
+      employeeIdsToProcess.push(employeeId);
+    }
+  }
+
+  if (employeeIdsToProcess.length === 0) {
+    return;
+  }
+
+  await EmployeeStatusMapping.update(
+    {
+      isActive: false,
+      updatedBy: userId,
+    },
+    {
+      where: {
+        employeeId: { [Op.in]: employeeIdsToProcess },
+        statusGroup: STATUS_GROUP,
+        isActive: true,
+      },
+      transaction,
+    },
+  );
+
+  const existingProcessedMappings = await EmployeeStatusMapping.findAll({
+    where: {
+      employeeId: { [Op.in]: employeeIdsToProcess },
+      statusId: processedStatus.id,
+    },
+    attributes: ["id", "employeeId"],
+    transaction,
+  });
+
+  const existingProcessedMappingIds = existingProcessedMappings.map(
+    (mapping) => mapping.id,
+  );
+  if (existingProcessedMappingIds.length > 0) {
+    await EmployeeStatusMapping.update(
+      {
+        isActive: true,
+        updatedBy: userId,
+      },
+      {
+        where: {
+          id: { [Op.in]: existingProcessedMappingIds },
+        },
+        transaction,
+      },
+    );
+  }
+
+  const existingEmployeeIds = new Set(
+    existingProcessedMappings.map((mapping) => String(mapping.employeeId)),
+  );
+  const mappingsToCreate = employeeIdsToProcess
+    .filter((employeeId) => !existingEmployeeIds.has(String(employeeId)))
+    .map((employeeId) => ({
+      employeeId,
+      statusId: processedStatus.id,
+      statusGroup: STATUS_GROUP,
+      createdBy: userId,
+      updatedBy: userId,
+      isActive: true,
+    }));
+
+  if (mappingsToCreate.length > 0) {
+    await EmployeeStatusMapping.bulkCreate(mappingsToCreate, { transaction });
+  }
+};
+
+const upsertEmployeeCounterpartyMappings = async ({
+  employeeIds,
+  counterpartyId,
+  constructionSiteId,
+  transaction,
+}) => {
+  const uniqueEmployeeIds = getUniqueIds(employeeIds);
+  if (uniqueEmployeeIds.length === 0) {
+    return;
+  }
+
+  const existingMappings = await EmployeeCounterpartyMapping.findAll({
+    where: {
+      counterpartyId,
+      constructionSiteId,
+      employeeId: { [Op.in]: uniqueEmployeeIds },
+    },
+    attributes: ["employeeId"],
+    transaction,
+  });
+
+  const existingEmployeeIds = new Set(
+    existingMappings.map((mapping) => String(mapping.employeeId)),
+  );
+  const existingEmployeeIdsList = [...existingEmployeeIds];
+
+  if (existingEmployeeIdsList.length > 0) {
+    await EmployeeCounterpartyMapping.update(
+      { updatedAt: new Date() },
+      {
+        where: {
+          counterpartyId,
+          constructionSiteId,
+          employeeId: { [Op.in]: existingEmployeeIdsList },
+        },
+        transaction,
+      },
+    );
+  }
+
+  const mappingsToCreate = uniqueEmployeeIds
+    .filter((employeeId) => !existingEmployeeIds.has(String(employeeId)))
+    .map((employeeId) => ({
+      employeeId,
+      counterpartyId,
+      constructionSiteId,
+      departmentId: null,
+    }));
+
+  if (mappingsToCreate.length > 0) {
+    await EmployeeCounterpartyMapping.bulkCreate(mappingsToCreate, {
+      transaction,
+      ignoreDuplicates: true,
+    });
+  }
+};
+
 // Функция генерации номера заявки
 const generateApplicationNumber = async (constructionSiteId) => {
   try {
@@ -488,151 +665,30 @@ export const createApplication = async (req, res) => {
       transaction,
     });
 
-    // Обновляем статусы сотрудников при создании заявки
-    // status_new и status_tb_passed становятся неактивными (is_active=false)
-    // status_processed становится активным (is_active=true)
-    console.log(
-      "[createApplication] Начинаем обновление статусов для",
-      employeeIds.length,
-      "сотрудников",
-    );
-
-    for (const employeeId of employeeIds) {
-      try {
-        // Получаем текущий статус сотрудника в группе 'status'
-        const currentMapping = await EmployeeStatusMapping.findOne({
-          where: {
-            employeeId: employeeId,
-            statusGroup: "status",
-            isActive: true,
-          },
-          include: [{ model: Status, as: "status" }],
-          transaction,
-        });
-
-        console.log(
-          `[createApplication] Сотрудник ${employeeId}: текущий статус = ${currentMapping?.status?.name}`,
-        );
-
-        const currentStatusName = currentMapping?.status?.name;
-
-        // Если текущий статус - 'status_new' или 'status_tb_passed', переводим в 'status_processed'
-        if (
-          currentStatusName === "status_new" ||
-          currentStatusName === "status_tb_passed"
-        ) {
-          console.log(
-            `[createApplication] Переводим ${employeeId} из ${currentStatusName} в status_processed`,
-          );
-
-          // Деактивируем старый статус
-          await EmployeeStatusMapping.update(
-            { isActive: false },
-            {
-              where: {
-                employeeId: employeeId,
-                statusGroup: "status",
-                isActive: true,
-              },
-              transaction,
-            },
-          );
-
-          // Получаем статус 'status_processed'
-          const processedStatus = await Status.findOne({
-            where: { name: "status_processed", group: "status" },
-            transaction,
-          });
-
-          if (!processedStatus) {
-            console.error(
-              `[createApplication] Статус 'status_processed' не найден!`,
-            );
-            continue;
-          }
-
-          // Проверяем, есть ли уже запись для этого статуса
-          let mapping = await EmployeeStatusMapping.findOne({
-            where: {
-              employeeId: employeeId,
-              statusId: processedStatus.id,
-            },
-            transaction,
-          });
-
-          if (mapping) {
-            // Обновляем существующую запись
-            await mapping.update(
-              { isActive: true, updatedBy: req.user.id },
-              { transaction },
-            );
-            console.log(
-              `[createApplication] Активировали существующий маппинг для ${employeeId}`,
-            );
-          } else {
-            // Создаем новую запись
-            await EmployeeStatusMapping.create(
-              {
-                employeeId: employeeId,
-                statusId: processedStatus.id,
-                statusGroup: "status",
-                createdBy: req.user.id,
-                updatedBy: req.user.id,
-                isActive: true,
-              },
-              { transaction },
-            );
-            console.log(
-              `[createApplication] Создали новый маппинг для ${employeeId}`,
-            );
-          }
-        } else {
-          console.log(
-            `[createApplication] Статус ${currentStatusName} не требует изменения`,
-          );
-        }
-      } catch (error) {
-        console.error(
-          `[createApplication] Ошибка при обновлении статуса сотрудника ${employeeId}:`,
-          error.message,
-          error.stack,
-        );
-        // Продолжаем создание заявки даже если обновление статуса не удалось
-      }
+    try {
+      await transitionEmployeesToProcessedStatus({
+        employeeIds,
+        userId: req.user.id,
+        transaction,
+      });
+    } catch (statusSyncError) {
+      console.error(
+        "[createApplication] Ошибка пакетного обновления статусов:",
+        statusSyncError.message,
+        statusSyncError.stack,
+      );
+      // Сохраняем прежнее поведение: создание заявки не блокируется ошибкой смены статусов.
     }
-
-    console.log("[createApplication] Обновление статусов завершено");
 
     // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
     // Только если указан объект строительства
     if (applicationData.constructionSiteId) {
-      for (const employeeId of employeeIds) {
-        // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
-        let mapping = await EmployeeCounterpartyMapping.findOne({
-          where: {
-            employeeId: employeeId,
-            counterpartyId: req.user.counterpartyId,
-            constructionSiteId: applicationData.constructionSiteId,
-          },
-          transaction,
-        });
-
-        if (mapping) {
-          // Связка уже существует - обновляем updated_at
-          await mapping.save({ transaction });
-        } else {
-          // Связки нет - создаем новую
-          await EmployeeCounterpartyMapping.create(
-            {
-              employeeId: employeeId,
-              counterpartyId: req.user.counterpartyId,
-              constructionSiteId: applicationData.constructionSiteId,
-              departmentId: null,
-            },
-            { transaction },
-          );
-        }
-      }
+      await upsertEmployeeCounterpartyMappings({
+        employeeIds,
+        counterpartyId: req.user.counterpartyId,
+        constructionSiteId: applicationData.constructionSiteId,
+        transaction,
+      });
     }
 
     // Добавляем файлы, если они выбраны
@@ -928,8 +984,11 @@ export const updateApplication = async (req, res) => {
       const oldEmployeeIds = oldEmployeeMappings.map((m) => m.employeeId);
 
       // Определяем сотрудников, у которых были сняты чекбоксы
+      const nextEmployeeIdSet = new Set(
+        employeeIds.map((empId) => String(empId)),
+      );
       const removedEmployeeIds = oldEmployeeIds.filter(
-        (empId) => !employeeIds.includes(empId),
+        (empId) => !nextEmployeeIdSet.has(String(empId)),
       );
 
       // Удаляем старые связи
@@ -948,40 +1007,18 @@ export const updateApplication = async (req, res) => {
         transaction,
       });
 
-      // Обновляем/создаем записи в employee_counterparty_mapping для добавленных сотрудников
-      for (const employeeId of employeeIds) {
-        // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
-        let mapping = await EmployeeCounterpartyMapping.findOne({
-          where: {
-            employeeId: employeeId,
-            counterpartyId: application.counterpartyId,
-            constructionSiteId: application.constructionSiteId,
-          },
-          transaction,
-        });
-
-        if (mapping) {
-          // Связка уже существует - обновляем updated_at
-          await mapping.save({ transaction });
-        } else {
-          // Связки нет - создаем новую
-          await EmployeeCounterpartyMapping.create(
-            {
-              employeeId: employeeId,
-              counterpartyId: application.counterpartyId,
-              constructionSiteId: application.constructionSiteId,
-              departmentId: null,
-            },
-            { transaction },
-          );
-        }
-      }
+      await upsertEmployeeCounterpartyMappings({
+        employeeIds,
+        counterpartyId: application.counterpartyId,
+        constructionSiteId: application.constructionSiteId,
+        transaction,
+      });
 
       // Удаляем записи из employee_counterparty_mapping для сотрудников, у которых сняли чекбоксы
-      for (const employeeId of removedEmployeeIds) {
+      if (removedEmployeeIds.length > 0) {
         await EmployeeCounterpartyMapping.destroy({
           where: {
-            employeeId: employeeId,
+            employeeId: { [Op.in]: removedEmployeeIds },
             counterpartyId: application.counterpartyId,
             constructionSiteId: application.constructionSiteId,
           },

@@ -425,17 +425,26 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
 
             console.log(`   📊 Найдено кандидатов с таким ФИО: ${candidateEmployees.length}`);
 
-            // Проверяем, есть ли среди них сотрудник этого контрагента
-            for (const candidate of candidateEmployees) {
-              const mapping = await EmployeeCounterpartyMapping.findOne({
+            if (candidateEmployees.length > 0) {
+              // Вместо запроса в цикле делаем один батч-запрос маппингов.
+              const candidateEmployeeIds = candidateEmployees.map((candidate) => candidate.id);
+              const candidateMappings = await EmployeeCounterpartyMapping.findAll({
                 where: {
-                  employeeId: candidate.id,
+                  employeeId: { [Op.in]: candidateEmployeeIds },
                   counterpartyId: userCounterparty.id
-                }
+                },
+                attributes: ['employeeId']
               });
 
-              if (mapping) {
-                existingEmployee = candidate;
+              const mappedEmployeeIds = new Set(
+                candidateMappings.map((mapping) => String(mapping.employeeId))
+              );
+              const matchedCandidate = candidateEmployees.find((candidate) =>
+                mappedEmployeeIds.has(String(candidate.id))
+              );
+
+              if (matchedCandidate) {
+                existingEmployee = matchedCandidate;
                 console.log(`   ✅ Найден сотрудник по ФИО (у этого контрагента):`, {
                   id: existingEmployee.id,
                   uuid: existingEmployee.id,
@@ -444,7 +453,6 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
                   hasSnils: !!existingEmployee.snils,
                   hasCitizenship: !!existingEmployee.citizenshipId
                 });
-                break;
               }
             }
 

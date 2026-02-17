@@ -1590,47 +1590,97 @@ export const ingestAccessEvents = async (logs) => {
   }
 
   const records = [];
-
-  for (const rawLog of logs) {
+  const normalizedLogs = logs.map((rawLog) => {
     const log = rawLog || {};
-    const normalizedKey = normalizeCardNumber(log.keyHex);
-    const externalEmpId = log.empId ? String(log.empId) : null;
+    return {
+      log,
+      normalizedKey: normalizeCardNumber(log.keyHex),
+      externalEmpId: log.empId ? String(log.empId) : null,
+    };
+  });
 
-    let employeeId = null;
-    if (externalEmpId) {
-      const binding = await SkudPersonBinding.findOne({
-        where: {
-          externalSystem: DEFAULT_EXTERNAL_SYSTEM,
-          externalEmpId,
-          isActive: true,
-        },
-      });
-      employeeId = binding?.employeeId || null;
-    }
+  const externalEmpIds = [
+    ...new Set(
+      normalizedLogs.map((item) => item.externalEmpId).filter(Boolean),
+    ),
+  ];
+  const normalizedKeys = [
+    ...new Set(
+      normalizedLogs.map((item) => item.normalizedKey).filter(Boolean),
+    ),
+  ];
 
-    if (!employeeId && normalizedKey) {
-      const card = await SkudCard.findOne({
-        where: {
-          externalSystem: DEFAULT_EXTERNAL_SYSTEM,
-          cardNumberNormalized: normalizedKey,
-          status: "active",
-        },
-      });
-      employeeId = card?.employeeId || null;
+  const [bindings, cards] = await Promise.all([
+    externalEmpIds.length > 0
+      ? SkudPersonBinding.findAll({
+          where: {
+            externalSystem: DEFAULT_EXTERNAL_SYSTEM,
+            isActive: true,
+            externalEmpId: {
+              [Op.in]: externalEmpIds,
+            },
+          },
+          attributes: ["externalEmpId", "employeeId", "updatedAt"],
+          order: [["updatedAt", "DESC"]],
+        })
+      : Promise.resolve([]),
+    normalizedKeys.length > 0
+      ? SkudCard.findAll({
+          where: {
+            externalSystem: DEFAULT_EXTERNAL_SYSTEM,
+            status: "active",
+            cardNumberNormalized: {
+              [Op.in]: normalizedKeys,
+            },
+          },
+          attributes: ["cardNumberNormalized", "employeeId", "updatedAt"],
+          order: [["updatedAt", "DESC"]],
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const employeeIdByExternalEmpId = new Map();
+  for (const binding of bindings) {
+    if (!binding?.externalEmpId || !binding?.employeeId) {
+      continue;
     }
+    if (!employeeIdByExternalEmpId.has(binding.externalEmpId)) {
+      employeeIdByExternalEmpId.set(binding.externalEmpId, binding.employeeId);
+    }
+  }
+
+  const employeeIdByCardKey = new Map();
+  for (const card of cards) {
+    if (!card?.cardNumberNormalized || !card?.employeeId) {
+      continue;
+    }
+    if (!employeeIdByCardKey.has(card.cardNumberNormalized)) {
+      employeeIdByCardKey.set(card.cardNumberNormalized, card.employeeId);
+    }
+  }
+
+  for (const item of normalizedLogs) {
+    const employeeId =
+      (item.externalEmpId
+        ? employeeIdByExternalEmpId.get(item.externalEmpId)
+        : null) ||
+      (item.normalizedKey
+        ? employeeIdByCardKey.get(item.normalizedKey)
+        : null) ||
+      null;
 
     records.push({
       externalSystem: DEFAULT_EXTERNAL_SYSTEM,
       source: "webdel",
       eventType: "passage",
-      logId: log.logId ?? null,
+      logId: item.log.logId ?? null,
       employeeId,
-      externalEmpId,
-      accessPoint: log.accessPoint ?? null,
-      direction: log.direction ?? null,
-      keyHex: log.keyHex ?? null,
-      eventTime: toDateFromUnixSeconds(log.time),
-      rawPayload: log,
+      externalEmpId: item.externalEmpId,
+      accessPoint: item.log.accessPoint ?? null,
+      direction: item.log.direction ?? null,
+      keyHex: item.log.keyHex ?? null,
+      eventTime: toDateFromUnixSeconds(item.log.time),
+      rawPayload: item.log,
     });
   }
 

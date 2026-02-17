@@ -154,10 +154,10 @@ const buildDocumentCte = async ({ user, filters }) => {
 
   if (filters.employeeSearch) {
     employeeWhere.push(`(
-      COALESCE(e.last_name, '') ILIKE :employeeSearch
-      OR COALESCE(e.first_name, '') ILIKE :employeeSearch
-      OR COALESCE(e.middle_name, '') ILIKE :employeeSearch
-      OR TRIM(CONCAT_WS(' ', e.last_name, e.first_name, e.middle_name)) ILIKE :employeeSearch
+      e.last_name ILIKE :employeeSearch
+      OR e.first_name ILIKE :employeeSearch
+      OR e.middle_name ILIKE :employeeSearch
+      OR CONCAT_WS(' ', e.last_name, e.first_name, e.middle_name) ILIKE :employeeSearch
     )`);
     replacements.employeeSearch = `%${filters.employeeSearch}%`;
   }

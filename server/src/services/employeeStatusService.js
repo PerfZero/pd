@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { Status, EmployeeStatusMapping, Employee } from '../models/index.js';
 
 /**
@@ -288,15 +289,23 @@ class EmployeeStatusService {
       'status_active': 'status_active_employed',
       'status_secure': 'status_secure_allow'
     };
+    const statusPairs = Object.entries(statusNames);
+    const statusNameSet = [...new Set(statusPairs.map(([, statusName]) => statusName))];
+    const statuses = await Status.findAll({
+      where: {
+        name: {
+          [Op.in]: statusNameSet
+        }
+      }
+    });
 
-    const mappings = [];
+    const statusByGroupAndName = new Map(
+      statuses.map((status) => [`${status.group}:${status.name}`, status])
+    );
 
-    for (const [group, statusName] of Object.entries(statusNames)) {
+    const rowsToCreate = statusPairs.map(([group, statusName]) => {
       console.log(`Looking for status: ${statusName} in group: ${group}`);
-      
-      const status = await Status.findOne({
-        where: { name: statusName, group }
-      });
+      const status = statusByGroupAndName.get(`${group}:${statusName}`);
 
       if (!status) {
         console.error(`Status ${statusName} NOT FOUND!`);
@@ -304,19 +313,20 @@ class EmployeeStatusService {
       }
 
       console.log(`Found status: ${status.id}, creating mapping...`);
-
-      const mapping = await EmployeeStatusMapping.create({
+      return {
         employeeId: employeeId,
         statusId: status.id,
         statusGroup: group,
         createdBy: userId,
         updatedBy: userId,
         isActive: true
-      });
+      };
+    });
 
-      console.log(`✓ Created mapping for ${group}:`, mapping.id);
-      mappings.push(mapping);
-    }
+    const mappings = await EmployeeStatusMapping.bulkCreate(rowsToCreate);
+    mappings.forEach((mapping) => {
+      console.log(`✓ Created mapping for ${mapping.statusGroup}:`, mapping.id);
+    });
 
     console.log('=== EMPLOYEE STATUSES INITIALIZED ===');
     return mappings;
