@@ -1,15 +1,4 @@
-import {
-  Form,
-  Input,
-  Select,
-  Button,
-  Space,
-  Typography,
-  Collapse,
-  App,
-  Popconfirm,
-  Radio,
-} from "antd";
+import { Form, Button, Collapse, App } from "antd";
 import {
   SaveOutlined,
   CaretRightOutlined,
@@ -26,14 +15,22 @@ import {
   capitalizeFirstLetter,
   filterCyrillicOnly,
 } from "../../utils/formatters";
-import MaskedDateInput from "../../shared/ui/MaskedDateInput";
 import { buildMobileDocumentSections } from "./MobileEmployeeDocumentSections";
-import dayjs from "dayjs";
-
-const { Title } = Typography;
-const { TextArea } = Input;
-const { Option } = Select;
-const DATE_FORMAT = "DD.MM.YYYY";
+import { buildMobilePrimarySections } from "./MobileEmployeePrimarySections";
+import {
+  OCR_DOC_TYPE_LABELS,
+  formatRussianPassportNumber,
+  normalizeString,
+  isEmptyFormValue,
+  toDisplayName,
+  mapOcrSexToFormGender,
+  resolveCitizenshipIdByOcrCode,
+  parseOcrRawJson,
+  resolvePassportNumberPartsFromOcr,
+  formatDateForMobileForm,
+  formatPassportNumberForMobileForm,
+  getOcrSourceDocumentType,
+} from "./mobileEmployeeOcrUtils";
 
 // Общие пропсы для отключения автозаполнения браузера
 const noAutoFillProps = {
@@ -61,214 +58,6 @@ const createAntiAutofillIds = () => ({
   phone: `employee_phone_${Math.random().toString(36).slice(2, 9)}`,
   registrationAddress: `employee_reg_addr_${Math.random().toString(36).slice(2, 9)}`,
 });
-
-// Маска для российского паспорта: форматирует ввод в 1234 №567890 (4 цифры, пробел, №, 6 цифр)
-const formatRussianPassportNumber = (value) => {
-  if (!value) return value;
-
-  // Убираем все символы кроме цифр и №
-  const cleaned = value.replace(/[^\d№]/g, "");
-
-  // Убираем все символы №, чтобы потом добавить один
-  const numbersOnly = cleaned.replace(/№/g, "");
-
-  // Ограничиваем длину до 10 цифр (4 серия + 6 номер)
-  const limited = numbersOnly.slice(0, 10);
-
-  // Если введено меньше 4 символов, просто возвращаем
-  if (limited.length <= 4) {
-    return limited;
-  }
-
-  // Форматируем: XXXX №XXXXXX
-  return `${limited.slice(0, 4)} №${limited.slice(4)}`;
-};
-
-const normalizeString = (value) => String(value || "").trim();
-
-const isEmptyFormValue = (value) =>
-  value === null || value === undefined || normalizeString(value) === "";
-
-const toDisplayName = (value) => {
-  const normalized = normalizeString(value);
-  if (!normalized) return null;
-  return normalized
-    .toLowerCase()
-    .split(/(\s|-)/)
-    .map((part) => {
-      if (part === " " || part === "-") return part;
-      return capitalizeFirstLetter(part);
-    })
-    .join("");
-};
-
-const mapOcrSexToFormGender = (ocrValue) => {
-  const normalized = normalizeString(ocrValue).toUpperCase();
-  if (normalized === "M") return "male";
-  if (normalized === "F") return "female";
-  return null;
-};
-
-const resolveCitizenshipIdByOcrCode = (citizenships = [], ocrValue = "") => {
-  const normalized = normalizeString(ocrValue).toUpperCase();
-  if (!normalized) return null;
-
-  const byCode = citizenships.find((item) => {
-    const code = normalizeString(item.code).toUpperCase();
-    if (!code) return false;
-    return (
-      code === normalized ||
-      (normalized === "RUS" && code === "RU") ||
-      (normalized === "RU" && code === "RUS")
-    );
-  });
-
-  if (byCode) return byCode.id;
-  return null;
-};
-
-const parseOcrRawJson = (response = {}) => {
-  const rawJson =
-    response?.data?.raw?.json ||
-    response?.raw?.json ||
-    response?.data?.data?.raw?.json ||
-    null;
-
-  if (rawJson && typeof rawJson === "object") {
-    return rawJson;
-  }
-
-  const rawContent =
-    response?.data?.raw?.content ||
-    response?.raw?.content ||
-    response?.data?.data?.raw?.content ||
-    null;
-
-  if (typeof rawContent !== "string" || !rawContent.trim()) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(rawContent);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-};
-
-const valueFromAliases = (source = {}, aliases = []) => {
-  for (const key of aliases) {
-    if (source?.[key] !== undefined && source?.[key] !== null) {
-      const value = normalizeString(source[key]);
-      if (value) return value;
-    }
-  }
-  return null;
-};
-
-const toDigits = (value, maxLength = 64) =>
-  normalizeString(value).replace(/[^\d]/g, "").slice(0, maxLength);
-
-const resolvePassportNumberPartsFromOcr = (normalized = {}, rawJson = {}) => {
-  let seriesDigits = toDigits(
-    normalized.passportSeries ||
-      valueFromAliases(rawJson, [
-        "passportSeries",
-        "passport_series",
-        "series",
-      ]),
-    4,
-  );
-
-  let numberDigits = toDigits(
-    normalized.passportNumber ||
-      valueFromAliases(rawJson, [
-        "passportNumberOnly",
-        "passport_number_only",
-        "numberOnly",
-        "number_only",
-      ]),
-    10,
-  );
-
-  const rawCombinedDigits = toDigits(
-    valueFromAliases(rawJson, [
-      "passportNumber",
-      "passport_number",
-      "number",
-      "seriesNumber",
-      "series_number",
-    ]),
-    10,
-  );
-
-  if (!numberDigits && rawCombinedDigits) {
-    if (rawCombinedDigits.length >= 10) {
-      seriesDigits = seriesDigits || rawCombinedDigits.slice(0, 4);
-      numberDigits = rawCombinedDigits.slice(4, 10);
-    } else {
-      seriesDigits = "";
-      numberDigits = rawCombinedDigits.slice(0, 6);
-    }
-  }
-
-  if (
-    seriesDigits &&
-    numberDigits &&
-    numberDigits.length < 6 &&
-    rawCombinedDigits
-  ) {
-    if (rawCombinedDigits.length <= 6) {
-      seriesDigits = "";
-      numberDigits = rawCombinedDigits.slice(0, 6);
-    }
-  }
-
-  return {
-    seriesDigits: seriesDigits || null,
-    numberDigits: numberDigits ? numberDigits.slice(0, 6) : null,
-  };
-};
-
-const formatDateForMobileForm = (value) => {
-  const normalized = normalizeString(value);
-  if (!normalized) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    const parsed = dayjs(normalized);
-    return parsed.isValid() ? parsed.format(DATE_FORMAT) : null;
-  }
-
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(normalized)) {
-    return normalized;
-  }
-
-  const parsed = dayjs(normalized);
-  return parsed.isValid() ? parsed.format(DATE_FORMAT) : null;
-};
-
-const formatPassportNumberForMobileForm = ({ series, number }) => {
-  const seriesDigits = normalizeString(series)
-    .replace(/[^\d]/g, "")
-    .slice(0, 4);
-  const numberDigits = normalizeString(number)
-    .replace(/[^\d]/g, "")
-    .slice(0, 6);
-
-  if (!seriesDigits && !numberDigits) return null;
-  if (!seriesDigits) return numberDigits || null;
-  if (!numberDigits) return seriesDigits || null;
-
-  return `${seriesDigits} №${numberDigits}`;
-};
-
-const OCR_DOC_TYPE_LABELS = {
-  passport_rf: "паспорт РФ",
-  foreign_passport: "иностранный паспорт",
-  patent: "патент",
-  kig: "КИГ",
-  visa: "виза",
-};
 
 /**
  * Мобильная форма сотрудника
@@ -532,22 +321,13 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
 
       const currentPassportType =
         form.getFieldValue("passportType") || passportType;
-      let ocrDocumentType = null;
+      let ocrDocumentType = getOcrSourceDocumentType({ documentType });
 
-      if (documentType === "passport") {
-        ocrDocumentType =
-          currentPassportType === "foreign"
-            ? "foreign_passport"
-            : "passport_rf";
-      } else if (
-        documentType === "patent_front" ||
-        documentType === "patent_back"
+      if (
+        ocrDocumentType === "passport_rf" &&
+        currentPassportType === "foreign"
       ) {
-        ocrDocumentType = "patent";
-      } else if (documentType === "kig") {
-        ocrDocumentType = "kig";
-      } else if (documentType === "visa") {
-        ocrDocumentType = "visa";
+        ocrDocumentType = "foreign_passport";
       }
 
       if (!ocrDocumentType) {
@@ -832,518 +612,108 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     scheduleAutoSaveDraft();
   };
 
-  // Формируем items для Collapse
-  const collapseItems = [];
-
-  // Блок 0: Статусы (если редактирование) - ДО Личной информации
-  if (employee?.id) {
-    const isFired =
-      employee.statusMappings?.find((m) => m.statusGroup === "status_active")
-        ?.status?.name === "status_active_fired";
-    const isInactive =
-      employee.statusMappings?.find((m) => m.statusGroup === "status_active")
-        ?.status?.name === "status_active_inactive";
-
-    const handleFire = async () => {
+  const executeStatusAction = useCallback(
+    async ({
+      request,
+      setLoadingState,
+      successMessage,
+      fallbackErrorMessage,
+      logPrefix,
+    }) => {
+      if (!employee?.id) {
+        return;
+      }
       try {
-        setFireLoading(true);
-        await employeeStatusService.fireEmployee(employee.id);
-        // Очищаем кэш для этого сотрудника
+        setLoadingState(true);
+        await request(employee.id);
         invalidateCache(`employees:getById:${employee.id}`);
-        messageApi.success(
-          `Сотрудник ${employee.lastName} ${employee.firstName} уволен`,
-        );
+        messageApi.success(successMessage);
         setTimeout(() => {
           onCancel && onCancel();
         }, 500);
       } catch (error) {
-        console.error("Error firing employee:", error);
-        messageApi.error("Ошибка при увольнении сотрудника");
+        console.error(logPrefix, error);
+        messageApi.error(fallbackErrorMessage);
       } finally {
-        setFireLoading(false);
+        setLoadingState(false);
       }
-    };
+    },
+    [employee?.id, messageApi, onCancel],
+  );
 
-    const handleReinstate = async () => {
-      try {
-        setActivateLoading(true);
-        await employeeStatusService.reinstateEmployee(employee.id);
-        // Очищаем кэш для этого сотрудника
-        invalidateCache(`employees:getById:${employee.id}`);
-        messageApi.success(
-          `Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`,
-        );
-        setTimeout(() => {
-          onCancel && onCancel();
-        }, 500);
-      } catch (error) {
-        console.error("Error reinstating employee:", error);
-        messageApi.error("Ошибка при восстановлении сотрудника");
-      } finally {
-        setActivateLoading(false);
-      }
-    };
+  const handleFire = useCallback(
+    () =>
+      executeStatusAction({
+        request: employeeStatusService.fireEmployee,
+        setLoadingState: setFireLoading,
+        successMessage: `Сотрудник ${employee.lastName} ${employee.firstName} уволен`,
+        fallbackErrorMessage: "Ошибка при увольнении сотрудника",
+        logPrefix: "Error firing employee:",
+      }),
+    [employee?.firstName, employee?.lastName, executeStatusAction],
+  );
 
-    const handleDeactivate = async () => {
-      try {
-        setFireLoading(true);
-        await employeeStatusService.deactivateEmployee(employee.id);
-        // Очищаем кэш для этого сотрудника
-        invalidateCache(`employees:getById:${employee.id}`);
-        messageApi.success(
-          `Сотрудник ${employee.lastName} ${employee.firstName} деактивирован`,
-        );
-        setTimeout(() => {
-          onCancel && onCancel();
-        }, 500);
-      } catch (error) {
-        console.error("Error deactivating employee:", error);
-        messageApi.error("Ошибка при деактивации сотрудника");
-      } finally {
-        setFireLoading(false);
-      }
-    };
+  const handleReinstate = useCallback(
+    () =>
+      executeStatusAction({
+        request: employeeStatusService.reinstateEmployee,
+        setLoadingState: setActivateLoading,
+        successMessage: `Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`,
+        fallbackErrorMessage: "Ошибка при восстановлении сотрудника",
+        logPrefix: "Error reinstating employee:",
+      }),
+    [employee?.firstName, employee?.lastName, executeStatusAction],
+  );
 
-    const handleActivate = async () => {
-      try {
-        setActivateLoading(true);
-        await employeeStatusService.activateEmployee(employee.id);
-        // Очищаем кэш для этого сотрудника
-        invalidateCache(`employees:getById:${employee.id}`);
-        messageApi.success(
-          `Сотрудник ${employee.lastName} ${employee.firstName} активирован`,
-        );
-        setTimeout(() => {
-          onCancel && onCancel();
-        }, 500);
-      } catch (error) {
-        console.error("Error activating employee:", error);
-        messageApi.error("Ошибка при активации сотрудника");
-      } finally {
-        setActivateLoading(false);
-      }
-    };
+  const handleDeactivate = useCallback(
+    () =>
+      executeStatusAction({
+        request: employeeStatusService.deactivateEmployee,
+        setLoadingState: setFireLoading,
+        successMessage: `Сотрудник ${employee.lastName} ${employee.firstName} деактивирован`,
+        fallbackErrorMessage: "Ошибка при деактивации сотрудника",
+        logPrefix: "Error deactivating employee:",
+      }),
+    [employee?.firstName, employee?.lastName, executeStatusAction],
+  );
 
-    collapseItems.push({
-      key: "statuses",
-      label: (
-        <Title level={5} style={{ margin: 0 }}>
-          ⚙️ Статусы
-        </Title>
-      ),
-      children: (
-        <Space direction="vertical" style={{ width: "100%" }}>
-          {isFired ? (
-            <Popconfirm
-              title="Восстановить сотрудника?"
-              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} восстанавливается?`}
-              onConfirm={handleReinstate}
-              okText="Да"
-              cancelText="Нет"
-            >
-              <Button type="primary" danger block loading={activateLoading}>
-                Принять уволенного
-              </Button>
-            </Popconfirm>
-          ) : (
-            <Popconfirm
-              title="Уволить сотрудника?"
-              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} увольняется?`}
-              onConfirm={handleFire}
-              okText="Да"
-              cancelText="Нет"
-            >
-              <Button danger block loading={fireLoading}>
-                Уволить
-              </Button>
-            </Popconfirm>
-          )}
+  const handleActivate = useCallback(
+    () =>
+      executeStatusAction({
+        request: employeeStatusService.activateEmployee,
+        setLoadingState: setActivateLoading,
+        successMessage: `Сотрудник ${employee.lastName} ${employee.firstName} активирован`,
+        fallbackErrorMessage: "Ошибка при активации сотрудника",
+        logPrefix: "Error activating employee:",
+      }),
+    [employee?.firstName, employee?.lastName, executeStatusAction],
+  );
 
-          {isInactive ? (
-            <Popconfirm
-              title="Активировать сотрудника?"
-              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} активируется?`}
-              onConfirm={handleActivate}
-              okText="Да"
-              cancelText="Нет"
-            >
-              <Button type="primary" block loading={activateLoading}>
-                Активировать
-              </Button>
-            </Popconfirm>
-          ) : (
-            // Скрываем кнопку для пользователей контрагента default
-            user?.counterpartyId !== defaultCounterpartyId && (
-              <Popconfirm
-                title="Сотрудник не работает на объектах СУ-10?"
-                description={`Вы уверены, что ${employee.lastName} ${employee.firstName} не работает на объектах СУ-10?`}
-                onConfirm={handleDeactivate}
-                okText="Да"
-                cancelText="Нет"
-              >
-                <Button type="default" block loading={fireLoading}>
-                  Не работает на объектах СУ-10
-                </Button>
-              </Popconfirm>
-            )
-          )}
-        </Space>
-      ),
-    });
-  }
-
-  // Блок 1: Личная информация
-  collapseItems.push({
-    key: "personal",
-    label: (
-      <Title level={5} style={{ margin: 0 }}>
-        📋 Личная информация
-      </Title>
-    ),
-    children: (
-      <>
-        {!getFieldProps("inn").hidden && (
-          <Form.Item
-            label="ИНН"
-            name="inn"
-            required={getFieldProps("inn").required}
-            rules={[
-              ...getFieldProps("inn").rules,
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  const digits = value.replace(/[^\d]/g, "");
-                  if (digits.length === 10 || digits.length === 12)
-                    return Promise.resolve();
-                  return Promise.reject(
-                    new Error("ИНН должен содержать 10 или 12 цифр"),
-                  );
-                },
-              },
-            ]}
-            getValueFromEvent={(e) => formatInn(e.target.value)}
-          >
-            <Input
-              placeholder="1234-567890-12"
-              size="large"
-              onBlur={handleInnBlur}
-              {...noAutoFillProps}
-            />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("gender").hidden && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "16px",
-              gap: "12px",
-            }}
-          >
-            <label
-              style={{ marginBottom: 0, minWidth: "70px", fontWeight: 500 }}
-            >
-              Пол{" "}
-              {getFieldProps("gender").required && (
-                <span style={{ color: "#ff4d4f" }}>*</span>
-              )}
-            </label>
-            <Form.Item
-              name="gender"
-              rules={getFieldProps("gender").rules}
-              style={{ marginBottom: 0 }}
-            >
-              <Radio.Group style={{ display: "flex", gap: "16px" }}>
-                <Radio value="male">Муж</Radio>
-                <Radio value="female">Жен</Radio>
-              </Radio.Group>
-            </Form.Item>
-          </div>
-        )}
-
-        {!getFieldProps("lastName").hidden && (
-          <Form.Item
-            label="Фамилия"
-            name="lastName"
-            required={getFieldProps("lastName").required}
-            rules={getFieldProps("lastName").rules}
-            validateStatus={latinInputError === "lastName" ? "error" : ""}
-            help={
-              latinInputError === "lastName" ? "Ввод только на кириллице" : ""
-            }
-          >
-            <Input
-              id={antiAutofillIds.lastName}
-              name={antiAutofillIds.lastName}
-              placeholder="Иванов"
-              size="large"
-              {...noAutoFillProps}
-              onChange={(e) => handleFullNameChange("lastName", e.target.value)}
-            />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("firstName").hidden && (
-          <Form.Item
-            label="Имя"
-            name="firstName"
-            required={getFieldProps("firstName").required}
-            rules={getFieldProps("firstName").rules}
-            validateStatus={latinInputError === "firstName" ? "error" : ""}
-            help={
-              latinInputError === "firstName" ? "Ввод только на кириллице" : ""
-            }
-          >
-            <Input
-              id={antiAutofillIds.firstName}
-              name={antiAutofillIds.firstName}
-              placeholder="Иван"
-              size="large"
-              {...noAutoFillProps}
-              onChange={(e) =>
-                handleFullNameChange("firstName", e.target.value)
-              }
-            />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("middleName").hidden && (
-          <Form.Item
-            label="Отчество"
-            name="middleName"
-            required={getFieldProps("middleName").required}
-            rules={getFieldProps("middleName").rules}
-            validateStatus={latinInputError === "middleName" ? "error" : ""}
-            help={
-              latinInputError === "middleName" ? "Ввод только на кириллице" : ""
-            }
-          >
-            <Input
-              id={antiAutofillIds.middleName}
-              name={antiAutofillIds.middleName}
-              placeholder="Иванович"
-              size="large"
-              {...noAutoFillProps}
-              onChange={(e) =>
-                handleFullNameChange("middleName", e.target.value)
-              }
-            />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("positionId").hidden && (
-          <Form.Item
-            label="Должность"
-            name="positionId"
-            required={getFieldProps("positionId").required}
-            rules={getFieldProps("positionId").rules}
-          >
-            <Select
-              placeholder="Выберите должность"
-              size="large"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              virtual={false}
-              listHeight={400}
-              loading={loadingReferences}
-              disabled={loadingReferences || positions.length === 0}
-              autoComplete="off"
-            >
-              {positions.map((pos) => (
-                <Option key={pos.id} value={pos.id}>
-                  {pos.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        )}
-
-        {!getFieldProps("citizenshipId").hidden && (
-          <Form.Item
-            label="Гражданство"
-            name="citizenshipId"
-            required={getFieldProps("citizenshipId").required}
-            rules={getFieldProps("citizenshipId").rules}
-          >
-            <Select
-              placeholder="Выберите гражданство"
-              size="large"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              virtual={false}
-              onChange={handleCitizenshipChange}
-              loading={loadingReferences}
-              disabled={loadingReferences || citizenships.length === 0}
-              autoComplete="off"
-            >
-              {citizenships.map((c) => (
-                <Option key={c.id} value={c.id}>
-                  {c.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        )}
-
-        {!getFieldProps("birthDate").hidden && (
-          <Form.Item
-            label="Дата рождения"
-            name="birthDate"
-            required={getFieldProps("birthDate").required}
-            rules={[
-              ...getFieldProps("birthDate").rules,
-              {
-                pattern: /^\d{2}\.\d{2}\.\d{4}$/,
-                message: "Дата должна быть в формате ДД.ММ.ГГГГ",
-              },
-              {
-                validator: (_, value) => {
-                  if (!value) {
-                    return Promise.resolve();
-                  }
-                  try {
-                    const dateObj = dayjs(value, DATE_FORMAT, true);
-                    if (!dateObj.isValid()) {
-                      return Promise.reject(new Error("Некорректная дата"));
-                    }
-                    const age = dayjs().diff(dateObj, "year");
-                    if (age < 18) {
-                      return Promise.reject(
-                        new Error(
-                          "Возраст сотрудника должен быть не менее 18 лет",
-                        ),
-                      );
-                    }
-                    if (age > 80) {
-                      return Promise.reject(
-                        new Error(
-                          "Возраст сотрудника должен быть не более 80 лет",
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    return Promise.reject(new Error("Некорректная дата"));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-            normalize={(value) => {
-              if (!value) return value;
-              // Если это строка, возвращаем как есть
-              if (typeof value === "string") return value;
-              // Если это dayjs объект, форматируем в строку
-              if (value && value.format) return value.format(DATE_FORMAT);
-              return value;
-            }}
-          >
-            <MaskedDateInput format={DATE_FORMAT} size="large" />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("birthCountryId").hidden && (
-          <Form.Item
-            label="Страна рождения"
-            name="birthCountryId"
-            required={getFieldProps("birthCountryId").required}
-            rules={getFieldProps("birthCountryId").rules}
-          >
-            <Select
-              popupMatchSelectWidth
-              placeholder="Выберите страну рождения"
-              size="large"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              virtual={false}
-              loading={loadingReferences}
-              disabled={loadingReferences || citizenships.length === 0}
-              autoComplete="off"
-            >
-              {citizenships.map((c) => (
-                <Option key={c.id} value={c.id}>
-                  {c.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        )}
-
-        {!getFieldProps("registrationAddress").hidden && (
-          <Form.Item
-            label="Адрес регистрации"
-            name="registrationAddress"
-            required={getFieldProps("registrationAddress").required}
-            rules={getFieldProps("registrationAddress").rules}
-          >
-            <TextArea
-              id={antiAutofillIds.registrationAddress}
-              name={antiAutofillIds.registrationAddress}
-              placeholder="г. Москва, ул. Ленина, д. 1"
-              rows={3}
-              size="large"
-              {...noAutoFillProps}
-            />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("phone").hidden && (
-          <Form.Item
-            label="Телефон"
-            name="phone"
-            required={getFieldProps("phone").required}
-            rules={[
-              ...getFieldProps("phone").rules,
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  const digits = value.replace(/[^\d]/g, "");
-                  if (digits.length === 11) return Promise.resolve();
-                  return Promise.reject(
-                    new Error("Телефон должен содержать 11 цифр"),
-                  );
-                },
-              },
-            ]}
-            getValueFromEvent={(e) => formatPhoneNumber(e.target.value)}
-          >
-            <Input
-              id={antiAutofillIds.phone}
-              name={antiAutofillIds.phone}
-              placeholder="+7 (___) ___-__-__"
-              size="large"
-              {...noAutoFillProps}
-            />
-          </Form.Item>
-        )}
-
-        {!getFieldProps("notes").hidden && (
-          <Form.Item
-            label="Примечание"
-            name="notes"
-            required={getFieldProps("notes").required}
-            rules={getFieldProps("notes").rules}
-          >
-            <TextArea
-              rows={2}
-              placeholder="Дополнительная информация"
-              size="large"
-              {...noAutoFillProps}
-            />
-          </Form.Item>
-        )}
-      </>
-    ),
-  });
+  const collapseItems = [
+    ...buildMobilePrimarySections({
+      employee,
+      user,
+      defaultCounterpartyId,
+      fireLoading,
+      activateLoading,
+      onFire: handleFire,
+      onReinstate: handleReinstate,
+      onDeactivate: handleDeactivate,
+      onActivate: handleActivate,
+      getFieldProps,
+      formatInn,
+      handleInnBlur,
+      noAutoFillProps,
+      latinInputError,
+      antiAutofillIds,
+      handleFullNameChange,
+      loadingReferences,
+      positions,
+      citizenships,
+      handleCitizenshipChange,
+      formatPhoneNumber,
+    }),
+  ];
 
   collapseItems.push(
     ...buildMobileDocumentSections({
