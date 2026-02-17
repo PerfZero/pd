@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   App,
-  Alert,
-  Button,
   Card,
-  DatePicker,
   Dropdown,
-  Input,
-  Modal,
-  QRCode,
-  Select,
+  Button,
   Space,
-  Statistic,
-  Switch,
-  Table,
   Tabs,
   Tag,
   Typography,
@@ -21,9 +12,16 @@ import {
 import dayjs from "dayjs";
 import { skudService } from "@/services/skudService";
 import { employeeService } from "@/services/employeeService";
+import SkudAccessTab from "@/components/Admin/Skud/SkudAccessTab";
+import SkudBindCardModal from "@/components/Admin/Skud/SkudBindCardModal";
+import SkudCardsTab from "@/components/Admin/Skud/SkudCardsTab";
+import SkudEventsTab from "@/components/Admin/Skud/SkudEventsTab";
+import SkudPageHeader from "@/components/Admin/Skud/SkudPageHeader";
+import SkudQrTab from "@/components/Admin/Skud/SkudQrTab";
+import SkudSettingsTab from "@/components/Admin/Skud/SkudSettingsTab";
+import SkudSyncTab from "@/components/Admin/Skud/SkudSyncTab";
 
-const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
+const { Text } = Typography;
 
 const statusMetaMap = {
   pending: { label: "Ожидает", color: "default" },
@@ -359,6 +357,34 @@ const getSyncStatusMeta = (status) =>
 const getSyncOperationLabel = (operation) =>
   syncOperationLabelMap[operation] || operation || "-";
 
+const ACCESS_STATUS_OPTIONS = Object.entries(statusMetaMap).map(
+  ([value, meta]) => ({
+    value,
+    label: meta.label,
+  }),
+);
+
+const CARD_STATUS_OPTIONS = Object.entries(cardStatusMetaMap).map(
+  ([value, meta]) => ({
+    value,
+    label: meta.label,
+  }),
+);
+
+const QR_STATUS_OPTIONS = Object.entries(qrStatusMetaMap).map(
+  ([value, meta]) => ({
+    value,
+    label: meta.label,
+  }),
+);
+
+const SYNC_STATUS_OPTIONS = Object.entries(syncStatusMetaMap).map(
+  ([value, meta]) => ({
+    value,
+    label: meta.label,
+  }),
+);
+
 const SkudAdministrationPage = () => {
   const { message } = App.useApp();
   const [activeTab, setActiveTab] = useState("access");
@@ -461,6 +487,17 @@ const SkudAdministrationPage = () => {
 
   const [actionResult, setActionResult] = useState(null);
 
+  const accessPage = accessPagination.current;
+  const accessPageSize = accessPagination.pageSize;
+  const eventsPage = eventsPagination.current;
+  const eventsPageSize = eventsPagination.pageSize;
+  const cardsPage = cardsPagination.current;
+  const cardsPageSize = cardsPagination.pageSize;
+  const qrTokensPage = qrTokensPagination.current;
+  const qrTokensPageSize = qrTokensPagination.pageSize;
+  const syncJobsPage = syncJobsPagination.current;
+  const syncJobsPageSize = syncJobsPagination.pageSize;
+
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
     try {
@@ -487,8 +524,8 @@ const SkudAdministrationPage = () => {
       const [skudResponse, employeesResponse, syncResponse] = await Promise.all(
         [
           skudService.getAccessStates({
-            page: accessPagination.current,
-            limit: accessPagination.pageSize,
+            page: accessPage,
+            limit: accessPageSize,
             status:
               accessStatusFilter && accessStatusFilter !== "pending"
                 ? accessStatusFilter
@@ -496,8 +533,8 @@ const SkudAdministrationPage = () => {
             q: accessSearch || undefined,
           }),
           employeeService.getAll({
-            page: accessPagination.current,
-            limit: accessPagination.pageSize,
+            page: accessPage,
+            limit: accessPageSize,
             search: accessSearch || undefined,
           }),
           skudService.getSyncJobs({
@@ -605,20 +642,14 @@ const SkudAdministrationPage = () => {
     } finally {
       setAccessLoading(false);
     }
-  }, [
-    accessPagination.current,
-    accessPagination.pageSize,
-    accessSearch,
-    accessStatusFilter,
-    message,
-  ]);
+  }, [accessPage, accessPageSize, accessSearch, accessStatusFilter, message]);
 
   const loadEvents = useCallback(async () => {
     setEventsLoading(true);
     try {
       const response = await skudService.getEvents({
-        page: eventsPagination.current,
-        limit: eventsPagination.pageSize,
+        page: eventsPage,
+        limit: eventsPageSize,
         allow: eventsAllowFilter,
         direction: eventsDirectionFilter,
         accessPoint: eventsAccessPoint || undefined,
@@ -658,8 +689,8 @@ const SkudAdministrationPage = () => {
       setEventsLoading(false);
     }
   }, [
-    eventsPagination.current,
-    eventsPagination.pageSize,
+    eventsPage,
+    eventsPageSize,
     eventsAllowFilter,
     eventsDirectionFilter,
     eventsAccessPoint,
@@ -671,8 +702,8 @@ const SkudAdministrationPage = () => {
     setCardsLoading(true);
     try {
       const response = await skudService.getCards({
-        page: cardsPagination.current,
-        limit: cardsPagination.pageSize,
+        page: cardsPage,
+        limit: cardsPageSize,
         status: cardsStatusFilter || undefined,
         q: cardsSearch || undefined,
       });
@@ -695,13 +726,7 @@ const SkudAdministrationPage = () => {
     } finally {
       setCardsLoading(false);
     }
-  }, [
-    cardsPagination.current,
-    cardsPagination.pageSize,
-    cardsSearch,
-    cardsStatusFilter,
-    message,
-  ]);
+  }, [cardsPage, cardsPageSize, cardsSearch, cardsStatusFilter, message]);
 
   const loadQrData = useCallback(async () => {
     setQrTokensLoading(true);
@@ -709,8 +734,8 @@ const SkudAdministrationPage = () => {
     try {
       const [tokensResponse, deniesResponse] = await Promise.all([
         skudService.getQrTokens({
-          page: qrTokensPagination.current,
-          limit: qrTokensPagination.pageSize,
+          page: qrTokensPage,
+          limit: qrTokensPageSize,
           status: qrStatusFilter || undefined,
         }),
         skudService.getQrDenies({
@@ -742,12 +767,7 @@ const SkudAdministrationPage = () => {
       setQrTokensLoading(false);
       setQrDeniesLoading(false);
     }
-  }, [
-    qrTokensPagination.current,
-    qrTokensPagination.pageSize,
-    qrStatusFilter,
-    message,
-  ]);
+  }, [qrTokensPage, qrTokensPageSize, qrStatusFilter, message]);
 
   const loadSkudSettings = useCallback(async () => {
     setSettingsLoading(true);
@@ -773,8 +793,8 @@ const SkudAdministrationPage = () => {
     setSyncJobsLoading(true);
     try {
       const response = await skudService.getSyncJobs({
-        page: syncJobsPagination.current,
-        limit: syncJobsPagination.pageSize,
+        page: syncJobsPage,
+        limit: syncJobsPageSize,
         status: syncStatusFilter || undefined,
         operation: syncOperationFilter || undefined,
       });
@@ -815,8 +835,8 @@ const SkudAdministrationPage = () => {
       setSyncJobsLoading(false);
     }
   }, [
-    syncJobsPagination.current,
-    syncJobsPagination.pageSize,
+    syncJobsPage,
+    syncJobsPageSize,
     syncStatusFilter,
     syncOperationFilter,
     message,
@@ -915,62 +935,68 @@ const SkudAdministrationPage = () => {
     }
   };
 
-  const mutateSingle = async (action, employeeId) => {
-    const payload = {
-      employeeId,
-      reason: actionReason || undefined,
-      reasonCode: actionReasonCode || undefined,
-    };
+  const mutateSingle = useCallback(
+    async (action, employeeId) => {
+      const payload = {
+        employeeId,
+        reason: actionReason || undefined,
+        reasonCode: actionReasonCode || undefined,
+      };
 
-    if (action === "grant") {
-      await skudService.grantAccess(payload);
-      return;
-    }
-    if (action === "block") {
-      await skudService.blockAccess(payload);
-      return;
-    }
-    if (action === "revoke") {
-      await skudService.revokeAccess(payload);
-      return;
-    }
-    if (action === "delete") {
-      await skudService.deleteAccess(employeeId, {
+      if (action === "grant") {
+        await skudService.grantAccess(payload);
+        return;
+      }
+      if (action === "block") {
+        await skudService.blockAccess(payload);
+        return;
+      }
+      if (action === "revoke") {
+        await skudService.revokeAccess(payload);
+        return;
+      }
+      if (action === "delete") {
+        await skudService.deleteAccess(employeeId, {
+          reason: actionReason || undefined,
+          reasonCode: actionReasonCode || undefined,
+        });
+        return;
+      }
+      if (action === "resync") {
+        await skudService.resyncEmployee({
+          employeeId,
+          reason: actionReason || undefined,
+        });
+      }
+    },
+    [actionReason, actionReasonCode],
+  );
+
+  const mutateBatch = useCallback(
+    async (action) => {
+      if (!selectedEmployeeIds.length) {
+        message.warning("Выберите сотрудников в таблице");
+        return;
+      }
+
+      const response = await skudService.batchMutateAccess({
+        action,
+        employeeIds: selectedEmployeeIds,
         reason: actionReason || undefined,
         reasonCode: actionReasonCode || undefined,
       });
-      return;
-    }
-    if (action === "resync") {
-      await skudService.resyncEmployee({
-        employeeId,
-        reason: actionReason || undefined,
-      });
-    }
-  };
 
-  const mutateBatch = async (action) => {
-    if (!selectedEmployeeIds.length) {
-      message.warning("Выберите сотрудников в таблице");
-      return;
-    }
+      const failedCount = response.data?.failedCount || 0;
+      if (failedCount > 0) {
+        message.warning(`Операция завершена частично. Ошибок: ${failedCount}`);
+        return;
+      }
+      message.success("Массовая операция выполнена");
+    },
+    [selectedEmployeeIds, actionReason, actionReasonCode, message],
+  );
 
-    const response = await skudService.batchMutateAccess({
-      action,
-      employeeIds: selectedEmployeeIds,
-      reason: actionReason || undefined,
-      reasonCode: actionReasonCode || undefined,
-    });
-
-    const failedCount = response.data?.failedCount || 0;
-    if (failedCount > 0) {
-      message.warning(`Операция завершена частично. Ошибок: ${failedCount}`);
-      return;
-    }
-    message.success("Массовая операция выполнена");
-  };
-
-  const mutateResyncBatch = async () => {
+  const mutateResyncBatch = useCallback(async () => {
     if (!selectedEmployeeIds.length) {
       message.warning("Выберите сотрудников в таблице");
       return;
@@ -992,7 +1018,7 @@ const SkudAdministrationPage = () => {
       return;
     }
     message.success("Resync для выбранных сотрудников поставлен в очередь");
-  };
+  }, [selectedEmployeeIds, actionReason, message]);
 
   const runAction = useCallback(
     async (action, employeeId = null) => {
@@ -1060,6 +1086,9 @@ const SkudAdministrationPage = () => {
       loadSyncJobs,
       activeTab,
       loadEvents,
+      mutateSingle,
+      mutateBatch,
+      mutateResyncBatch,
     ],
   );
 
@@ -1101,37 +1130,40 @@ const SkudAdministrationPage = () => {
     }
   };
 
-  const runCardAction = async (action, cardRecord) => {
-    if (!cardRecord?.id) return;
-    if (cardRecord.isMock || isCardsMock) {
-      message.warning("Операции недоступны на демо-данных");
-      return;
-    }
-
-    try {
-      if (action === "bind") {
-        setBindCardTarget(cardRecord);
-        setBindModalOpen(true);
-        return;
-      }
-      if (action === "unbind") {
-        await skudService.unbindCard({ cardId: cardRecord.id });
-      } else if (action === "block") {
-        await skudService.blockCard({ cardId: cardRecord.id });
-      } else if (action === "allow") {
-        await skudService.allowCard({ cardId: cardRecord.id });
-      } else {
+  const runCardAction = useCallback(
+    async (action, cardRecord) => {
+      if (!cardRecord?.id) return;
+      if (cardRecord.isMock || isCardsMock) {
+        message.warning("Операции недоступны на демо-данных");
         return;
       }
 
-      message.success("Операция с картой выполнена");
-      await loadCards();
-    } catch (error) {
-      message.error(
-        error.userMessage || error.message || "Ошибка операции с картой",
-      );
-    }
-  };
+      try {
+        if (action === "bind") {
+          setBindCardTarget(cardRecord);
+          setBindModalOpen(true);
+          return;
+        }
+        if (action === "unbind") {
+          await skudService.unbindCard({ cardId: cardRecord.id });
+        } else if (action === "block") {
+          await skudService.blockCard({ cardId: cardRecord.id });
+        } else if (action === "allow") {
+          await skudService.allowCard({ cardId: cardRecord.id });
+        } else {
+          return;
+        }
+
+        message.success("Операция с картой выполнена");
+        await loadCards();
+      } catch (error) {
+        message.error(
+          error.userMessage || error.message || "Ошибка операции с картой",
+        );
+      }
+    },
+    [isCardsMock, message, loadCards],
+  );
 
   const confirmBindCard = async () => {
     if (!bindCardTarget?.id) {
@@ -1651,679 +1683,167 @@ const SkudAdministrationPage = () => {
     [],
   );
 
-  const statsCards = (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        gap: 12,
-        marginBottom: 16,
-      }}
-    >
-      <Card size="small" loading={statsLoading}>
-        <Statistic title="События всего" value={stats?.events?.total || 0} />
-      </Card>
-      <Card size="small" loading={statsLoading}>
-        <Statistic
-          title="Разрешено"
-          value={stats?.events?.allow || 0}
-          valueStyle={{ color: "#3f8600" }}
-        />
-      </Card>
-      <Card size="small" loading={statsLoading}>
-        <Statistic
-          title="Запрещено"
-          value={stats?.events?.deny || 0}
-          valueStyle={{ color: "#cf1322" }}
-        />
-      </Card>
-      <Card size="small" loading={statsLoading}>
-        <Statistic
-          title="Сейчас разрешено"
-          value={stats?.accessStates?.allowed || 0}
-        />
-      </Card>
-    </div>
-  );
-
   const accessTab = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {statsCards}
-      {actionResult && (
-        <Alert
-          type={actionResult.type}
-          showIcon
-          message={
-            actionResult.type === "success" ? "Операция выполнена" : "Ошибка"
-          }
-          description={
-            <>
-              <div>{actionResult.text}</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>
-                {dayjs(actionResult.at).format("DD.MM.YYYY HH:mm:ss")}
-              </div>
-            </>
-          }
-          closable
-          onClose={() => setActionResult(null)}
-        />
-      )}
-      <Space wrap>
-        <Input
-          placeholder="Поиск по ФИО"
-          style={{ width: 280 }}
-          value={accessSearch}
-          onChange={(event) => {
-            setAccessSearch(event.target.value);
-            setAccessPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-        />
-        <Select
-          placeholder="Статус"
-          style={{ width: 180 }}
-          value={accessStatusFilter}
-          onChange={(value) => {
-            setAccessStatusFilter(value);
-            setAccessPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-          options={Object.entries(statusMetaMap).map(([value, meta]) => ({
-            value,
-            label: meta.label,
-          }))}
-        />
-        <Input
-          placeholder="Причина действия"
-          style={{ width: 280 }}
-          value={actionReason}
-          onChange={(event) => setActionReason(event.target.value)}
-          allowClear
-        />
-        <Input
-          placeholder="Код причины"
-          style={{ width: 180 }}
-          value={actionReasonCode}
-          onChange={(event) => setActionReasonCode(event.target.value)}
-          allowClear
-        />
-        <Button onClick={loadAccessStates}>Обновить</Button>
-      </Space>
-
-      <Space wrap>
-        {isAccessMock && (
-          <Tag color="gold">Демо-данные: операции в таблице недоступны</Tag>
-        )}
-        <Select
-          showSearch
-          value={targetEmployeeId}
-          onSearch={searchEmployees}
-          onChange={setTargetEmployeeId}
-          filterOption={false}
-          options={employeeOptions}
-          placeholder="Найти сотрудника для разрешения"
-          style={{ width: 420 }}
-          notFoundContent={employeeSearchLoading ? "Поиск..." : "Нет данных"}
-          allowClear
-        />
-        <Button type="primary" onClick={allowSelectedEmployee}>
-          Разрешить сотруднику
-        </Button>
-        <Button disabled={isAccessMock} onClick={() => runAction("grant")}>
-          Разрешить выбранных
-        </Button>
-        <Button
-          danger
-          disabled={isAccessMock}
-          onClick={() => runAction("block")}
-        >
-          Блокировать выбранных
-        </Button>
-        <Button disabled={isAccessMock} onClick={() => runAction("revoke")}>
-          Отозвать выбранных
-        </Button>
-        <Button disabled={isAccessMock} onClick={() => runAction("resync")}>
-          Resync выбранных
-        </Button>
-      </Space>
-
-      <Table
-        size="small"
-        rowKey={(record) => record.employeeId || record.id}
-        columns={accessColumns}
-        dataSource={accessItems}
-        loading={accessLoading}
-        rowSelection={{
-          selectedRowKeys: selectedEmployeeIds,
-          onChange: (keys) => setSelectedEmployeeIds(keys),
-          getCheckboxProps: (record) => ({
-            disabled: Boolean(record.isMock || !record.employeeId),
-          }),
-        }}
-        pagination={{
-          current: accessPagination.current,
-          pageSize: accessPagination.pageSize,
-          total: accessPagination.total,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
-          onChange: (page, pageSize) =>
-            setAccessPagination((prev) => ({
-              ...prev,
-              current: page,
-              pageSize: pageSize || prev.pageSize,
-            })),
-        }}
-      />
-    </div>
+    <SkudAccessTab
+      stats={stats}
+      statsLoading={statsLoading}
+      actionResult={actionResult}
+      setActionResult={setActionResult}
+      accessSearch={accessSearch}
+      setAccessSearch={setAccessSearch}
+      accessPagination={accessPagination}
+      setAccessPagination={setAccessPagination}
+      accessStatusFilter={accessStatusFilter}
+      setAccessStatusFilter={setAccessStatusFilter}
+      accessStatusOptions={ACCESS_STATUS_OPTIONS}
+      actionReason={actionReason}
+      setActionReason={setActionReason}
+      actionReasonCode={actionReasonCode}
+      setActionReasonCode={setActionReasonCode}
+      loadAccessStates={loadAccessStates}
+      isAccessMock={isAccessMock}
+      targetEmployeeId={targetEmployeeId}
+      setTargetEmployeeId={setTargetEmployeeId}
+      searchEmployees={searchEmployees}
+      employeeOptions={employeeOptions}
+      employeeSearchLoading={employeeSearchLoading}
+      allowSelectedEmployee={allowSelectedEmployee}
+      runAction={runAction}
+      accessColumns={accessColumns}
+      accessItems={accessItems}
+      accessLoading={accessLoading}
+      selectedEmployeeIds={selectedEmployeeIds}
+      setSelectedEmployeeIds={setSelectedEmployeeIds}
+    />
   );
 
   const eventsTab = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {statsCards}
-      <Space wrap>
-        <Select
-          placeholder="Решение"
-          style={{ width: 140 }}
-          value={eventsAllowFilter}
-          onChange={(value) => {
-            setEventsAllowFilter(value);
-            setEventsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-          options={[
-            { value: "true", label: "Разрешено" },
-            { value: "false", label: "Запрещено" },
-          ]}
-        />
-        <Select
-          placeholder="Направление"
-          style={{ width: 140 }}
-          value={eventsDirectionFilter}
-          onChange={(value) => {
-            setEventsDirectionFilter(value);
-            setEventsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-          options={[
-            { value: 1, label: "Выход" },
-            { value: 2, label: "Вход" },
-            { value: 3, label: "Неизвестно" },
-          ]}
-        />
-        <Input
-          placeholder="Точка доступа"
-          style={{ width: 160 }}
-          value={eventsAccessPoint}
-          onChange={(event) => {
-            setEventsAccessPoint(event.target.value);
-            setEventsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-        />
-        <RangePicker
-          value={eventsRange}
-          onChange={(value) => {
-            setEventsRange(value);
-            setEventsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-        />
-        <Button onClick={loadEvents}>Обновить</Button>
-      </Space>
-
-      <Table
-        size="small"
-        rowKey="id"
-        columns={eventsColumns}
-        dataSource={eventItems}
-        loading={eventsLoading}
-        pagination={{
-          current: eventsPagination.current,
-          pageSize: eventsPagination.pageSize,
-          total: eventsPagination.total,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
-          onChange: (page, pageSize) =>
-            setEventsPagination((prev) => ({
-              ...prev,
-              current: page,
-              pageSize: pageSize || prev.pageSize,
-            })),
-        }}
-      />
-    </div>
+    <SkudEventsTab
+      stats={stats}
+      statsLoading={statsLoading}
+      eventsAllowFilter={eventsAllowFilter}
+      setEventsAllowFilter={setEventsAllowFilter}
+      eventsDirectionFilter={eventsDirectionFilter}
+      setEventsDirectionFilter={setEventsDirectionFilter}
+      eventsAccessPoint={eventsAccessPoint}
+      setEventsAccessPoint={setEventsAccessPoint}
+      eventsRange={eventsRange}
+      setEventsRange={setEventsRange}
+      setEventsPagination={setEventsPagination}
+      loadEvents={loadEvents}
+      eventsColumns={eventsColumns}
+      eventItems={eventItems}
+      eventsLoading={eventsLoading}
+      eventsPagination={eventsPagination}
+    />
   );
 
   const cardsTab = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {statsCards}
-      <Space wrap>
-        <Input
-          placeholder="Номер карты / внешний ID"
-          style={{ width: 300 }}
-          value={cardsSearch}
-          onChange={(event) => {
-            setCardsSearch(event.target.value);
-            setCardsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-        />
-        <Select
-          placeholder="Статус карты"
-          style={{ width: 180 }}
-          value={cardsStatusFilter}
-          onChange={(value) => {
-            setCardsStatusFilter(value);
-            setCardsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-          options={Object.entries(cardStatusMetaMap).map(([value, meta]) => ({
-            value,
-            label: meta.label,
-          }))}
-        />
-        <Button onClick={loadCards}>Обновить</Button>
-      </Space>
-
-      <Space wrap>
-        {isCardsMock && (
-          <Tag color="gold">Демо-данные: операции с картами недоступны</Tag>
-        )}
-        <Input
-          placeholder="Номер карты"
-          style={{ width: 220 }}
-          value={registerCardNumber}
-          onChange={(event) => setRegisterCardNumber(event.target.value)}
-          allowClear
-        />
-        <Select
-          style={{ width: 120 }}
-          value={registerCardType}
-          onChange={setRegisterCardType}
-          options={[
-            { value: "rfid", label: "RFID" },
-            { value: "nfc", label: "NFC" },
-            { value: "barcode", label: "Barcode" },
-          ]}
-        />
-        <Input
-          placeholder="Внешний ID (опц.)"
-          style={{ width: 190 }}
-          value={registerCardExternalId}
-          onChange={(event) => setRegisterCardExternalId(event.target.value)}
-          allowClear
-        />
-        <Select
-          showSearch
-          value={registerCardEmployeeId}
-          onSearch={searchEmployees}
-          onChange={setRegisterCardEmployeeId}
-          filterOption={false}
-          options={employeeOptions}
-          placeholder="Привязать к сотруднику (опц.)"
-          style={{ width: 320 }}
-          notFoundContent={employeeSearchLoading ? "Поиск..." : "Нет данных"}
-          allowClear
-        />
-        <Button type="primary" disabled={isCardsMock} onClick={registerCard}>
-          Зарегистрировать карту
-        </Button>
-      </Space>
-
-      <Table
-        size="small"
-        rowKey="id"
-        columns={cardsColumns}
-        dataSource={cardItems}
-        loading={cardsLoading}
-        pagination={{
-          current: cardsPagination.current,
-          pageSize: cardsPagination.pageSize,
-          total: cardsPagination.total,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
-          onChange: (page, pageSize) =>
-            setCardsPagination((prev) => ({
-              ...prev,
-              current: page,
-              pageSize: pageSize || prev.pageSize,
-            })),
-        }}
-      />
-    </div>
+    <SkudCardsTab
+      stats={stats}
+      statsLoading={statsLoading}
+      cardsSearch={cardsSearch}
+      setCardsSearch={setCardsSearch}
+      setCardsPagination={setCardsPagination}
+      cardsStatusFilter={cardsStatusFilter}
+      setCardsStatusFilter={setCardsStatusFilter}
+      cardStatusOptions={CARD_STATUS_OPTIONS}
+      loadCards={loadCards}
+      isCardsMock={isCardsMock}
+      registerCardNumber={registerCardNumber}
+      setRegisterCardNumber={setRegisterCardNumber}
+      registerCardType={registerCardType}
+      setRegisterCardType={setRegisterCardType}
+      registerCardExternalId={registerCardExternalId}
+      setRegisterCardExternalId={setRegisterCardExternalId}
+      registerCardEmployeeId={registerCardEmployeeId}
+      setRegisterCardEmployeeId={setRegisterCardEmployeeId}
+      searchEmployees={searchEmployees}
+      employeeOptions={employeeOptions}
+      employeeSearchLoading={employeeSearchLoading}
+      registerCard={registerCard}
+      cardsColumns={cardsColumns}
+      cardItems={cardItems}
+      cardsLoading={cardsLoading}
+      cardsPagination={cardsPagination}
+    />
   );
 
   const qrTab = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {statsCards}
-      <Space wrap>
-        {isQrMock && (
-          <Tag color="gold">Демо-данные: операции QR недоступны</Tag>
-        )}
-        <Select
-          showSearch
-          value={qrEmployeeId}
-          onSearch={searchEmployees}
-          onChange={setQrEmployeeId}
-          filterOption={false}
-          options={employeeOptions}
-          placeholder="Сотрудник для генерации QR"
-          style={{ width: 360 }}
-          notFoundContent={employeeSearchLoading ? "Поиск..." : "Нет данных"}
-          allowClear
-        />
-        <Select
-          style={{ width: 160 }}
-          value={qrTokenType}
-          onChange={setQrTokenType}
-          options={[
-            { value: "persistent", label: "Постоянный" },
-            { value: "one_time", label: "Одноразовый" },
-          ]}
-        />
-        <Input
-          placeholder="TTL (минуты)"
-          value={qrTtlMinutes}
-          onChange={(event) => setQrTtlMinutes(event.target.value)}
-          style={{ width: 140 }}
-        />
-        <Button type="primary" disabled={isQrMock} onClick={handleGenerateQr}>
-          Сгенерировать QR
-        </Button>
-      </Space>
-
-      {generatedQrPayload?.token && (
-        <Card size="small" title="Последний сгенерированный QR">
-          <Space wrap align="start">
-            <QRCode value={generatedQrPayload.token} size={128} />
-            <Space direction="vertical">
-              <Text type="secondary">
-                Истекает:{" "}
-                {generatedQrPayload.expiresAt
-                  ? dayjs(generatedQrPayload.expiresAt).format(
-                      "DD.MM.YYYY HH:mm:ss",
-                    )
-                  : "-"}
-              </Text>
-              <Input.TextArea
-                value={generatedQrPayload.token}
-                rows={4}
-                readOnly
-              />
-            </Space>
-          </Space>
-        </Card>
-      )}
-
-      <Card size="small" title="Проверка QR">
-        <Space wrap>
-          <Input.TextArea
-            value={qrValidateToken}
-            onChange={(event) => setQrValidateToken(event.target.value)}
-            placeholder="Вставьте токен QR"
-            rows={3}
-            style={{ width: 520 }}
-          />
-          <Button onClick={handleValidateQr}>Проверить</Button>
-        </Space>
-        {qrValidationResult && (
-          <Space style={{ marginTop: 12 }} wrap>
-            <Tag color={qrValidationResult.allow ? "green" : "red"}>
-              {qrValidationResult.allow ? "Разрешено" : "Запрещено"}
-            </Tag>
-            <Text>{qrValidationResult.message || "-"}</Text>
-            <Text type="secondary">
-              Код: {getReasonCodeLabel(qrValidationResult.reasonCode)}
-            </Text>
-          </Space>
-        )}
-      </Card>
-
-      <Space wrap>
-        <Select
-          placeholder="Статус QR"
-          style={{ width: 180 }}
-          value={qrStatusFilter}
-          onChange={(value) => {
-            setQrStatusFilter(value);
-            setQrTokensPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-          options={Object.entries(qrStatusMetaMap).map(([value, meta]) => ({
-            value,
-            label: meta.label,
-          }))}
-        />
-        <Button onClick={loadQrData}>Обновить</Button>
-      </Space>
-
-      <Card size="small" title="Выданные QR">
-        <Table
-          size="small"
-          rowKey="id"
-          columns={qrTokenColumns}
-          dataSource={qrTokens}
-          loading={qrTokensLoading}
-          pagination={{
-            current: qrTokensPagination.current,
-            pageSize: qrTokensPagination.pageSize,
-            total: qrTokensPagination.total,
-            showSizeChanger: true,
-            pageSizeOptions: ["10", "20", "50", "100"],
-            onChange: (page, pageSize) =>
-              setQrTokensPagination((prev) => ({
-                ...prev,
-                current: page,
-                pageSize: pageSize || prev.pageSize,
-              })),
-          }}
-        />
-      </Card>
-
-      <Card size="small" title="Журнал отказов QR">
-        <Table
-          size="small"
-          rowKey="id"
-          columns={qrDenyColumns}
-          dataSource={qrDenies}
-          loading={qrDeniesLoading}
-          pagination={false}
-        />
-      </Card>
-    </div>
+    <SkudQrTab
+      stats={stats}
+      statsLoading={statsLoading}
+      isQrMock={isQrMock}
+      qrEmployeeId={qrEmployeeId}
+      setQrEmployeeId={setQrEmployeeId}
+      searchEmployees={searchEmployees}
+      employeeOptions={employeeOptions}
+      employeeSearchLoading={employeeSearchLoading}
+      qrTokenType={qrTokenType}
+      setQrTokenType={setQrTokenType}
+      qrTtlMinutes={qrTtlMinutes}
+      setQrTtlMinutes={setQrTtlMinutes}
+      handleGenerateQr={handleGenerateQr}
+      generatedQrPayload={generatedQrPayload}
+      qrValidateToken={qrValidateToken}
+      setQrValidateToken={setQrValidateToken}
+      handleValidateQr={handleValidateQr}
+      qrValidationResult={qrValidationResult}
+      getReasonCodeLabel={getReasonCodeLabel}
+      qrStatusFilter={qrStatusFilter}
+      setQrStatusFilter={setQrStatusFilter}
+      setQrTokensPagination={setQrTokensPagination}
+      qrStatusOptions={QR_STATUS_OPTIONS}
+      loadQrData={loadQrData}
+      qrTokenColumns={qrTokenColumns}
+      qrTokens={qrTokens}
+      qrTokensLoading={qrTokensLoading}
+      qrTokensPagination={qrTokensPagination}
+      qrDenyColumns={qrDenyColumns}
+      qrDenies={qrDenies}
+      qrDeniesLoading={qrDeniesLoading}
+    />
   );
 
   const syncTab = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Space wrap>
-        {isSyncMock && (
-          <Tag color="gold">Демо-данные: журнал синхронизации недоступен</Tag>
-        )}
-        <Select
-          placeholder="Статус синхронизации"
-          style={{ width: 220 }}
-          value={syncStatusFilter}
-          onChange={(value) => {
-            setSyncStatusFilter(value);
-            setSyncJobsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-          options={Object.entries(syncStatusMetaMap).map(([value, meta]) => ({
-            value,
-            label: meta.label,
-          }))}
-        />
-        <Input
-          placeholder="Операция (напр. manual_resync)"
-          style={{ width: 260 }}
-          value={syncOperationFilter}
-          onChange={(event) => {
-            setSyncOperationFilter(event.target.value);
-            setSyncJobsPagination((prev) => ({ ...prev, current: 1 }));
-          }}
-          allowClear
-        />
-        <Button onClick={loadSyncJobs}>Обновить</Button>
-      </Space>
-
-      <Table
-        size="small"
-        rowKey="id"
-        columns={syncColumns}
-        dataSource={syncJobs}
-        loading={syncJobsLoading}
-        pagination={{
-          current: syncJobsPagination.current,
-          pageSize: syncJobsPagination.pageSize,
-          total: syncJobsPagination.total,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
-          onChange: (page, pageSize) =>
-            setSyncJobsPagination((prev) => ({
-              ...prev,
-              current: page,
-              pageSize: pageSize || prev.pageSize,
-            })),
-        }}
-      />
-    </div>
+    <SkudSyncTab
+      isSyncMock={isSyncMock}
+      syncStatusFilter={syncStatusFilter}
+      setSyncStatusFilter={setSyncStatusFilter}
+      setSyncJobsPagination={setSyncJobsPagination}
+      syncStatusOptions={SYNC_STATUS_OPTIONS}
+      syncOperationFilter={syncOperationFilter}
+      setSyncOperationFilter={setSyncOperationFilter}
+      loadSyncJobs={loadSyncJobs}
+      syncColumns={syncColumns}
+      syncJobs={syncJobs}
+      syncJobsLoading={syncJobsLoading}
+      syncJobsPagination={syncJobsPagination}
+    />
   );
 
   const settingsTab = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Card
-        size="small"
-        title="Интеграция WebDel / Sigur"
-        loading={settingsLoading}
-      >
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Space wrap>
-            <Text>Включить WebDel</Text>
-            <Switch
-              checked={Boolean(skudSettings.webdelEnabled)}
-              onChange={(checked) =>
-                updateSkudSettingField("webdelEnabled", checked)
-              }
-            />
-          </Space>
-          <Input
-            placeholder="WebDel Base URL"
-            value={skudSettings.webdelBaseUrl || ""}
-            onChange={(event) =>
-              updateSkudSettingField("webdelBaseUrl", event.target.value)
-            }
-          />
-          <Input
-            placeholder="Basic Auth логин"
-            value={skudSettings.webdelBasicUser || ""}
-            onChange={(event) =>
-              updateSkudSettingField("webdelBasicUser", event.target.value)
-            }
-          />
-          <Input.Password
-            placeholder="Basic Auth пароль"
-            value={skudSettings.webdelBasicPassword || ""}
-            onChange={(event) =>
-              updateSkudSettingField("webdelBasicPassword", event.target.value)
-            }
-          />
-          <Input.TextArea
-            rows={3}
-            placeholder="IP allowlist (через запятую)"
-            value={skudSettings.webdelIpAllowlist || ""}
-            onChange={(event) =>
-              updateSkudSettingField("webdelIpAllowlist", event.target.value)
-            }
-          />
-          <Select
-            value={skudSettings.integrationMode || "webdel"}
-            onChange={(value) =>
-              updateSkudSettingField("integrationMode", value)
-            }
-            options={[
-              { value: "mock", label: "Mock" },
-              { value: "webdel", label: "WebDel" },
-              { value: "sigur_rest", label: "Sigur REST" },
-            ]}
-            style={{ width: 240 }}
-          />
-        </Space>
-      </Card>
-
-      <Card size="small" title="Feature Flags" loading={settingsLoading}>
-        <Space direction="vertical">
-          <Space wrap>
-            <Text>QR</Text>
-            <Switch
-              checked={Boolean(skudSettings.featureQrEnabled)}
-              onChange={(checked) =>
-                updateSkudSettingField("featureQrEnabled", checked)
-              }
-            />
-          </Space>
-          <Space wrap>
-            <Text>Карты</Text>
-            <Switch
-              checked={Boolean(skudSettings.featureCardsEnabled)}
-              onChange={(checked) =>
-                updateSkudSettingField("featureCardsEnabled", checked)
-              }
-            />
-          </Space>
-          <Space wrap>
-            <Text>Sigur REST</Text>
-            <Switch
-              checked={Boolean(skudSettings.featureSigurRestEnabled)}
-              onChange={(checked) =>
-                updateSkudSettingField("featureSigurRestEnabled", checked)
-              }
-            />
-          </Space>
-        </Space>
-      </Card>
-
-      <Space wrap>
-        <Button
-          type="primary"
-          loading={settingsSaving}
-          onClick={handleSaveSkudSettings}
-        >
-          Сохранить настройки
-        </Button>
-        <Button
-          loading={settingsCheckLoading}
-          onClick={handleCheckSkudConnection}
-        >
-          Проверить подключение
-        </Button>
-        <Button onClick={loadSkudSettings}>Обновить</Button>
-      </Space>
-
-      {settingsCheckResult && (
-        <Card size="small" title="Результат проверки подключения">
-          <Space direction="vertical">
-            <Tag color={settingsCheckResult.ok ? "green" : "red"}>
-              {settingsCheckResult.ok ? "Успешно" : "Ошибка"}
-            </Tag>
-            <Text>{settingsCheckResult.message || "-"}</Text>
-            <Text type="secondary">
-              Проверено:{" "}
-              {settingsCheckResult.checkedAt
-                ? dayjs(settingsCheckResult.checkedAt).format(
-                    "DD.MM.YYYY HH:mm:ss",
-                  )
-                : "-"}
-            </Text>
-            {settingsCheckResult.status ? (
-              <Text type="secondary">
-                HTTP статус: {settingsCheckResult.status}
-              </Text>
-            ) : null}
-          </Space>
-        </Card>
-      )}
-    </div>
+    <SkudSettingsTab
+      settingsLoading={settingsLoading}
+      skudSettings={skudSettings}
+      updateSkudSettingField={updateSkudSettingField}
+      settingsSaving={settingsSaving}
+      handleSaveSkudSettings={handleSaveSkudSettings}
+      settingsCheckLoading={settingsCheckLoading}
+      handleCheckSkudConnection={handleCheckSkudConnection}
+      loadSkudSettings={loadSkudSettings}
+      settingsCheckResult={settingsCheckResult}
+    />
   );
+
+  const tabsItems = [
+    { key: "access", label: "Доступ", children: accessTab },
+    { key: "events", label: "События", children: eventsTab },
+    { key: "cards", label: "Карты", children: cardsTab },
+    { key: "qr", label: "QR", children: qrTab },
+    { key: "sync", label: "Синхронизация", children: syncTab },
+    { key: "settings", label: "Настройки", children: settingsTab },
+  ];
 
   const isDemo =
     isStatsMock ||
@@ -2354,23 +1874,7 @@ const SkudAdministrationPage = () => {
         },
       }}
     >
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "16px 24px",
-          borderBottom: "1px solid #f0f0f0",
-        }}
-      >
-        <Space align="center" size={10}>
-          <Title level={4} style={{ margin: 0 }}>
-            СКУД
-          </Title>
-          {isDemo && <Tag color="gold">Демо-данные</Tag>}
-        </Space>
-        <Text type="secondary">
-          Управление доступом, картами, QR, настройками и журналом событий.
-        </Text>
-      </div>
+      <SkudPageHeader isDemo={isDemo} />
 
       <div
         style={{
@@ -2380,54 +1884,21 @@ const SkudAdministrationPage = () => {
           padding: "16px 24px 24px 24px",
         }}
       >
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
-            { key: "access", label: "Доступ", children: accessTab },
-            { key: "events", label: "События", children: eventsTab },
-            { key: "cards", label: "Карты", children: cardsTab },
-            { key: "qr", label: "QR", children: qrTab },
-            { key: "sync", label: "Синхронизация", children: syncTab },
-            { key: "settings", label: "Настройки", children: settingsTab },
-          ]}
-        />
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabsItems} />
       </div>
 
-      <Modal
-        title={
-          bindCardTarget?.cardNumber
-            ? `Привязать карту ${bindCardTarget.cardNumber}`
-            : "Привязать карту"
-        }
-        open={bindModalOpen}
-        onCancel={() => {
-          setBindModalOpen(false);
-          setBindCardTarget(null);
-          setBindEmployeeId(undefined);
-        }}
-        onOk={confirmBindCard}
-        okText="Привязать"
-        cancelText="Отмена"
-      >
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Text type="secondary">
-            Выберите сотрудника для привязки выбранной карты.
-          </Text>
-          <Select
-            showSearch
-            value={bindEmployeeId}
-            onSearch={searchEmployees}
-            onChange={setBindEmployeeId}
-            filterOption={false}
-            options={employeeOptions}
-            placeholder="Сотрудник"
-            style={{ width: "100%" }}
-            notFoundContent={employeeSearchLoading ? "Поиск..." : "Нет данных"}
-            allowClear
-          />
-        </Space>
-      </Modal>
+      <SkudBindCardModal
+        bindModalOpen={bindModalOpen}
+        bindCardTarget={bindCardTarget}
+        bindEmployeeId={bindEmployeeId}
+        setBindModalOpen={setBindModalOpen}
+        setBindCardTarget={setBindCardTarget}
+        setBindEmployeeId={setBindEmployeeId}
+        confirmBindCard={confirmBindCard}
+        searchEmployees={searchEmployees}
+        employeeOptions={employeeOptions}
+        employeeSearchLoading={employeeSearchLoading}
+      />
     </Card>
   );
 };
