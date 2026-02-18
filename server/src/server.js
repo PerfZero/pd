@@ -46,8 +46,9 @@ const PORT = process.env.PORT || 5000;
 // ======================================
 // TRUST PROXY - Для работы за Nginx
 // ======================================
-// Доверять заголовкам от прокси (X-Forwarded-For, X-Real-IP)
-app.set("trust proxy", 1);
+// Включаем trust proxy только при явной конфигурации в проде
+// (иначе возможен spoofing X-Forwarded-* заголовков при прямом доступе к приложению)
+app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 
 // ======================================
 // RATE LIMITING - Защита от брутфорса
@@ -146,7 +147,6 @@ app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
   });
 });
 

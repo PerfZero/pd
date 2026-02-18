@@ -116,22 +116,17 @@ export const useAuthStore = create(
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      partialize: () => ({}),
       onRehydrateStorage: () => (state, error) => {
         if (error || !state) {
           return;
         }
 
-        // Нормализуем состояние после восстановления из localStorage
-        const hasToken = Boolean(state.token);
-        state.isAuthenticated = hasToken;
-        if (!hasToken) {
-          state.user = null;
-        }
+        // Access token не храним в localStorage: после reload выполняется bootstrap через refresh cookie
+        state.user = null;
+        state.token = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
       },
     },
   ),

@@ -1,6 +1,6 @@
-import multer from 'multer';
-import path from 'path';
-import { AppError } from './errorHandler.js';
+import multer from "multer";
+import path from "path";
+import { AppError } from "./errorHandler.js";
 
 // Функция для исправления кодировки filename (UTF-8 декодированный как ISO-8859-1)
 const decodeFilename = (filename) => {
@@ -9,20 +9,20 @@ const decodeFilename = (filename) => {
     if (/[\u0400-\u04FF]/.test(filename)) {
       return filename;
     }
-    
+
     // Пытаемся декодировать как UTF-8 bytes, которые были неправильно интерпретированы как ISO-8859-1
-    const bytes = Buffer.from(filename, 'latin1');
-    const corrected = bytes.toString('utf8');
-    
+    const bytes = Buffer.from(filename, "latin1");
+    const corrected = bytes.toString("utf8");
+
     // Проверяем, содержит ли исправленная версия кириллицу
     if (/[\u0400-\u04FF]/.test(corrected)) {
       return corrected;
     }
-    
+
     // Если исправление не помогло, возвращаем исходное имя
     return filename;
   } catch (error) {
-    console.warn('⚠️ Error decoding filename:', filename, error.message);
+    console.warn("⚠️ Error decoding filename:", filename, error.message);
     return filename;
   }
 };
@@ -34,14 +34,14 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   // Разрешенные типы файлов
   const allowedTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'application/pdf',
-    'application/vnd.ms-excel', // XLS
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
-    'application/msword', // DOC
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "application/pdf",
+    "application/vnd.ms-excel", // XLS
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // XLSX
+    "application/msword", // DOC
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX
   ];
 
   if (allowedTypes.includes(file.mimetype)) {
@@ -56,8 +56,9 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024 // 100MB default
-  }
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 20 * 1024 * 1024, // 20MB default
+    files: parseInt(process.env.MAX_FILES_PER_REQUEST) || 10,
+  },
 });
 
 // Middleware для исправления кодировки filename
@@ -68,22 +69,21 @@ export const fixFilenameEncoding = (req, res, next) => {
       req.file.originalname = decodeFilename(req.file.originalname);
       console.log(`📝 Fixed filename encoding: ${req.file.originalname}`);
     }
-    
+
     // Исправляем несколько файлов
     if (req.files && Array.isArray(req.files)) {
-      req.files = req.files.map(file => ({
+      req.files = req.files.map((file) => ({
         ...file,
-        originalname: decodeFilename(file.originalname)
+        originalname: decodeFilename(file.originalname),
       }));
       console.log(`📝 Fixed ${req.files.length} filename encodings`);
     }
-    
+
     next();
   } catch (error) {
-    console.error('❌ Error in fixFilenameEncoding middleware:', error);
+    console.error("❌ Error in fixFilenameEncoding middleware:", error);
     next(error);
   }
 };
 
 export default upload;
-

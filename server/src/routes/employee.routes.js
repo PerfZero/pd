@@ -29,6 +29,16 @@ const importRateLimiter = rateLimit({
   },
 });
 
+// Rate limiter для проверки ИНН (защита от перебора)
+const checkInnRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 минута
+  max: 30,
+  message: "Слишком много проверок ИНН. Попробуйте снова через минуту.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.ip,
+});
+
 // Все маршруты требуют аутентификации
 router.use(authenticate);
 
@@ -113,7 +123,11 @@ router.delete(
   "/my-profile/telegram/link",
   telegramController.unlinkMyTelegramBinding,
 );
-router.get("/check-inn", employeeController.checkEmployeeByInn); // Проверить наличие сотрудника по ИНН
+router.get(
+  "/check-inn",
+  checkInnRateLimiter,
+  employeeController.checkEmployeeByInn,
+); // Проверить наличие сотрудника по ИНН
 router.get("/search", employeeController.searchEmployees); // Поиск
 router.get(
   "/document-types",

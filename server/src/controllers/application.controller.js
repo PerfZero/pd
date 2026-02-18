@@ -21,6 +21,7 @@ import storageProvider from "../config/storage.js";
 import { generateApplicationDocument } from "../services/documentService.js";
 import EmployeeStatusService from "../services/employeeStatusService.js";
 import { getAccessibleEmployeeIds } from "../utils/permissionUtils.js";
+import { AppError } from "../middleware/errorHandler.js";
 
 const STATUS_GROUP = "status";
 const PROCESSABLE_STATUSES = new Set(["status_new", "status_tb_passed"]);
@@ -528,17 +529,16 @@ export const getApplicationById = async (req, res) => {
 };
 
 // Создать заявку
-export const createApplication = async (req, res) => {
-  console.log(
-    "[createApplication] ===== START ===== req.body:",
-    JSON.stringify(req.body, null, 2),
-  );
-  console.log(
-    "[createApplication] user:",
-    req.user?.id,
-    "counterpartyId:",
-    req.user?.counterpartyId,
-  );
+export const createApplication = async (req, res, next) => {
+  if (process.env.NODE_ENV === "development") {
+    console.log(
+      "[createApplication] start",
+      "user:",
+      req.user?.id,
+      "counterpartyId:",
+      req.user?.counterpartyId,
+    );
+  }
 
   const transaction = await sequelize.transaction();
 
@@ -566,10 +566,12 @@ export const createApplication = async (req, res) => {
     );
     if (deniedEmployeeIds.length > 0) {
       await transaction.rollback();
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав для работы с выбранными сотрудниками",
-      });
+      return next(
+        new AppError(
+          "Недостаточно прав для работы с выбранными сотрудниками",
+          403,
+        ),
+      );
     }
 
     if (applicationData.constructionSiteId && req.user.role !== "admin") {
@@ -583,10 +585,12 @@ export const createApplication = async (req, res) => {
 
       if (!siteMapping) {
         await transaction.rollback();
-        return res.status(403).json({
-          success: false,
-          message: "Недостаточно прав для выбора объекта строительства",
-        });
+        return next(
+          new AppError(
+            "Недостаточно прав для выбора объекта строительства",
+            403,
+          ),
+        );
       }
     }
 
@@ -620,10 +624,7 @@ export const createApplication = async (req, res) => {
         subcontract.counterparty2Id !== req.user.counterpartyId
       ) {
         await transaction.rollback();
-        return res.status(403).json({
-          success: false,
-          message: "Недостаточно прав для выбора договора",
-        });
+        return next(new AppError("Недостаточно прав для выбора договора", 403));
       }
 
       if (
@@ -736,11 +737,12 @@ export const createApplication = async (req, res) => {
         );
       if (deniedSelectedEmployeeIds.length > 0) {
         await transaction.rollback();
-        return res.status(403).json({
-          success: false,
-          message:
+        return next(
+          new AppError(
             "Недостаточно прав для привязки файлов к выбранным сотрудникам",
-        });
+            403,
+          ),
+        );
       }
 
       const files = await File.findAll({
@@ -828,6 +830,10 @@ export const createApplication = async (req, res) => {
     await transaction.rollback();
     console.error("Error creating application:", error);
 
+    if (error.statusCode) {
+      return next(error);
+    }
+
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
@@ -848,7 +854,7 @@ export const createApplication = async (req, res) => {
 };
 
 // Обновить заявку
-export const updateApplication = async (req, res) => {
+export const updateApplication = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -890,10 +896,12 @@ export const updateApplication = async (req, res) => {
 
       if (!siteMapping) {
         await transaction.rollback();
-        return res.status(403).json({
-          success: false,
-          message: "Недостаточно прав для выбора объекта строительства",
-        });
+        return next(
+          new AppError(
+            "Недостаточно прав для выбора объекта строительства",
+            403,
+          ),
+        );
       }
     }
 
@@ -924,10 +932,7 @@ export const updateApplication = async (req, res) => {
         subcontract.counterparty2Id !== req.user.counterpartyId
       ) {
         await transaction.rollback();
-        return res.status(403).json({
-          success: false,
-          message: "Недостаточно прав для выбора договора",
-        });
+        return next(new AppError("Недостаточно прав для выбора договора", 403));
       }
 
       if (
@@ -969,10 +974,12 @@ export const updateApplication = async (req, res) => {
       );
       if (deniedEmployeeIds.length > 0) {
         await transaction.rollback();
-        return res.status(403).json({
-          success: false,
-          message: "Недостаточно прав для работы с выбранными сотрудниками",
-        });
+        return next(
+          new AppError(
+            "Недостаточно прав для работы с выбранными сотрудниками",
+            403,
+          ),
+        );
       }
 
       // Получаем старый список сотрудников из заявки
@@ -1062,6 +1069,10 @@ export const updateApplication = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating application:", error);
+
+    if (error.statusCode) {
+      return next(error);
+    }
 
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
@@ -1295,7 +1306,7 @@ export const copyApplication = async (req, res) => {
 };
 
 // Получить договоры для выбранного контрагента и объекта
-export const getContractsForApplication = async (req, res) => {
+export const getContractsForApplication = async (req, res, next) => {
   try {
     const { counterpartyId, constructionSiteId } = req.query;
 
@@ -1311,10 +1322,9 @@ export const getContractsForApplication = async (req, res) => {
       req.user.role !== "admin" &&
       req.user.counterpartyId !== counterpartyId
     ) {
-      return res.status(403).json({
-        success: false,
-        message: "Нет доступа к данным другого контрагента",
-      });
+      return next(
+        new AppError("Нет доступа к данным другого контрагента", 403),
+      );
     }
 
     // Получаем контрагента
@@ -1378,6 +1388,9 @@ export const getContractsForApplication = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching contracts:", error);
+    if (error.statusCode) {
+      return next(error);
+    }
     res.status(500).json({
       success: false,
       message: "Ошибка при получении договоров",
@@ -1387,7 +1400,7 @@ export const getContractsForApplication = async (req, res) => {
 };
 
 // Получить сотрудников для выбранного контрагента
-export const getEmployeesForApplication = async (req, res) => {
+export const getEmployeesForApplication = async (req, res, next) => {
   try {
     const { counterpartyId } = req.query;
 
@@ -1396,6 +1409,15 @@ export const getEmployeesForApplication = async (req, res) => {
         success: false,
         message: "Требуется counterpartyId",
       });
+    }
+
+    if (
+      req.user.role !== "admin" &&
+      String(req.user.counterpartyId) !== String(counterpartyId)
+    ) {
+      return next(
+        new AppError("Нет доступа к данным другого контрагента", 403),
+      );
     }
 
     // Теперь сотрудники связаны с контрагентами через маппинг
@@ -1425,6 +1447,9 @@ export const getEmployeesForApplication = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching employees:", error);
+    if (error.statusCode) {
+      return next(error);
+    }
     res.status(500).json({
       success: false,
       message: "Ошибка при получении сотрудников",
@@ -1480,7 +1505,7 @@ export const exportApplicationToWord = async (req, res) => {
 };
 
 // Выгрузить согласия на обработку перс. данных Застройщика в ZIP
-export const downloadDeveloperBiometricConsents = async (req, res) => {
+export const downloadDeveloperBiometricConsents = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { employeeIds } = req.body; // Массив ID выбранных сотрудников
@@ -1521,10 +1546,12 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
       "read",
     );
     if (deniedEmployeeIds.length > 0) {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав для работы с выбранными сотрудниками",
-      });
+      return next(
+        new AppError(
+          "Недостаточно прав для работы с выбранными сотрудниками",
+          403,
+        ),
+      );
     }
 
     const applicationEmployeeIdSet = new Set(
@@ -1535,10 +1562,9 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
     );
 
     if (invalidEmployeeIds.length > 0) {
-      return res.status(403).json({
-        success: false,
-        message: "Сотрудники не принадлежат выбранной заявке",
-      });
+      return next(
+        new AppError("Сотрудники не принадлежат выбранной заявке", 403),
+      );
     }
 
     // Получаем согласия на перс. данные Застройщика для выбранных сотрудников
@@ -1627,6 +1653,9 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
     await archive.finalize();
   } catch (error) {
     console.error("Error downloading biometric consents:", error);
+    if (error.statusCode && !res.headersSent) {
+      return next(error);
+    }
 
     // Проверяем, был ли уже отправлен заголовок ответа
     if (!res.headersSent) {

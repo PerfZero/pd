@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticate } from "../middleware/auth.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 import upload, { fixFilenameEncoding } from "../middleware/upload.js";
 import {
   getOtCategories,
@@ -54,6 +54,7 @@ import {
 const router = express.Router();
 
 router.use(authenticate);
+router.use(authorize("admin", "user", "ot_admin", "ot_engineer"));
 
 // Categories
 router.get("/categories", getOtCategories);

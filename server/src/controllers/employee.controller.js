@@ -698,11 +698,12 @@ export const createEmployee = async (req, res, next) => {
         "default_counterparty_id",
       );
       if (req.user.counterpartyId !== defaultCounterpartyId) {
-        return res.status(403).json({
-          success: false,
-          message:
+        return next(
+          new AppError(
             "Привязка сотрудников доступна только в контрагенте по умолчанию",
-        });
+            403,
+          ),
+        );
       }
 
       // Проверяем, есть ли уже связь в user_employee_mapping
@@ -1023,10 +1024,9 @@ export const updateEmployee = async (req, res, next) => {
       counterpartyId !== null &&
       req.user.role !== "admin"
     ) {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав для изменения контрагента",
-      });
+      return next(
+        new AppError("Недостаточно прав для изменения контрагента", 403),
+      );
     }
 
     if (counterpartyId !== undefined && counterpartyId !== null) {
@@ -1654,10 +1654,7 @@ export const deleteEmployee = async (req, res, next) => {
     }
 
     if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     await employee.update({
@@ -1708,10 +1705,7 @@ export const markEmployeeForDeletion = async (req, res, next) => {
     }
 
     if (req.user.role !== "user") {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     await checkEmployeeAccess(req.user, employee);
@@ -1765,10 +1759,7 @@ export const unmarkEmployeeForDeletion = async (req, res, next) => {
     }
 
     if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     await employee.update({
@@ -1943,10 +1934,7 @@ export const restoreEmployee = async (req, res, next) => {
     }
 
     if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     const duplicateChecks = [];
@@ -2023,10 +2011,7 @@ export const updateAllStatusesUploadFlag = async (req, res, next) => {
       "write",
     );
     if (deniedIds.length > 0) {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     // Обновляем все активные статусы сотрудника
@@ -2071,10 +2056,7 @@ export const updateStatusUploadFlag = async (req, res, next) => {
       "write",
     );
     if (deniedIds.length > 0) {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     // Проверяем наличие статуса
@@ -2088,10 +2070,7 @@ export const updateStatusUploadFlag = async (req, res, next) => {
 
     // Проверяем что статус принадлежит этому сотруднику
     if (statusMapping.employeeId !== employeeId) {
-      return res.status(403).json({
-        success: false,
-        message: "Доступ запрещен",
-      });
+      return next(new AppError("Доступ запрещен", 403));
     }
 
     // Обновляем флаг
@@ -2129,10 +2108,7 @@ export const setEditedStatus = async (req, res, next) => {
       "write",
     );
     if (deniedIds.length > 0) {
-      return res.status(403).json({
-        success: false,
-        message: "Недостаточно прав",
-      });
+      return next(new AppError("Недостаточно прав", 403));
     }
 
     // Найти ID статуса "status_hr_edited"

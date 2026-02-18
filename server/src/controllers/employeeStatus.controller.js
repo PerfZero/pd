@@ -1,5 +1,6 @@
 import EmployeeStatusService from "../services/employeeStatusService.js";
 import { getAccessibleEmployeeIds } from "../utils/permissionUtils.js";
+import { AppError } from "../middleware/errorHandler.js";
 
 /**
  * Контроллер для управления статусами сотрудников
@@ -8,32 +9,32 @@ export const employeeStatusController = {
   /**
    * Получить все статусы
    */
-  async getAllStatuses(req, res) {
+  async getAllStatuses(req, res, next) {
     try {
       const statuses = await EmployeeStatusService.getAllStatuses();
       res.json(statuses);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Получить статусы по группе
    */
-  async getStatusesByGroup(req, res) {
+  async getStatusesByGroup(req, res, next) {
     try {
       const { group } = req.params;
       const statuses = await EmployeeStatusService.getStatusesByGroup(group);
       res.json(statuses);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Получить текущий статус сотрудника по группе
    */
-  async getEmployeeCurrentStatus(req, res) {
+  async getEmployeeCurrentStatus(req, res, next) {
     try {
       const { employeeId, group } = req.params;
       const { deniedIds } = await getAccessibleEmployeeIds(
@@ -43,7 +44,7 @@ export const employeeStatusController = {
       );
 
       if (deniedIds.length > 0) {
-        return res.status(403).json({ error: "Недостаточно прав" });
+        return next(new AppError("Недостаточно прав", 403));
       }
 
       const status = await EmployeeStatusService.getCurrentStatus(
@@ -57,14 +58,14 @@ export const employeeStatusController = {
 
       res.json(status);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Получить все текущие статусы сотрудника
    */
-  async getEmployeeAllStatuses(req, res) {
+  async getEmployeeAllStatuses(req, res, next) {
     try {
       const { employeeId } = req.params;
       const { deniedIds } = await getAccessibleEmployeeIds(
@@ -74,21 +75,21 @@ export const employeeStatusController = {
       );
 
       if (deniedIds.length > 0) {
-        return res.status(403).json({ error: "Недостаточно прав" });
+        return next(new AppError("Недостаточно прав", 403));
       }
 
       const statuses =
         await EmployeeStatusService.getAllCurrentStatuses(employeeId);
       res.json(statuses);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Установить новый статус для сотрудника
    */
-  async setEmployeeStatus(req, res) {
+  async setEmployeeStatus(req, res, next) {
     try {
       const { employeeId } = req.params;
       const { statusId } = req.body;
@@ -104,7 +105,7 @@ export const employeeStatusController = {
         "write",
       );
       if (deniedIds.length > 0) {
-        return res.status(403).json({ error: "Недостаточно прав" });
+        return next(new AppError("Недостаточно прав", 403));
       }
 
       const mapping = await EmployeeStatusService.setStatus(
@@ -114,14 +115,14 @@ export const employeeStatusController = {
       );
       res.json(mapping);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Получить сотрудника со всеми его текущими статусами
    */
-  async getEmployeeWithStatuses(req, res) {
+  async getEmployeeWithStatuses(req, res, next) {
     try {
       const { employeeId } = req.params;
       const { deniedIds } = await getAccessibleEmployeeIds(
@@ -131,21 +132,21 @@ export const employeeStatusController = {
       );
 
       if (deniedIds.length > 0) {
-        return res.status(403).json({ error: "Недостаточно прав" });
+        return next(new AppError("Недостаточно прав", 403));
       }
 
       const employee =
         await EmployeeStatusService.getEmployeeWithStatuses(employeeId);
       res.json(employee);
     } catch (error) {
-      res.status(404).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Получить список сотрудников со статусами
    */
-  async getEmployeesWithStatuses(req, res) {
+  async getEmployeesWithStatuses(req, res, next) {
     try {
       const { limit = 50, offset = 0 } = req.query;
       const result = await EmployeeStatusService.getEmployeesWithStatuses({
@@ -154,14 +155,14 @@ export const employeeStatusController = {
       });
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   },
 
   /**
    * Получить статусы для нескольких сотрудников одним запросом (batch)
    */
-  async getStatusesBatch(req, res) {
+  async getStatusesBatch(req, res, next) {
     try {
       const { employeeIds } = req.body;
 
@@ -187,14 +188,14 @@ export const employeeStatusController = {
         "read",
       );
       if (deniedIds.length > 0) {
-        return res.status(403).json({ error: "Недостаточно прав" });
+        return next(new AppError("Недостаточно прав", 403));
       }
 
       const statuses =
         await EmployeeStatusService.getStatusesBatch(employeeIds);
       res.json(statuses);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   },
 };
