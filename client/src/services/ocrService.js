@@ -1,6 +1,6 @@
 import api from "./api";
 
-export const ocrService = {
+const ocrService = {
   recognizeDocument: async ({
     documentType,
     fileId,

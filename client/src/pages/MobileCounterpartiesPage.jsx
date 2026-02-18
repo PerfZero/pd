@@ -19,8 +19,10 @@ const MobileCounterpartiesPage = () => {
   const [counterparties, setCounterparties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCounterparty, setEditingCounterparty] = useState(null);
+  const [modalState, setModalState] = useState({
+    open: false,
+    editingCounterparty: null,
+  });
   const [form] = Form.useForm();
 
   // Загрузить контрагентов
@@ -58,18 +60,23 @@ const MobileCounterpartiesPage = () => {
 
   // Открыть форму редактирования
   const handleEdit = (counterparty) => {
-    setEditingCounterparty(counterparty);
+    setModalState({
+      open: true,
+      editingCounterparty: counterparty,
+    });
     form.setFieldsValue(counterparty);
-    setIsModalOpen(true);
   };
 
   // Сохранить изменения контрагента
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      await counterpartyService.update(editingCounterparty.id, values);
+      await counterpartyService.update(
+        modalState.editingCounterparty.id,
+        values,
+      );
       message.success("Контрагент обновлен");
-      setIsModalOpen(false);
+      setModalState({ open: false, editingCounterparty: null });
       fetchCounterparties();
     } catch (error) {
       if (error.errorFields) {
@@ -83,9 +90,8 @@ const MobileCounterpartiesPage = () => {
 
   // Закрыть модальное окно
   const handleModalCancel = () => {
-    setIsModalOpen(false);
+    setModalState({ open: false, editingCounterparty: null });
     form.resetFields();
-    setEditingCounterparty(null);
   };
 
   return (
@@ -127,7 +133,7 @@ const MobileCounterpartiesPage = () => {
       {/* Modal для редактирования контрагента */}
       <Modal
         title="Редактировать контрагента"
-        open={isModalOpen}
+        open={modalState.open}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={320}

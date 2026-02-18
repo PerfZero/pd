@@ -20,8 +20,6 @@ const DEFAULT_COLUMNS = [
   { key: "counterpartyKpp", label: "КПП контрагента" },
 ];
 
-export const AVAILABLE_COLUMNS = DEFAULT_COLUMNS;
-
 const STORAGE_KEY = "passdesk_excel_columns_selection";
 
 // Получить дефолтное состояние (все столбцы активны в стандартном порядке)

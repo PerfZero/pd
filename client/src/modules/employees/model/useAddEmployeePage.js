@@ -1,0 +1,145 @@
+import { useEffect, useRef, useState } from "react";
+import {
+  useEmployeeActions,
+  useCheckInn,
+  employeeApi,
+} from "@/entities/employee";
+
+export const useAddEmployeePage = ({ id, navigate, message, modal }) => {
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const employeeLoadedRef = useRef(false);
+  const savedEmployeeIdRef = useRef(null);
+
+  const { createEmployee, updateEmployee } = useEmployeeActions(() => {
+    // Не нужно refetch, так как после сохранения выполняется переход
+  });
+
+  const { checkInn } = useCheckInn();
+
+  const handleCheckInn = async (innValue) => {
+    try {
+      const foundEmployee = await checkInn(innValue);
+      if (foundEmployee) {
+        const currentEmployeeId =
+          editingEmployee?.id || savedEmployeeIdRef.current;
+        if (currentEmployeeId && foundEmployee.id === currentEmployeeId) {
+          return;
+        }
+
+        const fullName = [
+          foundEmployee.lastName,
+          foundEmployee.firstName,
+          foundEmployee.middleName,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        const isOwner = foundEmployee.isOwner !== false;
+        const canLink = foundEmployee.canLink === true;
+
+        if (canLink && !isOwner) {
+          modal.confirm({
+            title: "Привязать существующего сотрудника?",
+            content: `${fullName}\n\nПривязать этого сотрудника к своему профилю?`,
+            okText: "Привязать",
+            cancelText: "Отмена",
+            onOk: () => {
+              employeeLoadedRef.current = true;
+              setEditingEmployee({ ...foundEmployee, linkingMode: true });
+            },
+          });
+        } else {
+          modal.confirm({
+            title: "Сотрудник с таким ИНН уже существует",
+            content: `Перейти к редактированию?\n\n${fullName}`,
+            okText: "ОК",
+            cancelText: "Отмена",
+            onOk: () => {
+              navigate(`/employees/edit/${foundEmployee.id}`);
+            },
+          });
+        }
+      }
+    } catch (error) {
+      if (error.response?.status === 409) {
+        modal.error({
+          title: "Ошибка",
+          content:
+            error.response?.data?.message ||
+            "Сотрудник с таким ИНН уже существует. Обратитесь к администратору.",
+          okText: "ОК",
+        });
+      } else {
+        console.error("Ошибка при проверке ИНН:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (employeeLoadedRef.current) {
+      return;
+    }
+
+    if (id) {
+      savedEmployeeIdRef.current = id;
+      employeeApi
+        .getById(id)
+        .then((response) => {
+          setEditingEmployee(response.data);
+          employeeLoadedRef.current = true;
+          savedEmployeeIdRef.current = response.data?.id || id;
+        })
+        .catch((error) => {
+          message.error("Ошибка загрузки данных сотрудника");
+          console.error("Error loading employee:", error);
+          navigate("/employees");
+        });
+    }
+
+    return () => {
+      employeeLoadedRef.current = false;
+    };
+  }, [id, navigate, message]);
+
+  const handleFormSuccess = async (values) => {
+    if (values.employeeId) {
+      await createEmployee(values);
+
+      message.success("Сотрудник успешно привязан!");
+
+      setTimeout(() => {
+        navigate("/employees");
+      }, 1000);
+
+      return;
+    }
+
+    if (editingEmployee) {
+      const updated = await updateEmployee(editingEmployee.id, values);
+      setEditingEmployee(updated);
+      savedEmployeeIdRef.current = updated?.id || editingEmployee.id;
+
+      if (!values.isDraft) {
+        setTimeout(() => {
+          navigate("/employees");
+        }, 1000);
+      }
+    } else {
+      const newEmployee = await createEmployee(values);
+      setEditingEmployee(newEmployee);
+      savedEmployeeIdRef.current = newEmployee?.id;
+
+      if (!values.isDraft) {
+        setTimeout(() => {
+          navigate("/employees");
+        }, 1000);
+      }
+    }
+  };
+
+  return {
+    editingEmployee,
+    handleCheckInn,
+    handleFormSuccess,
+  };
+};

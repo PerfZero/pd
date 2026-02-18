@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   App,
   Button,
@@ -55,25 +55,198 @@ const toHighlightedFieldsText = (value) => {
   return value.join("\n");
 };
 
+const DocumentTypeEditForm = ({ form }) => (
+  <Form form={form} layout="vertical">
+    <Form.Item
+      name="name"
+      label="Название"
+      rules={[{ required: true, message: "Введите название" }]}
+    >
+      <Input maxLength={255} />
+    </Form.Item>
+
+    <Form.Item name="description" label="Описание">
+      <Input.TextArea rows={2} maxLength={2000} />
+    </Form.Item>
+
+    <Form.Item name="sortOrder" label="Порядок сортировки">
+      <Input type="number" />
+    </Form.Item>
+
+    <Form.Item name="isActive" label="Активен" valuePropName="checked">
+      <Switch />
+    </Form.Item>
+
+    <Form.Item
+      name="isRequired"
+      label="Обязательный документ"
+      valuePropName="checked"
+    >
+      <Switch />
+    </Form.Item>
+
+    <Form.Item
+      name="highlightedFieldsText"
+      label="Подсвеченные поля (по одному на строку)"
+    >
+      <Input.TextArea
+        rows={5}
+        placeholder={"Серия и номер\nКем выдан\nДата выдачи"}
+      />
+    </Form.Item>
+  </Form>
+);
+
+const createDocumentTypeColumns = ({
+  uploadingId,
+  deletingId,
+  onUploadSample,
+  onOpenViewer,
+  onOpenEditModal,
+  onDeleteSample,
+}) => [
+  {
+    title: "Тип документа",
+    key: "type",
+    render: (_, record) => (
+      <Space direction="vertical" size={0}>
+        <Typography.Text strong>
+          {record.label || record.name || record.code}
+        </Typography.Text>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {record.code}
+        </Typography.Text>
+      </Space>
+    ),
+    width: 260,
+  },
+  {
+    title: "Образец",
+    key: "sample",
+    render: (_, record) => (
+      <Space direction="vertical" size={4}>
+        {record.hasSample ? (
+          <>
+            <Tag color="green">Загружен</Tag>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {record.sampleOriginalName || "Файл образца"}
+            </Typography.Text>
+          </>
+        ) : (
+          <Tag>Не загружен</Tag>
+        )}
+      </Space>
+    ),
+    width: 170,
+  },
+  {
+    title: "Активен",
+    key: "active",
+    render: (_, record) =>
+      record.isActive ? (
+        <Tag color="blue">Да</Tag>
+      ) : (
+        <Tag color="default">Нет</Tag>
+      ),
+    width: 110,
+  },
+  {
+    title: "Обязательный",
+    key: "required",
+    render: (_, record) =>
+      record.isRequired ? (
+        <Tag color="red">Да</Tag>
+      ) : (
+        <Tag color="default">Нет</Tag>
+      ),
+    width: 130,
+  },
+  {
+    title: "Действия",
+    key: "actions",
+    render: (_, record) => (
+      <Space wrap>
+        <Upload
+          accept={ACCEPTED_SAMPLE_EXTENSIONS}
+          showUploadList={false}
+          beforeUpload={(file) => onUploadSample(record, file)}
+          disabled={uploadingId === record.id}
+        >
+          <Button
+            size="small"
+            icon={<UploadOutlined />}
+            loading={uploadingId === record.id}
+          >
+            Загрузить
+          </Button>
+        </Upload>
+
+        <Tooltip title="Предпросмотр образца">
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => onOpenViewer(record)}
+            disabled={!record.hasSample}
+          />
+        </Tooltip>
+
+        <Tooltip title="Редактировать метаданные">
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => onOpenEditModal(record)}
+          />
+        </Tooltip>
+
+        <Popconfirm
+          title="Удалить образец?"
+          description="Файл образца будет удален из хранилища"
+          okText="Удалить"
+          cancelText="Отмена"
+          onConfirm={() => onDeleteSample(record)}
+          disabled={!record.hasSample}
+        >
+          <Button
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            loading={deletingId === record.id}
+            disabled={!record.hasSample}
+          />
+        </Popconfirm>
+      </Space>
+    ),
+  },
+];
+
 const DocumentTypeSamplesSettingsSection = () => {
   const { message } = App.useApp();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [uploadingId, setUploadingId] = useState(null);
-  const [savingId, setSavingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState(null);
-  const [viewerVisible, setViewerVisible] = useState(false);
-  const [viewerFile, setViewerFile] = useState(null);
+  const [dataState, setDataState] = useState({
+    items: [],
+    loading: false,
+    uploadingId: null,
+    savingId: null,
+    deletingId: null,
+  });
+  const [uiState, setUiState] = useState({
+    editModalOpen: false,
+    editingRecord: null,
+    viewerVisible: false,
+    viewerFile: null,
+  });
   const [form] = Form.useForm();
+  const { items, loading, uploadingId, savingId, deletingId } = dataState;
+  const { editModalOpen, editingRecord, viewerVisible, viewerFile } = uiState;
 
   const loadDocumentTypes = useCallback(async () => {
     try {
-      setLoading(true);
+      setDataState((prev) => ({ ...prev, loading: true }));
       const response = await employeeService.getDocumentTypesForAdmin();
       const list = response?.data || response || [];
-      setItems(Array.isArray(list) ? list : []);
+      setDataState((prev) => ({
+        ...prev,
+        items: Array.isArray(list) ? list : [],
+      }));
     } catch (error) {
       console.error("Error loading employee document types for admin:", error);
       message.error(
@@ -81,7 +254,7 @@ const DocumentTypeSamplesSettingsSection = () => {
           "Ошибка загрузки типов документов для админки",
       );
     } finally {
-      setLoading(false);
+      setDataState((prev) => ({ ...prev, loading: false }));
     }
   }, [message]);
 
@@ -90,7 +263,10 @@ const DocumentTypeSamplesSettingsSection = () => {
   }, [loadDocumentTypes]);
 
   const patchItem = useCallback((id, nextItem) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? nextItem : item)));
+    setDataState((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => (item.id === id ? nextItem : item)),
+    }));
   }, []);
 
   const handleOpenViewer = useCallback(
@@ -100,15 +276,18 @@ const DocumentTypeSamplesSettingsSection = () => {
         return;
       }
 
-      setViewerFile({
-        url: record.sampleUrl,
-        mimeType:
-          record.sampleMimeType || inferMimeTypeFromUrl(record.sampleUrl),
-        fileName:
-          record.sampleOriginalName ||
-          `${record.label || record.name || record.code}`,
-      });
-      setViewerVisible(true);
+      setUiState((prev) => ({
+        ...prev,
+        viewerFile: {
+          url: record.sampleUrl,
+          mimeType:
+            record.sampleMimeType || inferMimeTypeFromUrl(record.sampleUrl),
+          fileName:
+            record.sampleOriginalName ||
+            `${record.label || record.name || record.code}`,
+        },
+        viewerVisible: true,
+      }));
     },
     [message],
   );
@@ -121,7 +300,7 @@ const DocumentTypeSamplesSettingsSection = () => {
       }
 
       try {
-        setUploadingId(record.id);
+        setDataState((prev) => ({ ...prev, uploadingId: record.id }));
         const response = await employeeService.uploadDocumentTypeSample(
           record.id,
           file,
@@ -135,7 +314,7 @@ const DocumentTypeSamplesSettingsSection = () => {
           error?.response?.data?.message || "Ошибка загрузки образца документа",
         );
       } finally {
-        setUploadingId(null);
+        setDataState((prev) => ({ ...prev, uploadingId: null }));
       }
 
       return false;
@@ -146,7 +325,7 @@ const DocumentTypeSamplesSettingsSection = () => {
   const handleDeleteSample = useCallback(
     async (record) => {
       try {
-        setDeletingId(record.id);
+        setDataState((prev) => ({ ...prev, deletingId: record.id }));
         const response = await employeeService.deleteDocumentTypeSample(
           record.id,
         );
@@ -159,7 +338,7 @@ const DocumentTypeSamplesSettingsSection = () => {
           error?.response?.data?.message || "Ошибка удаления образца документа",
         );
       } finally {
-        setDeletingId(null);
+        setDataState((prev) => ({ ...prev, deletingId: null }));
       }
     },
     [message, patchItem],
@@ -167,7 +346,7 @@ const DocumentTypeSamplesSettingsSection = () => {
 
   const openEditModal = useCallback(
     (record) => {
-      setEditingRecord(record);
+      setUiState((prev) => ({ ...prev, editingRecord: record }));
       form.setFieldsValue({
         name: record.label || record.name || "",
         description: record.description || "",
@@ -178,7 +357,7 @@ const DocumentTypeSamplesSettingsSection = () => {
           record.sampleHighlightedFields,
         ),
       });
-      setEditModalOpen(true);
+      setUiState((prev) => ({ ...prev, editModalOpen: true }));
     },
     [form],
   );
@@ -188,7 +367,7 @@ const DocumentTypeSamplesSettingsSection = () => {
 
     try {
       const values = await form.validateFields();
-      setSavingId(editingRecord.id);
+      setDataState((prev) => ({ ...prev, savingId: editingRecord.id }));
       const response = await employeeService.updateDocumentType(
         editingRecord.id,
         {
@@ -204,8 +383,11 @@ const DocumentTypeSamplesSettingsSection = () => {
       );
       const updated = response?.data || response;
       patchItem(editingRecord.id, updated);
-      setEditModalOpen(false);
-      setEditingRecord(null);
+      setUiState((prev) => ({
+        ...prev,
+        editModalOpen: false,
+        editingRecord: null,
+      }));
       message.success("Тип документа обновлен");
     } catch (error) {
       if (error?.errorFields) {
@@ -216,124 +398,28 @@ const DocumentTypeSamplesSettingsSection = () => {
         error?.response?.data?.message || "Ошибка сохранения типа документа",
       );
     } finally {
-      setSavingId(null);
+      setDataState((prev) => ({ ...prev, savingId: null }));
     }
   }, [editingRecord, form, message, patchItem]);
-
-  const columns = [
-    {
-      title: "Тип документа",
-      key: "type",
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong>
-            {record.label || record.name || record.code}
-          </Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.code}
-          </Typography.Text>
-        </Space>
-      ),
-      width: 260,
-    },
-    {
-      title: "Образец",
-      key: "sample",
-      render: (_, record) => (
-        <Space direction="vertical" size={4}>
-          {record.hasSample ? (
-            <>
-              <Tag color="green">Загружен</Tag>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {record.sampleOriginalName || "Файл образца"}
-              </Typography.Text>
-            </>
-          ) : (
-            <Tag>Не загружен</Tag>
-          )}
-        </Space>
-      ),
-      width: 170,
-    },
-    {
-      title: "Активен",
-      key: "active",
-      render: (_, record) =>
-        record.isActive ? (
-          <Tag color="blue">Да</Tag>
-        ) : (
-          <Tag color="default">Нет</Tag>
-        ),
-      width: 110,
-    },
-    {
-      title: "Обязательный",
-      key: "required",
-      render: (_, record) =>
-        record.isRequired ? (
-          <Tag color="red">Да</Tag>
-        ) : (
-          <Tag color="default">Нет</Tag>
-        ),
-      width: 130,
-    },
-    {
-      title: "Действия",
-      key: "actions",
-      render: (_, record) => (
-        <Space wrap>
-          <Upload
-            accept={ACCEPTED_SAMPLE_EXTENSIONS}
-            showUploadList={false}
-            beforeUpload={(file) => handleUploadSample(record, file)}
-            disabled={uploadingId === record.id}
-          >
-            <Button
-              size="small"
-              icon={<UploadOutlined />}
-              loading={uploadingId === record.id}
-            >
-              Загрузить
-            </Button>
-          </Upload>
-
-          <Tooltip title="Предпросмотр образца">
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleOpenViewer(record)}
-              disabled={!record.hasSample}
-            />
-          </Tooltip>
-
-          <Tooltip title="Редактировать метаданные">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => openEditModal(record)}
-            />
-          </Tooltip>
-
-          <Popconfirm
-            title="Удалить образец?"
-            description="Файл образца будет удален из хранилища"
-            okText="Удалить"
-            cancelText="Отмена"
-            onConfirm={() => handleDeleteSample(record)}
-            disabled={!record.hasSample}
-          >
-            <Button
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              loading={deletingId === record.id}
-              disabled={!record.hasSample}
-            />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () =>
+      createDocumentTypeColumns({
+        uploadingId,
+        deletingId,
+        onUploadSample: handleUploadSample,
+        onOpenViewer: handleOpenViewer,
+        onOpenEditModal: openEditModal,
+        onDeleteSample: handleDeleteSample,
+      }),
+    [
+      deletingId,
+      handleDeleteSample,
+      handleOpenViewer,
+      handleUploadSample,
+      openEditModal,
+      uploadingId,
+    ],
+  );
 
   return (
     <Card size="small">
@@ -353,8 +439,11 @@ const DocumentTypeSamplesSettingsSection = () => {
         title="Редактирование типа документа"
         open={editModalOpen}
         onCancel={() => {
-          setEditModalOpen(false);
-          setEditingRecord(null);
+          setUiState((prev) => ({
+            ...prev,
+            editModalOpen: false,
+            editingRecord: null,
+          }));
         }}
         onOk={handleSaveDocumentType}
         confirmLoading={savingId === editingRecord?.id}
@@ -362,45 +451,7 @@ const DocumentTypeSamplesSettingsSection = () => {
         cancelText="Отмена"
         okButtonProps={{ icon: <SaveOutlined /> }}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Название"
-            rules={[{ required: true, message: "Введите название" }]}
-          >
-            <Input maxLength={255} />
-          </Form.Item>
-
-          <Form.Item name="description" label="Описание">
-            <Input.TextArea rows={2} maxLength={2000} />
-          </Form.Item>
-
-          <Form.Item name="sortOrder" label="Порядок сортировки">
-            <Input type="number" />
-          </Form.Item>
-
-          <Form.Item name="isActive" label="Активен" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-
-          <Form.Item
-            name="isRequired"
-            label="Обязательный документ"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
-
-          <Form.Item
-            name="highlightedFieldsText"
-            label="Подсвеченные поля (по одному на строку)"
-          >
-            <Input.TextArea
-              rows={5}
-              placeholder={"Серия и номер\nКем выдан\nДата выдачи"}
-            />
-          </Form.Item>
-        </Form>
+        <DocumentTypeEditForm form={form} />
       </Modal>
 
       {viewerFile && (
@@ -409,7 +460,9 @@ const DocumentTypeSamplesSettingsSection = () => {
           fileUrl={viewerFile.url}
           fileName={viewerFile.fileName}
           mimeType={viewerFile.mimeType}
-          onClose={() => setViewerVisible(false)}
+          onClose={() =>
+            setUiState((prev) => ({ ...prev, viewerVisible: false }))
+          }
           onDownload={() => window.open(viewerFile.url, "_blank")}
         />
       )}

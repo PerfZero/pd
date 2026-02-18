@@ -17,12 +17,12 @@ export const deduplicateRequest = async (key, requestFn) => {
 
   // Создаем новый Promise и кэшируем его
   const promise = requestFn()
-    .then(result => {
+    .then((result) => {
       // Удаляем из кэша после успешного завершения
       requestCache.delete(key);
       return result;
     })
-    .catch(error => {
+    .catch((error) => {
       // Удаляем из кэша при ошибке
       requestCache.delete(key);
       throw error;
@@ -30,13 +30,6 @@ export const deduplicateRequest = async (key, requestFn) => {
 
   requestCache.set(key, promise);
   return promise;
-};
-
-/**
- * Очищает кэш запросов (для отладки)
- */
-export const clearRequestCache = () => {
-  requestCache.clear();
 };
 
 /**
@@ -62,8 +55,7 @@ export const invalidateCache = (pattern) => {
     }
   }
 
-  keysToDelete.forEach(key => {
+  keysToDelete.forEach((key) => {
     requestCache.delete(key);
   });
 };
-

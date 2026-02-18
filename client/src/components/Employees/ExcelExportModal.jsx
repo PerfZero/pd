@@ -1,16 +1,23 @@
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Modal, Table, Button, Space, App, Empty } from "antd";
 import { FileExcelOutlined } from "@ant-design/icons";
 import { employeeApi } from "@/entities/employee";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 
+const EMPTY_EMPLOYEES = [];
+
 /**
  * Модальное окно для выгрузки сотрудников в Excel
  * Фильтрует сотрудников по статусам и is_upload флагу
  * После выгрузки обновляет is_upload = true для всех активных статусов
  */
-const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
+const ExcelExportModal = ({
+  visible,
+  employees = EMPTY_EMPLOYEES,
+  onCancel,
+  onSuccess,
+}) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
@@ -42,14 +49,15 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
     });
   }, [employees]);
 
-  // При открытии модала - выбираем всех по умолчанию
-  useEffect(() => {
-    if (visible) {
-      setSelectedEmployeeIds(filteredEmployees.map((emp) => emp.id));
-    } else {
-      setSelectedEmployeeIds([]);
-    }
-  }, [visible, filteredEmployees]);
+  const handleOpenChange = useCallback(
+    (open) => {
+      const nextSelectedEmployeeIds = open
+        ? filteredEmployees.map((emp) => emp.id)
+        : [];
+      setSelectedEmployeeIds(nextSelectedEmployeeIds);
+    },
+    [filteredEmployees],
+  );
 
   // Обработка экспорта в Excel
   const handleExport = async () => {
@@ -202,6 +210,7 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
       onCancel={onCancel}
       width="90vw"
       style={{ maxWidth: "95vw" }}
+      afterOpenChange={handleOpenChange}
       footer={
         <Space>
           <Button onClick={onCancel}>Отмена</Button>

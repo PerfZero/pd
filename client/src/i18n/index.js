@@ -5,7 +5,7 @@ import uz from "../locales/uz.json";
 import tj from "../locales/tj.json";
 import kz from "../locales/kz.json";
 
-export const SUPPORTED_LANGUAGES = ["ru", "uz", "tj", "kz"];
+const SUPPORTED_LANGUAGES = ["ru", "uz", "tj", "kz"];
 
 const normalizeLanguage = (lng) =>
   SUPPORTED_LANGUAGES.includes(lng) ? lng : "ru";

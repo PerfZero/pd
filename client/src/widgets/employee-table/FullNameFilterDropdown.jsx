@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Input, Button, Space, Checkbox } from 'antd';
+import { useState } from "react";
+import { Input, Button, Space, Checkbox } from "antd";
+
+const EMPTY_SELECTED_COUNTERPARTIES = [];
 
 /**
  * Компонент фильтра для колонки "ФИО"
@@ -12,22 +14,17 @@ export const FullNameFilterDropdown = ({
   confirm,
   clearFilters,
   uniqueFilterFullNames,
-  resetTrigger,
-  selectedCounterparties = [],
+  resetTrigger: _resetTrigger,
+  selectedCounterparties = EMPTY_SELECTED_COUNTERPARTIES,
 }) => {
-  const [searchText, setSearchText] = useState('');
-
-  // Очищаем поле поиска при сбросе фильтров на странице
-  useEffect(() => {
-    setSearchText('');
-  }, [resetTrigger]);
+  const [searchText, setSearchText] = useState("");
 
   const filteredFullNames = uniqueFilterFullNames.filter((name) =>
-    name.toLowerCase().includes(searchText.toLowerCase())
+    name.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const handleReset = () => {
-    setSearchText('');
+    setSearchText("");
     setSelectedKeys([]);
     clearFilters();
   };
@@ -36,16 +33,18 @@ export const FullNameFilterDropdown = ({
   const showHint = selectedCounterparties && selectedCounterparties.length > 0;
 
   return (
-    <div style={{ padding: '8px', minWidth: '250px' }}>
+    <div style={{ padding: "8px", minWidth: "250px" }}>
       {showHint && (
-        <div style={{ 
-          padding: '8px', 
-          marginBottom: '8px', 
-          backgroundColor: '#e6f7ff', 
-          borderRadius: '4px',
-          fontSize: '12px',
-          color: '#0050b3'
-        }}>
+        <div
+          style={{
+            padding: "8px",
+            marginBottom: "8px",
+            backgroundColor: "#e6f7ff",
+            borderRadius: "4px",
+            fontSize: "12px",
+            color: "#0050b3",
+          }}
+        >
           ℹ️ Показаны только сотрудники выбранного контрагента
         </div>
       )}
@@ -53,13 +52,14 @@ export const FullNameFilterDropdown = ({
         placeholder="Поиск по ФИО..."
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
-        style={{ marginBottom: '8px' }}
-        autoFocus
+        style={{ marginBottom: "8px" }}
       />
-      <div style={{ maxHeight: '200px', overflow: 'auto', marginBottom: '8px' }}>
+      <div
+        style={{ maxHeight: "200px", overflow: "auto", marginBottom: "8px" }}
+      >
         {filteredFullNames.length > 0 ? (
           filteredFullNames.map((name) => (
-            <div key={name} style={{ marginBottom: '4px' }}>
+            <div key={name} style={{ marginBottom: "4px" }}>
               <Checkbox
                 checked={selectedKeys.includes(name)}
                 onChange={(e) => {
@@ -75,17 +75,13 @@ export const FullNameFilterDropdown = ({
             </div>
           ))
         ) : (
-          <div style={{ padding: '8px', color: '#999', textAlign: 'center' }}>
-            {showHint ? 'Нет сотрудников' : 'Выберите контрагента'}
+          <div style={{ padding: "8px", color: "#999", textAlign: "center" }}>
+            {showHint ? "Нет сотрудников" : "Выберите контрагента"}
           </div>
         )}
       </div>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Button
-          type="primary"
-          onClick={() => confirm()}
-          size="small"
-        >
+      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+        <Button type="primary" onClick={() => confirm()} size="small">
           OK
         </Button>
         <Button onClick={handleReset} size="small">
@@ -95,4 +91,3 @@ export const FullNameFilterDropdown = ({
     </div>
   );
 };
-

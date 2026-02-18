@@ -9,6 +9,7 @@ import {
 import MaskedDatePicker from "../../shared/ui/MaskedDatePicker";
 
 const { Option } = Select;
+const EMPTY_OCR_CONFLICTS = {};
 
 const withOcrWarningIcon = (label, warningText) => {
   if (!warningText) return label;
@@ -32,7 +33,7 @@ const EmployeeDocumentsTab = ({
   dateFormat,
   ocrSection = null,
   mvdSection = null,
-  ocrConflictByField = {},
+  ocrConflictByField = EMPTY_OCR_CONFLICTS,
 }) => (
   <>
     {ocrSection}

@@ -4,10 +4,10 @@ import { EyeOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useEmployees, useEmployeeActions } from "@/entities/employee";
 import { employeeApi } from "@/entities/employee";
 import { ExportDateFilter } from "@/features/export-date-filter";
-import StatusUploadToggle from "@/components/Employees/StatusUploadToggle";
-import EmployeeViewModal from "@/components/Employees/EmployeeViewModal";
-import EmployeeFormModal from "@/components/Employees/EmployeeFormModal";
-import ExcelExportModal from "@/components/Employees/ExcelExportModal";
+import StatusUploadToggle from "@/modules/employees/ui/StatusUploadToggle";
+import EmployeeViewModal from "@/modules/employees/ui/EmployeeViewModal";
+import EmployeeFormModal from "@/modules/employees/ui/EmployeeFormModal";
+import ExcelExportModal from "@/modules/employees/ui/ExcelExportModal";
 
 const FILTER_STORAGE_KEY = "exportPageDateFilter";
 const TABLE_FILTERS_STORAGE_KEY = "exportPageTableFilters";
@@ -38,6 +38,8 @@ const ExportPage = () => {
   const [tableFilters, setTableFilters] = useState(() =>
     parseStoredJson(TABLE_FILTERS_STORAGE_KEY, {}),
   );
+  const currentPage = pagination.current || 1;
+  const pageSize = pagination.pageSize || 20;
 
   // Инициализируем фильтр из localStorage
   const [filterParams, setFilterParams] = useState(() => {
@@ -60,11 +62,11 @@ const ExportPage = () => {
     localStorage.setItem(
       PAGINATION_STORAGE_KEY,
       JSON.stringify({
-        current: pagination.current || 1,
-        pageSize: pagination.pageSize || 20,
+        current: currentPage,
+        pageSize,
       }),
     );
-  }, [pagination.current, pagination.pageSize]);
+  }, [currentPage, pageSize]);
 
   // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам и датам)
   const { employees, loading, refetch } = useEmployees(true, filterParams);

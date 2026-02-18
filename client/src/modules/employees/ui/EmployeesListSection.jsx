@@ -1,0 +1,60 @@
+import { memo } from "react";
+import { EmployeeTable, MobileEmployeeList } from "@/widgets/employee-table";
+
+const EmployeesListSection = memo(({ isMobile, model, actions }) => {
+  if (isMobile) {
+    return (
+      <MobileEmployeeList
+        employees={model.filteredEmployees}
+        loading={model.loading}
+        onView={actions.onView}
+        onEdit={actions.onEdit}
+        onDelete={actions.onDelete}
+        onViewFiles={actions.onViewFiles}
+        canDeleteEmployee={model.canDeleteEmployee}
+        canMarkForDeletion={model.canMarkForDeletion}
+        onMarkForDeletion={actions.onMarkForDeletion}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        paddingRight: 15,
+      }}
+    >
+      <EmployeeTable
+        employees={model.filteredEmployees}
+        departments={model.departments}
+        loading={model.loading}
+        onEdit={actions.onEdit}
+        onView={actions.onView}
+        onDelete={actions.onDelete}
+        onViewFiles={actions.onViewFiles}
+        onDepartmentChange={actions.onDepartmentChange}
+        canExport={model.canExport}
+        showCounterpartyColumn={model.showCounterpartyColumn}
+        canDeleteEmployee={model.canDeleteEmployee}
+        canMarkForDeletion={model.canMarkForDeletion}
+        onMarkForDeletion={actions.onMarkForDeletion}
+        uniqueFilters={model.uniqueFilters}
+        onFiltersChange={actions.onFiltersChange}
+        defaultCounterpartyId={model.defaultCounterpartyId}
+        userCounterpartyId={model.userCounterpartyId}
+        onConstructionSitesEdit={actions.onConstructionSitesEdit}
+        resetTrigger={model.resetTrigger}
+        hiddenColumnKeys={model.hiddenColumns}
+      />
+    </div>
+  );
+});
+
+EmployeesListSection.displayName = "EmployeesListSection";
+
+export default EmployeesListSection;

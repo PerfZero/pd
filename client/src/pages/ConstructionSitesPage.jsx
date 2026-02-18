@@ -24,22 +24,25 @@ const { Title } = Typography;
 const ConstructionSitesPage = () => {
   const { message, modal } = App.useApp();
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [uiState, setUiState] = useState({
+    loading: false,
+    modalVisible: false,
+    editingId: null,
+    search: "",
+  });
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
-  const [search, setSearch] = useState("");
   const [form] = Form.useForm();
+  const { loading, modalVisible, editingId, search } = uiState;
 
   const { current: paginationCurrent, pageSize: paginationPageSize } =
     pagination;
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setUiState((prev) => ({ ...prev, loading: true }));
     try {
       const { data: response } = await constructionSiteService.getAll({
         page: paginationCurrent,
@@ -60,7 +63,7 @@ const ConstructionSitesPage = () => {
     } catch (error) {
       message.error("Ошибка при загрузке данных");
     } finally {
-      setLoading(false);
+      setUiState((prev) => ({ ...prev, loading: false }));
     }
   }, [message, paginationCurrent, paginationPageSize, search]);
 
@@ -69,15 +72,21 @@ const ConstructionSitesPage = () => {
   }, [fetchData]);
 
   const handleAdd = () => {
-    setEditingId(null);
+    setUiState((prev) => ({
+      ...prev,
+      editingId: null,
+      modalVisible: true,
+    }));
     form.resetFields();
-    setModalVisible(true);
   };
 
   const handleEdit = (record) => {
-    setEditingId(record.id);
+    setUiState((prev) => ({
+      ...prev,
+      editingId: record.id,
+      modalVisible: true,
+    }));
     form.setFieldsValue(record);
-    setModalVisible(true);
   };
 
   const handleDelete = async (id) => {
@@ -104,7 +113,7 @@ const ConstructionSitesPage = () => {
         await constructionSiteService.create(values);
         message.success("Объект создан");
       }
-      setModalVisible(false);
+      setUiState((prev) => ({ ...prev, modalVisible: false }));
       fetchData();
     } catch (error) {
       message.error("Ошибка при сохранении");
@@ -179,7 +188,9 @@ const ConstructionSitesPage = () => {
             placeholder="Поиск по названию или адресу"
             prefix={<SearchOutlined />}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setUiState((prev) => ({ ...prev, search: e.target.value }))
+            }
             style={{ width: 300 }}
             allowClear
           />
@@ -225,7 +236,9 @@ const ConstructionSitesPage = () => {
       <Modal
         title={editingId ? "Редактировать объект" : "Добавить объект"}
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() =>
+          setUiState((prev) => ({ ...prev, modalVisible: false }))
+        }
         onOk={() => form.submit()}
         width={600}
       >

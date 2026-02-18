@@ -76,6 +76,7 @@ export const useEmployeeColumns = ({
         sorter: (a, b) => a.lastName.localeCompare(b.lastName),
         filterDropdown: (props) => (
           <FullNameFilterDropdown
+            key={`full-name-filter-${resetTrigger}`}
             {...props}
             uniqueFilterFullNames={uniqueFilters.fullNames}
             resetTrigger={resetTrigger}
@@ -117,6 +118,7 @@ export const useEmployeeColumns = ({
         },
         filterDropdown: (props) => (
           <PositionFilterDropdown
+            key={`position-filter-${resetTrigger}`}
             {...props}
             uniqueFilterPositions={uniqueFilters.positions}
             resetTrigger={resetTrigger}
@@ -242,6 +244,7 @@ export const useEmployeeColumns = ({
               },
               filterDropdown: (props) => (
                 <CounterpartyFilterDropdown
+                  key={`counterparty-filter-${resetTrigger}`}
                   {...props}
                   uniqueFilterCounterparties={uniqueFilters.counterparties}
                   resetTrigger={resetTrigger}
@@ -288,6 +291,17 @@ export const useEmployeeColumns = ({
               onClick={() =>
                 onConstructionSitesEdit && onConstructionSitesEdit(record)
               }
+              onKeyDown={(event) => {
+                if (
+                  onConstructionSitesEdit &&
+                  (event.key === "Enter" || event.key === " ")
+                ) {
+                  event.preventDefault();
+                  onConstructionSitesEdit(record);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -309,12 +323,25 @@ export const useEmployeeColumns = ({
                 e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
-              {siteMappings.map((mapping, index) => (
-                <div key={index}>
-                  {mapping.constructionSite?.shortName ||
-                    mapping.constructionSite?.name}
-                </div>
-              ))}
+              {siteMappings.map((mapping) => {
+                const siteKey = [
+                  record.id,
+                  mapping.id,
+                  mapping.counterpartyId,
+                  mapping.constructionSiteId,
+                  mapping.constructionSite?.id,
+                  mapping.constructionSite?.name,
+                ]
+                  .filter(Boolean)
+                  .join("-");
+
+                return (
+                  <div key={siteKey}>
+                    {mapping.constructionSite?.shortName ||
+                      mapping.constructionSite?.name}
+                  </div>
+                );
+              })}
             </div>
           );
         },

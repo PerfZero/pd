@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { Modal, Tabs, Table, Checkbox, Button, App, Alert } from "antd";
 import {
   EMPLOYEE_FIELDS,
@@ -23,17 +23,16 @@ const EmployeeFieldsSettingsModal = ({ visible, onCancel }) => {
   const [localConfigDefault, setLocalConfigDefault] = useState({});
   const [localConfigExternal, setLocalConfigExternal] = useState({});
 
-  useEffect(() => {
-    if (visible) {
-      // Инициализация при открытии
-      // Если конфига нет в сторе, берем дефолтный
+  const handleAfterOpenChange = useCallback(
+    (open) => {
+      if (!open) return;
+
       setLocalConfigDefault(formConfigDefault || DEFAULT_FORM_CONFIG);
       setLocalConfigExternal(formConfigExternal || DEFAULT_FORM_CONFIG);
-
-      // На всякий случай обновляем настройки с сервера
       fetchSettings();
-    }
-  }, [visible, formConfigDefault, formConfigExternal, fetchSettings]);
+    },
+    [formConfigDefault, formConfigExternal, fetchSettings],
+  );
 
   const handleChange = (type, key, property, value) => {
     const setConfig =
@@ -190,6 +189,7 @@ const EmployeeFieldsSettingsModal = ({ visible, onCancel }) => {
       title="Настройка полей формы сотрудника"
       open={visible}
       onCancel={onCancel}
+      afterOpenChange={handleAfterOpenChange}
       width={800}
       footer={[
         <Button key="cancel" onClick={onCancel}>

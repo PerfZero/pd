@@ -148,6 +148,14 @@ const MobileEmployeeList = ({
             {/* Левая часть - основная информация (кликабельна) */}
             <div
               onClick={() => onView(employee)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onView(employee);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 flex: 1,
                 display: "flex",

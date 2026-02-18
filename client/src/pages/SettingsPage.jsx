@@ -3,8 +3,8 @@ import { Form, Select, Button, message, Spin, Typography, Divider } from "antd";
 import { SaveOutlined, UploadOutlined, FormOutlined } from "@ant-design/icons";
 import settingsService from "@/services/settingsService";
 import { counterpartyService } from "@/services/counterpartyService";
-import EmployeeImportModal from "@/components/Employees/EmployeeImportModal";
 import EmployeeFieldsSettingsModal from "@/components/Admin/EmployeeFieldsSettingsModal";
+import EmployeeImportModal from "@/modules/employees/ui/EmployeeImportModal";
 
 const { Title, Text } = Typography;
 
@@ -12,9 +12,11 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [counterparties, setCounterparties] = useState([]);
+  const [modals, setModals] = useState({
+    importOpen: false,
+    fieldsSettingsOpen: false,
+  });
   const [form] = Form.useForm();
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isFieldsSettingsOpen, setIsFieldsSettingsOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -25,7 +27,6 @@ const SettingsPage = () => {
         limit: 10000,
         page: 1,
       });
-      console.log("Counterparties response:", counterpartiesResponse);
 
       // Проверяем разные варианты структуры ответа
       const counterpartiesList =
@@ -35,12 +36,10 @@ const SettingsPage = () => {
         counterpartiesResponse?.data ||
         [];
 
-      console.log("Counterparties list:", counterpartiesList);
       setCounterparties(counterpartiesList);
 
       // Загружаем настройки
       const settingsResponse = await settingsService.getSettings();
-      console.log("Settings response:", settingsResponse);
 
       // Проверяем структуру ответа
       const settingsArray =
@@ -166,7 +165,9 @@ const SettingsPage = () => {
         </Text>
         <Button
           icon={<FormOutlined />}
-          onClick={() => setIsFieldsSettingsOpen(true)}
+          onClick={() =>
+            setModals((prev) => ({ ...prev, fieldsSettingsOpen: true }))
+          }
           size="large"
         >
           Настройка полей сотрудника
@@ -183,24 +184,26 @@ const SettingsPage = () => {
         <Button
           type="primary"
           icon={<UploadOutlined />}
-          onClick={() => setIsImportModalOpen(true)}
+          onClick={() => setModals((prev) => ({ ...prev, importOpen: true }))}
           size="large"
         >
           Загрузка сотрудников из Excel
         </Button>
       </div>
       <EmployeeImportModal
-        visible={isImportModalOpen}
-        onCancel={() => setIsImportModalOpen(false)}
+        visible={modals.importOpen}
+        onCancel={() => setModals((prev) => ({ ...prev, importOpen: false }))}
         onSuccess={() => {
           message.success("Сотрудники успешно импортированы");
-          setIsImportModalOpen(false);
+          setModals((prev) => ({ ...prev, importOpen: false }));
         }}
       />
 
       <EmployeeFieldsSettingsModal
-        visible={isFieldsSettingsOpen}
-        onCancel={() => setIsFieldsSettingsOpen(false)}
+        visible={modals.fieldsSettingsOpen}
+        onCancel={() =>
+          setModals((prev) => ({ ...prev, fieldsSettingsOpen: false }))
+        }
       />
     </div>
   );

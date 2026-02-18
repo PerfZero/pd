@@ -6,45 +6,151 @@ import dayjs from "dayjs";
 
 const { Title } = Typography;
 
+const createEmployeeColumns = (onRestore) => [
+  {
+    title: "ФИО",
+    key: "fullName",
+    render: (_, record) =>
+      `${record.lastName} ${record.firstName} ${record.middleName || ""}`.trim(),
+  },
+  {
+    title: "Контрагент",
+    key: "counterparty",
+    render: (_, record) => {
+      const mappings = record.employeeCounterpartyMappings || [];
+      const names = [
+        ...new Set(mappings.map((m) => m.counterparty?.name).filter(Boolean)),
+      ];
+      return names.join(", ") || "-";
+    },
+  },
+  {
+    title: "Удален",
+    dataIndex: "deletedAt",
+    render: (value) => (value ? dayjs(value).format("DD.MM.YYYY HH:mm") : "-"),
+  },
+  {
+    title: "Действия",
+    key: "actions",
+    render: (_, record) => (
+      <Button onClick={() => onRestore(record)}>Восстановить</Button>
+    ),
+  },
+];
+
+const createUserColumns = (onRestore) => [
+  { title: "Email", dataIndex: "email" },
+  { title: "Имя", dataIndex: "firstName" },
+  { title: "Роль", dataIndex: "role" },
+  {
+    title: "Удален",
+    dataIndex: "deletedAt",
+    render: (value) => (value ? dayjs(value).format("DD.MM.YYYY HH:mm") : "-"),
+  },
+  {
+    title: "Действия",
+    key: "actions",
+    render: (_, record) => (
+      <Button onClick={() => onRestore(record)}>Восстановить</Button>
+    ),
+  },
+];
+
+const TrashListTab = ({
+  searchPlaceholder,
+  searchValue,
+  onSearchChange,
+  onRefresh,
+  columns,
+  dataSource,
+  loading,
+  pagination,
+  onChangePage,
+  onChangePageSize,
+}) => (
+  <>
+    <Space style={{ marginBottom: 12 }}>
+      <Input
+        placeholder={searchPlaceholder}
+        value={searchValue}
+        onChange={onSearchChange}
+        allowClear
+      />
+      <Button onClick={onRefresh}>Обновить</Button>
+    </Space>
+    <Table
+      columns={columns}
+      dataSource={dataSource}
+      rowKey="id"
+      loading={loading}
+      pagination={{
+        ...pagination,
+        onChange: onChangePage,
+        onShowSizeChange: onChangePageSize,
+        showSizeChanger: true,
+        pageSizeOptions: ["10", "20", "50", "100"],
+      }}
+      size="small"
+    />
+  </>
+);
+
 const TrashPage = () => {
   const { message } = App.useApp();
   const [activeTab, setActiveTab] = useState("employees");
-
-  const [employees, setEmployees] = useState([]);
-  const [employeesLoading, setEmployeesLoading] = useState(false);
-  const [employeeSearch, setEmployeeSearch] = useState("");
-  const [employeePagination, setEmployeePagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
+  const [employeeState, setEmployeeState] = useState({
+    items: [],
+    loading: false,
+    search: "",
+    pagination: {
+      current: 1,
+      pageSize: 10,
+      total: 0,
+    },
   });
-
-  const [users, setUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [userSearch, setUserSearch] = useState("");
-  const [userPagination, setUserPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
+  const [userState, setUserState] = useState({
+    items: [],
+    loading: false,
+    search: "",
+    pagination: {
+      current: 1,
+      pageSize: 10,
+      total: 0,
+    },
   });
+  const {
+    items: employees,
+    loading: employeesLoading,
+    search: employeeSearch,
+    pagination: employeePagination,
+  } = employeeState;
+  const {
+    items: users,
+    loading: usersLoading,
+    search: userSearch,
+    pagination: userPagination,
+  } = userState;
 
   const fetchEmployees = useCallback(async () => {
-    setEmployeesLoading(true);
+    setEmployeeState((prev) => ({ ...prev, loading: true }));
     try {
       const { data } = await employeeService.getDeleted({
         page: employeePagination.current,
         limit: employeePagination.pageSize,
         search: employeeSearch,
       });
-      setEmployees(data.employees || []);
-      setEmployeePagination((prev) => ({
+      setEmployeeState((prev) => ({
         ...prev,
-        total: data.pagination?.total || 0,
+        items: data.employees || [],
+        pagination: {
+          ...prev.pagination,
+          total: data.pagination?.total || 0,
+        },
       }));
     } catch (error) {
       message.error("Ошибка при загрузке удаленных сотрудников");
     } finally {
-      setEmployeesLoading(false);
+      setEmployeeState((prev) => ({ ...prev, loading: false }));
     }
   }, [
     employeePagination.current,
@@ -54,22 +160,25 @@ const TrashPage = () => {
   ]);
 
   const fetchUsers = useCallback(async () => {
-    setUsersLoading(true);
+    setUserState((prev) => ({ ...prev, loading: true }));
     try {
       const { data } = await userService.getDeleted({
         page: userPagination.current,
         limit: userPagination.pageSize,
         search: userSearch,
       });
-      setUsers(data.users || []);
-      setUserPagination((prev) => ({
+      setUserState((prev) => ({
         ...prev,
-        total: data.pagination?.total || 0,
+        items: data.users || [],
+        pagination: {
+          ...prev.pagination,
+          total: data.pagination?.total || 0,
+        },
       }));
     } catch (error) {
       message.error("Ошибка при загрузке удаленных пользователей");
     } finally {
-      setUsersLoading(false);
+      setUserState((prev) => ({ ...prev, loading: false }));
     }
   }, [userPagination.current, userPagination.pageSize, userSearch, message]);
 
@@ -91,140 +200,82 @@ const TrashPage = () => {
     fetchUsers();
   };
 
-  const employeeColumns = [
-    {
-      title: "ФИО",
-      key: "fullName",
-      render: (_, record) =>
-        `${record.lastName} ${record.firstName} ${record.middleName || ""}`.trim(),
-    },
-    {
-      title: "Контрагент",
-      key: "counterparty",
-      render: (_, record) => {
-        const mappings = record.employeeCounterpartyMappings || [];
-        const names = [
-          ...new Set(
-            mappings.map((m) => m.counterparty?.name).filter(Boolean),
-          ),
-        ];
-        return names.join(", ") || "-";
-      },
-    },
-    {
-      title: "Удален",
-      dataIndex: "deletedAt",
-      render: (value) => (value ? dayjs(value).format("DD.MM.YYYY HH:mm") : "-"),
-    },
-    {
-      title: "Действия",
-      key: "actions",
-      render: (_, record) => (
-        <Button onClick={() => restoreEmployee(record)}>Восстановить</Button>
-      ),
-    },
-  ];
-
-  const userColumns = [
-    {
-      title: "Email",
-      dataIndex: "email",
-    },
-    {
-      title: "Имя",
-      dataIndex: "firstName",
-    },
-    {
-      title: "Роль",
-      dataIndex: "role",
-    },
-    {
-      title: "Удален",
-      dataIndex: "deletedAt",
-      render: (value) => (value ? dayjs(value).format("DD.MM.YYYY HH:mm") : "-"),
-    },
-    {
-      title: "Действия",
-      key: "actions",
-      render: (_, record) => (
-        <Button onClick={() => restoreUser(record)}>Восстановить</Button>
-      ),
-    },
-  ];
+  const employeeColumns = createEmployeeColumns(restoreEmployee);
+  const userColumns = createUserColumns(restoreUser);
 
   const tabs = [
     {
       key: "employees",
       label: "Сотрудники",
       children: (
-        <>
-          <Space style={{ marginBottom: 12 }}>
-            <Input
-              placeholder="Поиск по ФИО или ИНН"
-              value={employeeSearch}
-              onChange={(e) => setEmployeeSearch(e.target.value)}
-              allowClear
-            />
-            <Button onClick={fetchEmployees}>Обновить</Button>
-          </Space>
-          <Table
-            columns={employeeColumns}
-            dataSource={employees}
-            rowKey="id"
-            loading={employeesLoading}
-            pagination={{
-              ...employeePagination,
-              onChange: (page) =>
-                setEmployeePagination((prev) => ({ ...prev, current: page })),
-              onShowSizeChange: (current, pageSize) =>
-                setEmployeePagination((prev) => ({
-                  ...prev,
-                  current: 1,
-                  pageSize,
-                })),
-              showSizeChanger: true,
-              pageSizeOptions: ["10", "20", "50", "100"],
-            }}
-            size="small"
-          />
-        </>
+        <TrashListTab
+          searchPlaceholder="Поиск по ФИО или ИНН"
+          searchValue={employeeSearch}
+          onSearchChange={(e) =>
+            setEmployeeState((prev) => ({
+              ...prev,
+              search: e.target.value,
+            }))
+          }
+          onRefresh={fetchEmployees}
+          columns={employeeColumns}
+          dataSource={employees}
+          loading={employeesLoading}
+          pagination={employeePagination}
+          onChangePage={(page) =>
+            setEmployeeState((prev) => ({
+              ...prev,
+              pagination: { ...prev.pagination, current: page },
+            }))
+          }
+          onChangePageSize={(_current, pageSize) =>
+            setEmployeeState((prev) => ({
+              ...prev,
+              pagination: {
+                ...prev.pagination,
+                current: 1,
+                pageSize,
+              },
+            }))
+          }
+        />
       ),
     },
     {
       key: "users",
       label: "Пользователи",
       children: (
-        <>
-          <Space style={{ marginBottom: 12 }}>
-            <Input
-              placeholder="Поиск по имени или email"
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              allowClear
-            />
-            <Button onClick={fetchUsers}>Обновить</Button>
-          </Space>
-          <Table
-            columns={userColumns}
-            dataSource={users}
-            rowKey="id"
-            loading={usersLoading}
-            pagination={{
-              ...userPagination,
-              onChange: (page) =>
-                setUserPagination((prev) => ({ ...prev, current: page })),
-              onShowSizeChange: (current, pageSize) =>
-                setUserPagination((prev) => ({
-                  ...prev,
-                  current: 1,
-                  pageSize,
-                })),
-              showSizeChanger: true,
-              pageSizeOptions: ["10", "20", "50", "100"],
-            }}
-            size="small"
-          />
-        </>
+        <TrashListTab
+          searchPlaceholder="Поиск по имени или email"
+          searchValue={userSearch}
+          onSearchChange={(e) =>
+            setUserState((prev) => ({
+              ...prev,
+              search: e.target.value,
+            }))
+          }
+          onRefresh={fetchUsers}
+          columns={userColumns}
+          dataSource={users}
+          loading={usersLoading}
+          pagination={userPagination}
+          onChangePage={(page) =>
+            setUserState((prev) => ({
+              ...prev,
+              pagination: { ...prev.pagination, current: page },
+            }))
+          }
+          onChangePageSize={(_current, pageSize) =>
+            setUserState((prev) => ({
+              ...prev,
+              pagination: {
+                ...prev.pagination,
+                current: 1,
+                pageSize,
+              },
+            }))
+          }
+        />
       ),
     },
   ];

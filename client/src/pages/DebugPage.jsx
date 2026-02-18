@@ -126,9 +126,9 @@ const DebugPage = () => {
       {logs.length > 0 && (
         <Card title="Логи" style={{ marginBottom: 20 }}>
           <Space direction="vertical" style={{ width: "100%" }}>
-            {logs.map((log, index) => (
+            {logs.map((log) => (
               <Card
-                key={index}
+                key={`${log.timestamp}-${log.type}-${log.message}`}
                 size="small"
                 style={{
                   borderLeft: `4px solid ${

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Input } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -27,15 +26,10 @@ const MaskedDateInput = ({
   placeholder = "ДД.ММ.ГГГГ",
   ...rest
 }) => {
-  const [inputValue, setInputValue] = useState(value || "");
-
-  useEffect(() => {
-    setInputValue(value || "");
-  }, [value]);
+  const inputValue = formatMask(String(value || ""));
 
   const handleChange = (event) => {
     const formatted = formatMask(event.target.value);
-    setInputValue(formatted);
 
     if (!formatted) {
       onChange?.(null);

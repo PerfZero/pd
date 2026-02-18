@@ -20,12 +20,19 @@ const DepartmentsPage = () => {
   const [departments, setDepartments] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [modalState, setModalState] = useState({
+    visible: false,
+    editingDepartment: null,
+  });
   const [form] = Form.useForm();
   const { user } = useAuthStore();
 
   const fetchDepartments = useCallback(async () => {
+    if (!user?.counterpartyId) {
+      setDepartments([]);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await departmentService.getAll(user.counterpartyId);
@@ -40,6 +47,11 @@ const DepartmentsPage = () => {
 
   // Загрузка объектов (для default контрагента - все, для остальных - только привязанные)
   const fetchConstructionSites = useCallback(async () => {
+    if (!user?.counterpartyId) {
+      setConstructionSites([]);
+      return;
+    }
+
     try {
       let sites = [];
 
@@ -69,14 +81,15 @@ const DepartmentsPage = () => {
   }, [user?.counterpartyId]);
 
   useEffect(() => {
-    if (user) {
-      fetchDepartments();
-      fetchConstructionSites();
-    }
-  }, [user, fetchDepartments, fetchConstructionSites]);
+    fetchDepartments();
+    fetchConstructionSites();
+  }, [fetchDepartments, fetchConstructionSites]);
 
   const handleOpenModal = (department = null) => {
-    setEditingDepartment(department);
+    setModalState({
+      visible: true,
+      editingDepartment: department,
+    });
     if (department) {
       form.setFieldsValue({
         name: department.name,
@@ -85,12 +98,13 @@ const DepartmentsPage = () => {
     } else {
       form.resetFields();
     }
-    setModalVisible(true);
   };
 
   const handleCloseModal = () => {
-    setModalVisible(false);
-    setEditingDepartment(null);
+    setModalState({
+      visible: false,
+      editingDepartment: null,
+    });
     form.resetFields();
   };
 
@@ -102,8 +116,11 @@ const DepartmentsPage = () => {
         counterpartyId: user?.counterpartyId,
       };
 
-      if (editingDepartment) {
-        await departmentService.update(editingDepartment.id, payload);
+      if (modalState.editingDepartment) {
+        await departmentService.update(
+          modalState.editingDepartment.id,
+          payload,
+        );
         message.success("Подразделение обновлено");
       } else {
         await departmentService.create(payload);
@@ -205,11 +222,11 @@ const DepartmentsPage = () => {
 
       <Modal
         title={
-          editingDepartment
+          modalState.editingDepartment
             ? "Редактировать подразделение"
             : "Добавить подразделение"
         }
-        open={modalVisible}
+        open={modalState.visible}
         onOk={handleSave}
         onCancel={handleCloseModal}
         okText="Сохранить"

@@ -108,6 +108,7 @@ const tableStyles = `
  */
 // Ключ для localStorage
 const PAGE_SIZE_KEY = "employees_table_page_size";
+const EMPTY_HIDDEN_COLUMN_KEYS = [];
 
 export const EmployeeTable = ({
   employees,
@@ -129,7 +130,7 @@ export const EmployeeTable = ({
   userCounterpartyId,
   onConstructionSitesEdit, // Новый prop для редактирования объектов
   resetTrigger, // Триггер для сброса фильтров
-  hiddenColumnKeys = [],
+  hiddenColumnKeys = EMPTY_HIDDEN_COLUMN_KEYS,
 }) => {
   const {
     filters,

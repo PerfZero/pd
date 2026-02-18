@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react';
-import { DatePicker, Button } from 'antd';
-import { FileExcelOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { useState, useEffect } from "react";
+import { DatePicker, Button } from "antd";
+import { FileExcelOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+
+const EMPTY_FILTER = {};
 
 /**
  * Компонент для фильтрации сотрудников по диапазону дат
  * Фильтрует по дате создания или обновления статуса
  */
-const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport }) => {
+const ExportDateFilter = ({
+  onFilter,
+  onReset,
+  initialFilter = EMPTY_FILTER,
+  onExcelExport,
+}) => {
   const [dateRange, setDateRange] = useState(null);
 
   // Инициализируем дату при загрузке, если есть сохраненные значения
@@ -28,12 +35,12 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport
       return;
     }
 
-    const dateFrom = dateRange[0].format('YYYY-MM-DD');
-    const dateTo = dateRange[1].format('YYYY-MM-DD');
+    const dateFrom = dateRange[0].format("YYYY-MM-DD");
+    const dateTo = dateRange[1].format("YYYY-MM-DD");
 
     onFilter({
       dateFrom,
-      dateTo
+      dateTo,
     });
   };
 
@@ -43,20 +50,29 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport
   };
 
   return (
-    <div style={{
-      padding: '12px 16px',
-      background: '#fafafa',
-      border: '1px solid #f0f0f0',
-      borderRadius: '4px',
-      marginBottom: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '14px', fontWeight: '500' }}>
+    <div
+      style={{
+        padding: "12px 16px",
+        background: "#fafafa",
+        border: "1px solid #f0f0f0",
+        borderRadius: "4px",
+        marginBottom: "16px",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontSize: "14px", fontWeight: "500" }}>
           Фильтр по дате:
         </span>
 
@@ -64,8 +80,8 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport
           value={dateRange}
           onChange={handleDateRangeChange}
           format="DD.MM.YYYY"
-          placeholder={['Дата с', 'Дата по']}
-          style={{ width: '280px' }}
+          placeholder={["Дата с", "Дата по"]}
+          style={{ width: "280px" }}
         />
 
         <Button
@@ -76,11 +92,7 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport
           Применить фильтр
         </Button>
 
-        <Button
-          onClick={handleResetFilter}
-        >
-          Сбросить фильтры
-        </Button>
+        <Button onClick={handleResetFilter}>Сбросить фильтры</Button>
       </div>
 
       {onExcelExport && (
@@ -97,4 +109,3 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport
 };
 
 export default ExportDateFilter;
-

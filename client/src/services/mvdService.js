@@ -1,6 +1,6 @@
 import api from "./api";
 
-export const mvdService = {
+const mvdService = {
   getMeta: async () => {
     const response = await api.get("/mvd/meta");
     return response.data;

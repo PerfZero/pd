@@ -34,26 +34,31 @@ const EmployeeDocumentUpload = ({
   ensureEmployeeId,
 }) => {
   const { message } = App.useApp();
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [cameraVisible, setCameraVisible] = useState(false);
-  const [effectiveEmployeeId, setEffectiveEmployeeId] = useState(
-    employeeId || null,
-  );
+  const [state, setState] = useState({
+    files: [],
+    loading: false,
+    uploading: false,
+    previewImage: null,
+    previewVisible: false,
+    cameraVisible: false,
+    resolvedEmployeeId: null,
+  });
+  const {
+    files,
+    loading,
+    uploading,
+    previewImage,
+    previewVisible,
+    cameraVisible,
+    resolvedEmployeeId,
+  } = state;
+  const effectiveEmployeeId = employeeId || resolvedEmployeeId;
 
   // Ссылка на скрытый инпут для системной камеры (резервный вариант)
   const nativeCameraInputRef = useRef(null);
 
   // Ссылка на скрытый инпут для выбора файлов
   const fileInputRef = useRef(null);
-
-  // Загружаем файлы только при изменении employeeId или documentType
-  useEffect(() => {
-    setEffectiveEmployeeId(employeeId || null);
-  }, [employeeId]);
 
   const resolveEmployeeId = async () => {
     if (effectiveEmployeeId) {
@@ -66,7 +71,7 @@ const EmployeeDocumentUpload = ({
     try {
       const newEmployeeId = await ensureEmployeeId();
       if (newEmployeeId) {
-        setEffectiveEmployeeId(newEmployeeId);
+        setState((prev) => ({ ...prev, resolvedEmployeeId: newEmployeeId }));
         return newEmployeeId;
       }
       message.error("Не удалось создать черновик сотрудника");
@@ -79,10 +84,10 @@ const EmployeeDocumentUpload = ({
 
   // Загрузка файлов с сервера
   const fetchFiles = useCallback(async () => {
-    setLoading(true);
+    setState((prev) => ({ ...prev, loading: true }));
     try {
       if (!effectiveEmployeeId) {
-        setFiles([]);
+        setState((prev) => ({ ...prev, files: [] }));
         return;
       }
 
@@ -95,22 +100,18 @@ const EmployeeDocumentUpload = ({
           return typeValue === documentType;
         }) || [];
 
-      setFiles(filteredFiles);
+      setState((prev) => ({ ...prev, files: filteredFiles }));
     } catch (error) {
       console.error("Error loading files:", error);
       message.error("Ошибка загрузки файлов");
     } finally {
-      setLoading(false);
+      setState((prev) => ({ ...prev, loading: false }));
     }
   }, [documentType, effectiveEmployeeId, message]);
 
   useEffect(() => {
-    if (effectiveEmployeeId) {
-      fetchFiles();
-    } else {
-      setFiles([]);
-    }
-  }, [effectiveEmployeeId, documentType, fetchFiles]);
+    fetchFiles();
+  }, [fetchFiles]);
 
   // Загрузка файла (универсальная функция)
   const uploadFile = async (file) => {
@@ -141,7 +142,7 @@ const EmployeeDocumentUpload = ({
     formData.append("files", file);
     formData.append("documentType", documentType);
 
-    setUploading(true);
+    setState((prev) => ({ ...prev, uploading: true }));
     try {
       await employeeService.uploadFiles(currentEmployeeId, formData);
       message.success("Файл успешно загружен");
@@ -150,7 +151,7 @@ const EmployeeDocumentUpload = ({
       console.error("Error uploading file:", error);
       message.error(error.response?.data?.message || "Ошибка загрузки файла");
     } finally {
-      setUploading(false);
+      setState((prev) => ({ ...prev, uploading: false }));
     }
   };
 
@@ -160,7 +161,7 @@ const EmployeeDocumentUpload = ({
     const file = new File([blob], `document-${Date.now()}.jpg`, {
       type: "image/jpeg",
     });
-    setCameraVisible(false);
+    setState((prev) => ({ ...prev, cameraVisible: false }));
     await uploadFile(file);
   };
 
@@ -212,7 +213,7 @@ const EmployeeDocumentUpload = ({
     // const isSecure = window.isSecureContext; // Обычно isApiSupported уже false если не secure
 
     if (isApiSupported) {
-      setCameraVisible(true);
+      setState((prev) => ({ ...prev, cameraVisible: true }));
     } else {
       // Если API недоступен (например, HTTP), используем системную камеру
       console.warn(
@@ -254,8 +255,11 @@ const EmployeeDocumentUpload = ({
       );
       if (response.data.viewUrl) {
         if (file.mimeType.startsWith("image/")) {
-          setPreviewImage(response.data.viewUrl);
-          setPreviewVisible(true);
+          setState((prev) => ({
+            ...prev,
+            previewImage: response.data.viewUrl,
+            previewVisible: true,
+          }));
         } else {
           window.open(response.data.viewUrl, "_blank");
         }
@@ -409,7 +413,8 @@ const EmployeeDocumentUpload = ({
         preview={{
           visible: previewVisible,
           src: previewImage,
-          onVisibleChange: (visible) => setPreviewVisible(visible),
+          onVisibleChange: (visible) =>
+            setState((prev) => ({ ...prev, previewVisible: visible })),
         }}
       />
 
@@ -417,7 +422,7 @@ const EmployeeDocumentUpload = ({
       <DocumentCamera
         visible={cameraVisible}
         onCapture={handleCameraCapture}
-        onCancel={() => setCameraVisible(false)}
+        onCancel={() => setState((prev) => ({ ...prev, cameraVisible: false }))}
       />
     </div>
   );

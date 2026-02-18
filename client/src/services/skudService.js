@@ -118,5 +118,3 @@ export const skudService = {
     return response.data;
   },
 };
-
-export default skudService;

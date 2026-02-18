@@ -13,7 +13,7 @@ const buildFormData = (file, extra = {}) => {
   return formData;
 };
 
-export const otService = {
+const otService = {
   getCategories: (params) => api.get("/ot/categories", { params }),
   createCategory: (data) => api.post("/ot/categories", data),
   updateCategory: (id, data) => api.patch(`/ot/categories/${id}`, data),

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Input, Button, Space, Checkbox } from 'antd';
+import { useState } from "react";
+import { Input, Button, Space, Checkbox } from "antd";
 
 /**
  * Компонент фильтра для колонки "Должность"
@@ -11,37 +11,33 @@ export const PositionFilterDropdown = ({
   confirm,
   clearFilters,
   uniqueFilterPositions,
-  resetTrigger,
+  resetTrigger: _resetTrigger,
 }) => {
-  const [searchText, setSearchText] = useState('');
-
-  // Очищаем поле поиска при сбросе фильтров на странице
-  useEffect(() => {
-    setSearchText('');
-  }, [resetTrigger]);
+  const [searchText, setSearchText] = useState("");
 
   const filteredPositions = uniqueFilterPositions.filter((pos) =>
-    pos.toLowerCase().includes(searchText.toLowerCase())
+    pos.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const handleReset = () => {
-    setSearchText('');
+    setSearchText("");
     setSelectedKeys([]);
     clearFilters();
   };
 
   return (
-    <div style={{ padding: '8px', minWidth: '250px' }}>
+    <div style={{ padding: "8px", minWidth: "250px" }}>
       <Input
         placeholder="Поиск должности..."
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
-        style={{ marginBottom: '8px' }}
-        autoFocus
+        style={{ marginBottom: "8px" }}
       />
-      <div style={{ maxHeight: '200px', overflow: 'auto', marginBottom: '8px' }}>
+      <div
+        style={{ maxHeight: "200px", overflow: "auto", marginBottom: "8px" }}
+      >
         {filteredPositions.map((pos) => (
-          <div key={pos} style={{ marginBottom: '4px' }}>
+          <div key={pos} style={{ marginBottom: "4px" }}>
             <Checkbox
               checked={selectedKeys.includes(pos)}
               onChange={(e) => {
@@ -57,12 +53,8 @@ export const PositionFilterDropdown = ({
           </div>
         ))}
       </div>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Button
-          type="primary"
-          onClick={() => confirm()}
-          size="small"
-        >
+      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+        <Button type="primary" onClick={() => confirm()} size="small">
           OK
         </Button>
         <Button onClick={handleReset} size="small">
@@ -72,4 +64,3 @@ export const PositionFilterDropdown = ({
     </div>
   );
 };
-

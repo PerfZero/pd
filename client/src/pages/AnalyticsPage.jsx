@@ -84,11 +84,20 @@ const SimpleBars = ({ data, labelKey, valueKey, color = "#1677ff" }) => {
 
   return (
     <Space direction="vertical" size={8} style={{ width: "100%" }}>
-      {normalized.map((item, index) => {
+      {normalized.map((item) => {
         const value = Number(item?.[valueKey]) || 0;
         const ratio = max > 0 ? Math.max((value / max) * 100, 3) : 0;
+        const key = [
+          item?.id,
+          item?.[labelKey],
+          item?.[valueKey],
+          item?.date,
+          item?.createdAt,
+        ]
+          .filter(Boolean)
+          .join("-");
         return (
-          <div key={`${item?.[labelKey]}-${index}`}>
+          <div key={key || JSON.stringify(item)}>
             <div
               style={{
                 display: "flex",

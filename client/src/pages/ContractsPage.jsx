@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   Table,
@@ -25,30 +25,143 @@ dayjs.extend(customParseFormat);
 const DATE_FORMAT = "DD.MM.YYYY";
 const { Title } = Typography;
 
+const createContractColumns = ({ onEdit, onDelete }) => [
+  { title: "Номер", dataIndex: "contractNumber", key: "contractNumber" },
+  {
+    title: "Дата",
+    dataIndex: "contractDate",
+    key: "contractDate",
+    render: (date) => (date ? dayjs(date).format(DATE_FORMAT) : "-"),
+  },
+  {
+    title: "Тип",
+    dataIndex: "type",
+    render: (type) => (
+      <Tag color={type === "general_contract" ? "blue" : "green"}>
+        {type === "general_contract" ? "Генподряд" : "Подряд"}
+      </Tag>
+    ),
+  },
+  {
+    title: "Объект",
+    dataIndex: ["constructionSite", "shortName"],
+    key: "site",
+  },
+  {
+    title: "Действия",
+    render: (_, record) => (
+      <Space>
+        <Button icon={<EditOutlined />} onClick={() => onEdit(record)} />
+        <Button
+          icon={<DeleteOutlined />}
+          danger
+          onClick={() => onDelete(record)}
+        />
+      </Space>
+    ),
+  },
+];
+
+const ContractEditorFields = ({ sites, counterparties }) => (
+  <>
+    <Form.Item
+      name="contractNumber"
+      label="Номер договора"
+      rules={[{ required: true }]}
+    >
+      <Input />
+    </Form.Item>
+    <Form.Item
+      name="contractDate"
+      label="Дата договора"
+      rules={[{ required: true, message: "Введите дату договора" }]}
+    >
+      <DatePicker
+        style={{ width: "100%" }}
+        format={DATE_FORMAT}
+        placeholder="ДД.ММ.ГГГГ"
+      />
+    </Form.Item>
+    <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
+      <Select>
+        <Select.Option value="general_contract">
+          Договор генподряда
+        </Select.Option>
+        <Select.Option value="subcontract">Договор подряда</Select.Option>
+      </Select>
+    </Form.Item>
+    <Form.Item
+      name="constructionSiteId"
+      label="Объект строительства"
+      rules={[{ required: true }]}
+    >
+      <Select showSearch optionFilterProp="children">
+        {sites.map((site) => (
+          <Select.Option key={site.id} value={site.id}>
+            {site.shortName}
+          </Select.Option>
+        ))}
+      </Select>
+    </Form.Item>
+    <Form.Item
+      name="counterparty1Id"
+      label="Контрагент 1"
+      rules={[{ required: true }]}
+    >
+      <Select showSearch optionFilterProp="children">
+        {counterparties.map((cp) => (
+          <Select.Option key={cp.id} value={cp.id}>
+            {cp.name}
+          </Select.Option>
+        ))}
+      </Select>
+    </Form.Item>
+    <Form.Item
+      name="counterparty2Id"
+      label="Контрагент 2"
+      rules={[{ required: true }]}
+    >
+      <Select showSearch optionFilterProp="children">
+        {counterparties.map((cp) => (
+          <Select.Option key={cp.id} value={cp.id}>
+            {cp.name}
+          </Select.Option>
+        ))}
+      </Select>
+    </Form.Item>
+  </>
+);
+
 const ContractsPage = () => {
   const { message, modal } = App.useApp();
   const [data, setData] = useState([]);
-  const [counterparties, setCounterparties] = useState([]);
-  const [sites, setSites] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [referenceData, setReferenceData] = useState({
+    counterparties: [],
+    sites: [],
+  });
+  const [uiState, setUiState] = useState({
+    loading: false,
+    modalVisible: false,
+    editingId: null,
+  });
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
   const [form] = Form.useForm();
+  const { counterparties, sites } = referenceData;
+  const { loading, modalVisible, editingId } = uiState;
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setUiState((prev) => ({ ...prev, loading: true }));
     try {
       const { data: response } = await contractService.getAll();
       setData(response.data.contracts);
     } catch (error) {
       message.error("Ошибка при загрузке данных");
     } finally {
-      setLoading(false);
+      setUiState((prev) => ({ ...prev, loading: false }));
     }
   }, [message]);
 
@@ -59,7 +172,10 @@ const ContractsPage = () => {
         limit: 10000,
         page: 1,
       });
-      setCounterparties(data.data.counterparties);
+      setReferenceData((prev) => ({
+        ...prev,
+        counterparties: data.data.counterparties,
+      }));
     } catch (error) {
       console.error("Error loading counterparties:", error);
     }
@@ -68,7 +184,10 @@ const ContractsPage = () => {
   const fetchSites = useCallback(async () => {
     try {
       const { data } = await constructionSiteService.getAll({ limit: 100 });
-      setSites(data.data.constructionSites);
+      setReferenceData((prev) => ({
+        ...prev,
+        sites: data.data.constructionSites,
+      }));
     } catch (error) {
       console.error("Error loading sites:", error);
     }
@@ -93,68 +212,50 @@ const ContractsPage = () => {
         await contractService.create(data);
         message.success("Договор создан");
       }
-      setModalVisible(false);
+      setUiState((prev) => ({ ...prev, modalVisible: false }));
       fetchData();
     } catch (error) {
       message.error("Ошибка при сохранении");
     }
   };
 
-  const columns = [
-    { title: "Номер", dataIndex: "contractNumber", key: "contractNumber" },
-    {
-      title: "Дата",
-      dataIndex: "contractDate",
-      key: "contractDate",
-      render: (date) => (date ? dayjs(date).format(DATE_FORMAT) : "-"),
+  const handleEdit = useCallback(
+    (record) => {
+      setUiState((prev) => ({
+        ...prev,
+        editingId: record.id,
+        modalVisible: true,
+      }));
+      form.setFieldsValue({
+        ...record,
+        contractDate: dayjs(record.contractDate),
+      });
     },
-    {
-      title: "Тип",
-      dataIndex: "type",
-      render: (type) => (
-        <Tag color={type === "general_contract" ? "blue" : "green"}>
-          {type === "general_contract" ? "Генподряд" : "Подряд"}
-        </Tag>
-      ),
+    [form],
+  );
+
+  const handleDelete = useCallback(
+    (record) => {
+      modal.confirm({
+        title: "Удалить договор?",
+        onOk: async () => {
+          await contractService.delete(record.id);
+          message.success("Договор удален");
+          fetchData();
+        },
+      });
     },
-    {
-      title: "Объект",
-      dataIndex: ["constructionSite", "shortName"],
-      key: "site",
-    },
-    {
-      title: "Действия",
-      render: (_, record) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setEditingId(record.id);
-              form.setFieldsValue({
-                ...record,
-                contractDate: dayjs(record.contractDate),
-              });
-              setModalVisible(true);
-            }}
-          />
-          <Button
-            icon={<DeleteOutlined />}
-            danger
-            onClick={() => {
-              modal.confirm({
-                title: "Удалить договор?",
-                onOk: async () => {
-                  await contractService.delete(record.id);
-                  message.success("Договор удален");
-                  fetchData();
-                },
-              });
-            }}
-          />
-        </Space>
-      ),
-    },
-  ];
+    [fetchData, message, modal],
+  );
+
+  const columns = useMemo(
+    () =>
+      createContractColumns({
+        onEdit: handleEdit,
+        onDelete: handleDelete,
+      }),
+    [handleDelete, handleEdit],
+  );
 
   return (
     <div
@@ -204,9 +305,12 @@ const ContractsPage = () => {
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => {
-              setEditingId(null);
+              setUiState((prev) => ({
+                ...prev,
+                editingId: null,
+                modalVisible: true,
+              }));
               form.resetFields();
-              setModalVisible(true);
             }}
             style={{ marginLeft: "auto" }}
           >
@@ -246,76 +350,14 @@ const ContractsPage = () => {
       <Modal
         title={editingId ? "Редактировать договор" : "Добавить договор"}
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() =>
+          setUiState((prev) => ({ ...prev, modalVisible: false }))
+        }
         onOk={() => form.submit()}
         width={600}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item
-            name="contractNumber"
-            label="Номер договора"
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="contractDate"
-            label="Дата договора"
-            rules={[{ required: true, message: "Введите дату договора" }]}
-          >
-            <DatePicker
-              style={{ width: "100%" }}
-              format={DATE_FORMAT}
-              placeholder="ДД.ММ.ГГГГ"
-            />
-          </Form.Item>
-          <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
-            <Select>
-              <Select.Option value="general_contract">
-                Договор генподряда
-              </Select.Option>
-              <Select.Option value="subcontract">Договор подряда</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="constructionSiteId"
-            label="Объект строительства"
-            rules={[{ required: true }]}
-          >
-            <Select showSearch optionFilterProp="children">
-              {sites.map((site) => (
-                <Select.Option key={site.id} value={site.id}>
-                  {site.shortName}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="counterparty1Id"
-            label="Контрагент 1"
-            rules={[{ required: true }]}
-          >
-            <Select showSearch optionFilterProp="children">
-              {counterparties.map((cp) => (
-                <Select.Option key={cp.id} value={cp.id}>
-                  {cp.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="counterparty2Id"
-            label="Контрагент 2"
-            rules={[{ required: true }]}
-          >
-            <Select showSearch optionFilterProp="children">
-              {counterparties.map((cp) => (
-                <Select.Option key={cp.id} value={cp.id}>
-                  {cp.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+          <ContractEditorFields sites={sites} counterparties={counterparties} />
         </Form>
       </Modal>
     </div>

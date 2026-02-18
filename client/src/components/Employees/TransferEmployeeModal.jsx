@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Modal, Input, Table, Button, Space, App, Empty, Spin } from 'antd';
-import { SearchOutlined, SwapOutlined } from '@ant-design/icons';
-import { counterpartyService } from '../../services/counterpartyService';
-import { employeeService } from '../../services/employeeService';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Modal, Input, Table, Button, Space, App, Empty, Spin } from "antd";
+import { SearchOutlined, SwapOutlined } from "@ant-design/icons";
+import { counterpartyService } from "../../services/counterpartyService";
+import { employeeService } from "../../services/employeeService";
+
+const PAGE_SIZE = 10;
 
 /**
  * Модальное окно для перевода сотрудника в другую компанию
@@ -10,60 +12,67 @@ import { employeeService } from '../../services/employeeService';
  */
 const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
   const { message, modal } = App.useApp();
-  const [searchText, setSearchText] = useState('');
-  const [counterparties, setCounterparties] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [transferring, setTransferring] = useState(false);
-  const [selectedCounterparty, setSelectedCounterparty] = useState(null);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0
+  const [searchText, setSearchText] = useState("");
+  const [listState, setListState] = useState({
+    counterparties: [],
+    currentPage: 1,
+    total: 0,
   });
+  const [requestState, setRequestState] = useState({
+    loading: false,
+    transferring: false,
+  });
+  const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const searchTimeoutRef = useRef(null); // Ref для дебаунса поиска
 
   // Загрузка контрагентов
-  const loadCounterparties = useCallback(async (search = '', page = 1) => {
-    setLoading(true);
-    try {
-      const response = await counterpartyService.getAll({
-        search,
-        page,
-        limit: pagination.pageSize
-      });
-      
-      if (response.data?.success) {
-        setCounterparties(response.data.data.counterparties);
-        setPagination(prev => ({
-          ...prev,
-          current: response.data.data.pagination.page,
-          total: response.data.data.pagination.total
-        }));
+  const loadCounterparties = useCallback(
+    async (search = "", page = 1) => {
+      setRequestState((prev) => ({ ...prev, loading: true }));
+      try {
+        const response = await counterpartyService.getAll({
+          search,
+          page,
+          limit: PAGE_SIZE,
+        });
+
+        if (response.data?.success) {
+          setListState((prev) => ({
+            ...prev,
+            counterparties: response.data.data.counterparties,
+            currentPage: response.data.data.pagination.page,
+            total: response.data.data.pagination.total,
+          }));
+        }
+      } catch (error) {
+        console.error("Ошибка загрузки контрагентов:", error);
+        message.error("Не удалось загрузить список компаний");
+      } finally {
+        setRequestState((prev) => ({ ...prev, loading: false }));
       }
-    } catch (error) {
-      console.error('Ошибка загрузки контрагентов:', error);
-      message.error('Не удалось загрузить список компаний');
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.pageSize, message]);
+    },
+    [message],
+  );
 
   // Дебаунс для поиска
-  const debouncedSearch = useCallback((value) => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    searchTimeoutRef.current = setTimeout(() => {
-      loadCounterparties(value, 1);
-    }, 300);
-  }, [loadCounterparties]);
+  const debouncedSearch = useCallback(
+    (value) => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        loadCounterparties(value, 1);
+      }, 300);
+    },
+    [loadCounterparties],
+  );
 
   // Загрузка при открытии модального окна
   useEffect(() => {
     if (visible) {
-      setSearchText('');
+      setSearchText("");
       setSelectedCounterparty(null);
-      loadCounterparties('', 1);
+      loadCounterparties("", 1);
     }
     // Очистка таймера при размонтировании
     return () => {
@@ -96,69 +105,77 @@ const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
 
     // Подтверждение перевода
     modal.confirm({
-      title: 'Подтверждение перевода',
+      title: "Подтверждение перевода",
       content: (
         <div>
           <p>Вы уверены, что хотите перевести сотрудника:</p>
-          <p><strong>{employee.lastName} {employee.firstName} {employee.middleName || ''}</strong></p>
+          <p>
+            <strong>
+              {employee.lastName} {employee.firstName}{" "}
+              {employee.middleName || ""}
+            </strong>
+          </p>
           <p>в компанию:</p>
-          <p><strong>{selectedCounterparty.name}</strong></p>
+          <p>
+            <strong>{selectedCounterparty.name}</strong>
+          </p>
           {selectedCounterparty.inn && <p>ИНН: {selectedCounterparty.inn}</p>}
         </div>
       ),
-      okText: 'Перевести',
-      cancelText: 'Отмена',
+      okText: "Перевести",
+      cancelText: "Отмена",
       onOk: async () => {
-        setTransferring(true);
+        setRequestState((prev) => ({ ...prev, transferring: true }));
         try {
           const response = await employeeService.transferToCounterparty(
             employee.id,
-            selectedCounterparty.id
+            selectedCounterparty.id,
           );
-          
+
           if (response.success) {
-            message.success(response.message || 'Сотрудник успешно переведен');
+            message.success(response.message || "Сотрудник успешно переведен");
             onCancel();
           }
         } catch (error) {
-          console.error('Ошибка перевода сотрудника:', error);
-          const errorMessage = error.response?.data?.message || 'Не удалось перевести сотрудника';
+          console.error("Ошибка перевода сотрудника:", error);
+          const errorMessage =
+            error.response?.data?.message || "Не удалось перевести сотрудника";
           message.error(errorMessage);
         } finally {
-          setTransferring(false);
+          setRequestState((prev) => ({ ...prev, transferring: false }));
         }
-      }
+      },
     });
   };
 
   // Колонки таблицы
   const columns = [
     {
-      title: 'Название',
-      dataIndex: 'name',
-      key: 'name',
-      ellipsis: true
+      title: "Название",
+      dataIndex: "name",
+      key: "name",
+      ellipsis: true,
     },
     {
-      title: 'ИНН',
-      dataIndex: 'inn',
-      key: 'inn',
-      width: 140
+      title: "ИНН",
+      dataIndex: "inn",
+      key: "inn",
+      width: 140,
     },
     {
-      title: 'Тип',
-      dataIndex: 'type',
-      key: 'type',
+      title: "Тип",
+      dataIndex: "type",
+      key: "type",
       width: 120,
       render: (type) => {
         const typeLabels = {
-          contractor: 'Подрядчик',
-          customer: 'Заказчик',
-          other: 'Прочее'
+          contractor: "Подрядчик",
+          customer: "Заказчик",
+          other: "Прочее",
         };
         return typeLabels[type] || type;
-      }
-    }
+      },
+    },
   ];
 
   return (
@@ -174,15 +191,13 @@ const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
       width={700}
       footer={
         <Space>
-          <Button onClick={onCancel}>
-            Отмена
-          </Button>
+          <Button onClick={onCancel}>Отмена</Button>
           <Button
             type="primary"
             icon={<SwapOutlined />}
             onClick={handleTransfer}
             disabled={!selectedCounterparty}
-            loading={transferring}
+            loading={requestState.transferring}
           >
             Перевести
           </Button>
@@ -191,9 +206,21 @@ const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
     >
       {/* Информация о сотруднике */}
       {employee && (
-        <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
-          <strong>Сотрудник:</strong> {employee.lastName} {employee.firstName} {employee.middleName || ''}
-          {employee.inn && <span style={{ marginLeft: 16, color: '#666' }}>ИНН: {employee.inn}</span>}
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#f5f5f5",
+            borderRadius: 6,
+          }}
+        >
+          <strong>Сотрудник:</strong> {employee.lastName} {employee.firstName}{" "}
+          {employee.middleName || ""}
+          {employee.inn && (
+            <span style={{ marginLeft: 16, color: "#666" }}>
+              ИНН: {employee.inn}
+            </span>
+          )}
         </div>
       )}
 
@@ -209,34 +236,49 @@ const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
 
       {/* Выбранная компания */}
       {selectedCounterparty && (
-        <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', borderRadius: 6, border: '1px solid #91d5ff' }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#e6f7ff",
+            borderRadius: 6,
+            border: "1px solid #91d5ff",
+          }}
+        >
           <strong>Выбрана компания:</strong> {selectedCounterparty.name}
-          {selectedCounterparty.inn && <span style={{ marginLeft: 16, color: '#666' }}>ИНН: {selectedCounterparty.inn}</span>}
+          {selectedCounterparty.inn && (
+            <span style={{ marginLeft: 16, color: "#666" }}>
+              ИНН: {selectedCounterparty.inn}
+            </span>
+          )}
         </div>
       )}
 
       {/* Таблица контрагентов */}
-      <Spin spinning={loading}>
+      <Spin spinning={requestState.loading}>
         <Table
-          dataSource={counterparties}
+          dataSource={listState.counterparties}
           columns={columns}
           rowKey="id"
           size="small"
           pagination={{
-            ...pagination,
+            current: listState.currentPage,
+            pageSize: PAGE_SIZE,
+            total: listState.total,
             showSizeChanger: false,
-            showTotal: (total) => `Всего: ${total}`
+            showTotal: (total) => `Всего: ${total}`,
           }}
           onChange={handleTableChange}
           onRow={(record) => ({
             onClick: () => handleSelectCounterparty(record),
             style: {
-              cursor: 'pointer',
-              background: selectedCounterparty?.id === record.id ? '#e6f7ff' : undefined
-            }
+              cursor: "pointer",
+              background:
+                selectedCounterparty?.id === record.id ? "#e6f7ff" : undefined,
+            },
           })}
           locale={{
-            emptyText: <Empty description="Компании не найдены" />
+            emptyText: <Empty description="Компании не найдены" />,
           }}
           scroll={{ y: 300 }}
         />
@@ -246,4 +288,3 @@ const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
 };
 
 export default TransferEmployeeModal;
-

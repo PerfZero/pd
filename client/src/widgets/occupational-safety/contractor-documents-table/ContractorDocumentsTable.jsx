@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   Table,
   Button,
@@ -63,17 +63,9 @@ const ContractorDocumentsTable = ({
   onApprove,
   onReject,
 }) => {
-  const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+  const [collapsedCategoryKeys, setCollapsedCategoryKeys] = useState([]);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewingFile, setViewingFile] = useState(null);
-
-  const toggleCategoryExpand = useCallback((categoryKey) => {
-    setExpandedRowKeys((prev) =>
-      prev.includes(categoryKey)
-        ? prev.filter((key) => key !== categoryKey)
-        : [...prev, categoryKey],
-    );
-  }, []);
 
   const tableData = useMemo(() => {
     const mapNode = (node, parentPath = [], depth = 0) => {
@@ -150,9 +142,28 @@ const ContractorDocumentsTable = ({
     return keys;
   }, [tableData]);
 
-  useEffect(() => {
-    setExpandedRowKeys(allCategoryKeys);
-  }, [allCategoryKeys]);
+  const expandedRowKeys = useMemo(() => {
+    const collapsedSet = new Set(collapsedCategoryKeys);
+    return allCategoryKeys.filter((key) => !collapsedSet.has(key));
+  }, [allCategoryKeys, collapsedCategoryKeys]);
+
+  const toggleCategoryExpand = useCallback((categoryKey) => {
+    setCollapsedCategoryKeys((prev) =>
+      prev.includes(categoryKey)
+        ? prev.filter((key) => key !== categoryKey)
+        : [...prev, categoryKey],
+    );
+  }, []);
+
+  const handleExpandedRowsChange = useCallback(
+    (nextExpandedRowKeys) => {
+      const nextExpandedSet = new Set(nextExpandedRowKeys);
+      setCollapsedCategoryKeys(
+        allCategoryKeys.filter((key) => !nextExpandedSet.has(key)),
+      );
+    },
+    [allCategoryKeys],
+  );
 
   const getDocumentPayload = (record) =>
     record?.type === "document" ? record : record?.singleDocument || null;
@@ -604,7 +615,7 @@ const ContractorDocumentsTable = ({
         pagination={false}
         expandable={{
           expandedRowKeys,
-          onExpandedRowsChange: setExpandedRowKeys,
+          onExpandedRowsChange: handleExpandedRowsChange,
           expandIcon: () => null,
           rowExpandable: (record) => hasExpandableChildren(record),
         }}

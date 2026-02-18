@@ -14,9 +14,11 @@ export const CounterpartyObjectsModal = ({
   const { message: msg } = App.useApp();
   const { user } = useAuthStore();
   const [sites, setSites] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [uiState, setUiState] = useState({
+    loading: false,
+    saving: false,
+  });
   const [selectedIds, setSelectedIds] = useState([]);
-  const [saving, setSaving] = useState(false);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export const CounterpartyObjectsModal = ({
   }, []);
 
   const fetchSites = useCallback(async () => {
-    setLoading(true);
+    setUiState((prev) => ({ ...prev, loading: true }));
     try {
       // Для user (не default) загружаем только объекты своего контрагента
       if (
@@ -59,7 +61,7 @@ export const CounterpartyObjectsModal = ({
       msg.error("Ошибка при загрузке объектов");
       setSites([]);
     } finally {
-      setLoading(false);
+      setUiState((prev) => ({ ...prev, loading: false }));
     }
   }, [defaultCounterpartyId, msg, user?.counterpartyId, user?.role]);
 
@@ -93,14 +95,14 @@ export const CounterpartyObjectsModal = ({
   };
 
   const handleSave = async () => {
-    setSaving(true);
+    setUiState((prev) => ({ ...prev, saving: true }));
     try {
       await onSave(selectedIds);
-      setSaving(false);
+      setUiState((prev) => ({ ...prev, saving: false }));
       onCancel();
     } catch (error) {
       msg.error(error.response?.data?.message || "Ошибка при сохранении");
-      setSaving(false);
+      setUiState((prev) => ({ ...prev, saving: false }));
     }
   };
 
@@ -117,7 +119,7 @@ export const CounterpartyObjectsModal = ({
       width={600}
       okText="Сохранить"
       cancelText="Отмена"
-      okButtonProps={{ loading: saving }}
+      okButtonProps={{ loading: uiState.saving }}
     >
       {user?.role === "user" &&
         user?.counterpartyId !== defaultCounterpartyId && (
@@ -130,7 +132,7 @@ export const CounterpartyObjectsModal = ({
           />
         )}
 
-      <Spin spinning={loading} tip="Загрузка объектов...">
+      <Spin spinning={uiState.loading} tip="Загрузка объектов...">
         {sites.length === 0 ? (
           <Empty description="Нет доступных объектов" />
         ) : (

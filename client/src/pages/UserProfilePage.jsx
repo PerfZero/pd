@@ -406,8 +406,10 @@ const UserProfilePage = () => {
             <div>
               <div>Ошибка валидации:</div>
               <div style={{ marginTop: 8, fontSize: 12 }}>
-                {error.response.data.errors.map((err, idx) => (
-                  <div key={idx}>
+                {error.response.data.errors.map((err) => (
+                  <div
+                    key={`${err.field || "field"}-${err.message || "message"}`}
+                  >
                     • {err.field}: {err.message}
                   </div>
                 ))}

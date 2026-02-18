@@ -23,8 +23,11 @@ const { useBreakpoint } = Grid;
 const useOccupationalSafety = () => {
   const { user } = useAuthStore();
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
-  const [constructionSites, setConstructionSites] = useState([]);
-  const [counterparties, setCounterparties] = useState([]);
+  const [selectionOptions, setSelectionOptions] = useState({
+    constructionSites: [],
+    counterparties: [],
+  });
+  const { constructionSites, counterparties } = selectionOptions;
   const [selectedConstructionSiteId, setSelectedConstructionSiteId] =
     useState(null);
   const [selectedCounterpartyId, setSelectedCounterpartyId] = useState(null);
@@ -163,14 +166,19 @@ const useOccupationalSafety = () => {
             counterpartiesResponse.data?.data ||
             [];
 
-          setConstructionSites(sites);
-          setCounterparties(counterpartyList);
+          setSelectionOptions({
+            constructionSites: sites,
+            counterparties: counterpartyList,
+          });
         } else if (isContractorUser && user?.counterpartyId) {
           const response = await counterpartyService.getConstructionSites(
             user.counterpartyId,
           );
           const sites = response.data?.data || [];
-          setConstructionSites(sites);
+          setSelectionOptions((prev) => ({
+            ...prev,
+            constructionSites: sites,
+          }));
         }
       } catch (error) {
         console.error("Error loading OT initial data:", error);

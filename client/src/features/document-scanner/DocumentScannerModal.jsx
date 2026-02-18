@@ -40,46 +40,54 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
   const PRIORITY_INNER = 10; // х10 внутри рамки
   const PRIORITY_EDGE = 20; // х20 на краях рамки
 
-  useEffect(() => {
-    if (visible && !window.cv) {
-      setLoading(true);
-      const script = document.createElement("script");
-      script.src = "https://docs.opencv.org/4.8.0/opencv.js";
-      script.async = true;
-      script.onload = () => {
-        if (window.cv.getBuildInformation) {
-          setCvReady(true);
-          setLoading(false);
-        } else {
-          window.cv.onRuntimeInitialized = () => {
-            setCvReady(true);
-            setLoading(false);
-          };
-        }
-      };
-      script.onerror = () => {
-        setError(
-          "Не удалось загрузить библиотеку обработки изображений (OpenCV). Проверьте подключение к интернету.",
-        );
-        setLoading(false);
-      };
-      document.body.appendChild(script);
-    } else if (visible && window.cv) {
-      setCvReady(true);
-      setLoading(false);
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) {
+  const handleModalVisibilityChange = useCallback((open) => {
+    if (!open) {
       setCapturedImage(null);
       setProcessedImage(null);
       setError(null);
+      setProcessing(false);
       lastContourRef.current = null;
       stableCounterRef.current = 0;
       setIsStable(false);
+      return;
     }
-  }, [visible]);
+
+    if (window.cv) {
+      setCvReady(true);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    setLoading(true);
+    const existingScript = document.querySelector(
+      "script[data-opencv-script='true']",
+    );
+    if (existingScript) return;
+
+    const script = document.createElement("script");
+    script.dataset.opencvScript = "true";
+    script.src = "https://docs.opencv.org/4.8.0/opencv.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.cv.getBuildInformation) {
+        setCvReady(true);
+        setLoading(false);
+      } else {
+        window.cv.onRuntimeInitialized = () => {
+          setCvReady(true);
+          setLoading(false);
+        };
+      }
+    };
+    script.onerror = () => {
+      setError(
+        "Не удалось загрузить библиотеку обработки изображений (OpenCV). Проверьте подключение к интернету.",
+      );
+      setLoading(false);
+    };
+    document.body.appendChild(script);
+  }, []);
 
   // Функция для определения весового коэффициента контура на основе его расположения
   const calculateFramePenalty = useCallback((contour, width, height) => {
@@ -879,6 +887,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       title="Сканирование документа"
       open={visible}
       onCancel={onCancel}
+      afterOpenChange={handleModalVisibilityChange}
       footer={null}
       width={800}
       centered
@@ -979,7 +988,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
                     : "rgba(0, 0, 0, 0.5)",
                   color: "#fff",
                   fontSize: 14,
-                  transition: "all 0.3s",
+                  transition: "background 0.3s, color 0.3s",
                 }}
               >
                 {isStable ? "Не двигайте камеру..." : "Поиск документа..."}

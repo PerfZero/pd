@@ -1,4 +1,4 @@
-export const buildCategoryOptions = (categories = []) => {
+const buildCategoryOptions = (categories = []) => {
   const walk = (nodes, depth = 0) =>
     (nodes || []).flatMap((node) => {
       const label = `${"— ".repeat(depth)}${node.name}`;

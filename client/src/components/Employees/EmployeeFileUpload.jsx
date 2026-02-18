@@ -59,23 +59,39 @@ const EmployeeFileUpload = ({
   hideUploadButton = false,
 }) => {
   const { message } = App.useApp();
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [fileList, setFileList] = useState([]);
-  const [documentTypeModalVisible, setDocumentTypeModalVisible] =
-    useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [viewerVisible, setViewerVisible] = useState(false);
-  const [viewingFile, setViewingFile] = useState(null);
+  const [state, setState] = useState({
+    files: [],
+    loading: false,
+    uploading: false,
+    fileList: [],
+    documentTypeModalVisible: false,
+    selectedFiles: [],
+    viewerVisible: false,
+    viewingFile: null,
+  });
+  const {
+    files,
+    loading,
+    uploading,
+    fileList,
+    documentTypeModalVisible,
+    selectedFiles,
+    viewerVisible,
+    viewingFile,
+  } = state;
   const [form] = Form.useForm();
 
   const fetchFiles = useCallback(async () => {
-    setLoading(true);
+    setState((prev) => ({ ...prev, loading: true }));
     try {
+      if (!employeeId) {
+        setState((prev) => ({ ...prev, files: [] }));
+        onFilesChange?.(0);
+        return;
+      }
       const response = await employeeService.getFiles(employeeId);
       const filesList = response.data || [];
-      setFiles(filesList);
+      setState((prev) => ({ ...prev, files: filesList }));
 
       // Уведомляем родителя об изменении файлов (только для информации, без обновления сотрудника)
       // onFilesChange используется только для обновления отображения количества файлов в таблице
@@ -86,15 +102,13 @@ const EmployeeFileUpload = ({
       console.error("Error loading files:", error);
       message.error("Ошибка загрузки списка файлов");
     } finally {
-      setLoading(false);
+      setState((prev) => ({ ...prev, loading: false }));
     }
   }, [employeeId, message, onFilesChange]);
 
   useEffect(() => {
-    if (employeeId) {
-      fetchFiles();
-    }
-  }, [employeeId, fetchFiles]);
+    fetchFiles();
+  }, [fetchFiles]);
 
   // Открываем модальное окно выбора типа документа
   const handleSelectFiles = () => {
@@ -102,8 +116,11 @@ const EmployeeFileUpload = ({
       message.warning("Выберите файлы для загрузки");
       return;
     }
-    setSelectedFiles(fileList);
-    setDocumentTypeModalVisible(true);
+    setState((prev) => ({
+      ...prev,
+      selectedFiles: fileList,
+      documentTypeModalVisible: true,
+    }));
   };
 
   // Загрузка файлов с типом документа
@@ -121,12 +138,15 @@ const EmployeeFileUpload = ({
       // Добавляем тип документа в formData
       formData.append("documentType", documentType);
 
-      setUploading(true);
+      setState((prev) => ({ ...prev, uploading: true }));
       await employeeService.uploadFiles(employeeId, formData);
       message.success("Файлы успешно загружены");
-      setFileList([]);
-      setSelectedFiles([]);
-      setDocumentTypeModalVisible(false);
+      setState((prev) => ({
+        ...prev,
+        fileList: [],
+        selectedFiles: [],
+        documentTypeModalVisible: false,
+      }));
       form.resetFields();
       fetchFiles();
     } catch (error) {
@@ -137,14 +157,17 @@ const EmployeeFileUpload = ({
       console.error("Error uploading files:", error);
       message.error(error.response?.data?.message || "Ошибка загрузки файлов");
     } finally {
-      setUploading(false);
+      setState((prev) => ({ ...prev, uploading: false }));
     }
   };
 
   // Отмена выбора типа документа
   const handleCancelDocumentType = () => {
-    setDocumentTypeModalVisible(false);
-    setSelectedFiles([]);
+    setState((prev) => ({
+      ...prev,
+      documentTypeModalVisible: false,
+      selectedFiles: [],
+    }));
     form.resetFields();
   };
 
@@ -183,13 +206,16 @@ const EmployeeFileUpload = ({
         file.id,
       );
       if (response.data.viewUrl) {
-        setViewingFile({
-          url: response.data.viewUrl,
-          name: file.originalName,
-          mimeType: file.mimeType,
-          fileId: file.id,
-        });
-        setViewerVisible(true);
+        setState((prev) => ({
+          ...prev,
+          viewingFile: {
+            url: response.data.viewUrl,
+            name: file.originalName,
+            mimeType: file.mimeType,
+            fileId: file.id,
+          },
+          viewerVisible: true,
+        }));
       }
     } catch (error) {
       console.error("Error getting view link:", error);
@@ -269,7 +295,7 @@ const EmployeeFileUpload = ({
     },
     onChange: (info) => {
       // Обновляем fileList при изменениях
-      setFileList(info.fileList);
+      setState((prev) => ({ ...prev, fileList: info.fileList }));
     },
     onRemove: () => {
       return true; // Разрешить удаление
@@ -413,7 +439,7 @@ const EmployeeFileUpload = ({
         fileUrl={viewingFile?.url}
         fileName={viewingFile?.name}
         mimeType={viewingFile?.mimeType}
-        onClose={() => setViewerVisible(false)}
+        onClose={() => setState((prev) => ({ ...prev, viewerVisible: false }))}
         onDownload={handleDownloadFromViewer}
       />
     </Space>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Modal, Checkbox, Space, App } from "antd";
 import { employeeApi } from "@/entities/employee";
 import api from "@/services/api";
@@ -44,18 +44,30 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
     }
   }, [user?.counterpartyId]);
 
-  useEffect(() => {
-    if (visible) {
-      fetchConstructionSites();
-      // Устанавливаем уже выбранные объекты
-      if (employee?.employeeCounterpartyMappings) {
-        const siteIds = employee.employeeCounterpartyMappings
-          .map((mapping) => mapping.constructionSiteId)
-          .filter(Boolean); // Убираем null значения
-        setSelectedSites(siteIds);
-      }
+  const syncSelectedSites = useCallback(() => {
+    if (!employee?.employeeCounterpartyMappings) {
+      setSelectedSites([]);
+      return;
     }
-  }, [visible, employee, fetchConstructionSites]);
+
+    const siteIds = employee.employeeCounterpartyMappings
+      .map((mapping) => mapping.constructionSiteId)
+      .filter(Boolean);
+    setSelectedSites(siteIds);
+  }, [employee]);
+
+  const handleOpenChange = useCallback(
+    async (open) => {
+      if (!open) {
+        setSelectedSites([]);
+        return;
+      }
+
+      syncSelectedSites();
+      await fetchConstructionSites();
+    },
+    [fetchConstructionSites, syncSelectedSites],
+  );
 
   const handleSiteChange = (siteId, checked) => {
     if (checked) {
@@ -90,6 +102,7 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
       cancelText="Отмена"
       confirmLoading={loading}
       width={600}
+      afterOpenChange={handleOpenChange}
     >
       <div style={{ maxHeight: 400, overflowY: "auto" }}>
         {constructionSites.length === 0 ? (

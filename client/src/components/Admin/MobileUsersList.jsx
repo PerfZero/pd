@@ -174,13 +174,13 @@ const MobileUsersList = ({
                 alignItems: "flex-end",
                 gap: 8,
               }}
-              onClick={(e) => e.stopPropagation()}
             >
               {/* Переключатель Активен/Неактивен */}
               {currentUser?.role === "admin" && user.id !== currentUser?.id && (
                 <Switch
                   checked={user.isActive}
                   onChange={() => onStatusToggle(user.id)}
+                  onClick={(event) => event.stopPropagation()}
                   size="small"
                   style={{ margin: 0 }}
                 />

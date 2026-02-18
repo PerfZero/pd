@@ -1,4 +1,4 @@
-export const groupDocumentsByCategory = (documents = []) => {
+const groupDocumentsByCategory = (documents = []) => {
   const grouped = new Map();
 
   (documents || []).forEach((doc) => {

@@ -1,41 +1,48 @@
-import { useState, useRef } from 'react';
-import { Modal, Spin, Button, Space, message, Row, Col } from 'antd';
+import { useState, useRef } from "react";
+import { Modal, Spin, Button, Space, message, Row, Col } from "antd";
 import {
   ZoomInOutlined,
   ZoomOutOutlined,
   DownloadOutlined,
   RotateLeftOutlined,
-  CloseOutlined
-} from '@ant-design/icons';
-import styles from './FileViewer.module.css';
+  CloseOutlined,
+} from "@ant-design/icons";
+import styles from "./FileViewer.module.css";
 
 /**
  * Универсальный компонент для просмотра файлов с возможностью увеличения
  * Поддерживает изображения и PDF
  */
-export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDownload }) => {
+export const FileViewer = ({
+  fileUrl,
+  fileName,
+  mimeType,
+  visible,
+  onClose,
+  onDownload,
+}) => {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef(null);
 
   // Определяем тип файла
-  const isImage = mimeType?.startsWith('image/');
-  const isPdf = mimeType?.includes('pdf');
+  const isImage = mimeType?.startsWith("image/");
+  const isPdf = mimeType?.includes("pdf");
 
   // Обработчик увеличения
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 10, 300));
+    setZoom((prev) => Math.min(prev + 10, 300));
   };
 
   // Обработчик уменьшения
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 10, 50));
+    setZoom((prev) => Math.max(prev - 10, 50));
   };
 
   // Обработчик ротации
   const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360);
+    setRotation((prev) => (prev + 90) % 360);
   };
 
   // Обработчик скачивания
@@ -44,8 +51,8 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
       try {
         await onDownload();
       } catch (error) {
-        message.error('Ошибка скачивания файла');
-        console.error('Download error:', error);
+        message.error("Ошибка скачивания файла");
+        console.error("Download error:", error);
       }
     }
   };
@@ -58,19 +65,15 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
   };
 
   // Тулбар управления просмотром
-  const renderToolbar = () => (
+  const toolbar = (
     <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
       <Col>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>
-          {fileName}
-        </span>
+        <span style={{ fontSize: 14, fontWeight: 500 }}>{fileName}</span>
       </Col>
       <Col>
         <Space size="small">
           {/* Процент увеличения */}
-          <span style={{ minWidth: 60, textAlign: 'center' }}>
-            {zoom}%
-          </span>
+          <span style={{ minWidth: 60, textAlign: "center" }}>{zoom}%</span>
 
           {/* Кнопки управления */}
           <Button
@@ -131,17 +134,17 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
         ref={containerRef}
         style={{
           transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-          transition: 'transform 0.2s ease-in-out'
+          transition: "transform 0.2s ease-in-out",
         }}
       >
         <img
           src={fileUrl}
           alt={fileName}
-          style={{ maxWidth: '100%', height: 'auto' }}
+          style={{ maxWidth: "100%", height: "auto" }}
           onLoad={() => setLoading(false)}
           onError={() => {
             setLoading(false);
-            message.error('Ошибка загрузки изображения');
+            message.error("Ошибка загрузки изображения");
           }}
         />
       </div>
@@ -159,8 +162,8 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
         onLoad={() => setLoading(false)}
         style={{
           transform: `scale(${zoom / 100})`,
-          transformOrigin: 'top left',
-          transition: 'transform 0.2s ease-in-out'
+          transformOrigin: "top left",
+          transition: "transform 0.2s ease-in-out",
         }}
       >
         <p>
@@ -195,15 +198,15 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
       width="90vw"
       height="90vh"
       style={{
-        maxWidth: '90vw',
-        maxHeight: '90vh'
+        maxWidth: "90vw",
+        maxHeight: "90vh",
       }}
       styles={{
         body: {
           padding: 16,
-          height: 'calc(90vh - 110px)',
-          overflow: 'auto'
-        }
+          height: "calc(90vh - 110px)",
+          overflow: "auto",
+        },
       }}
       footer={null}
       centered={true}
@@ -211,7 +214,7 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
       wrapClassName={styles.fullscreenModal}
     >
       {/* Тулбар */}
-      {renderToolbar()}
+      {toolbar}
 
       {/* Контент с загрузкой */}
       <Spin spinning={loading} tip="Загрузка...">
@@ -224,4 +227,3 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
     </Modal>
   );
 };
-

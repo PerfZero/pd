@@ -361,7 +361,22 @@ const CounterpartiesPage = () => {
 
         return (
           <div
-            onClick={() => canEditObjects && handleOpenObjectsModal(record.id)}
+            onClick={
+              canEditObjects
+                ? () => handleOpenObjectsModal(record.id)
+                : undefined
+            }
+            onKeyDown={(event) => {
+              if (
+                canEditObjects &&
+                (event.key === "Enter" || event.key === " ")
+              ) {
+                event.preventDefault();
+                handleOpenObjectsModal(record.id);
+              }
+            }}
+            role="button"
+            tabIndex={canEditObjects ? 0 : -1}
             style={{
               cursor: canEditObjects ? "pointer" : "default",
               padding: "4px",

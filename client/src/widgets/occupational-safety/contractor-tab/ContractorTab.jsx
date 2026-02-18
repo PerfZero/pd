@@ -25,6 +25,306 @@ import ContractorDocumentsTable from "@/widgets/occupational-safety/contractor-d
 
 const { Title, Text } = Typography;
 
+const InstructionCard = ({
+  latestInstruction,
+  settingsInstructions,
+  onDownloadInstructionFile,
+  constructionSiteOptions,
+  selectedConstructionSiteId,
+  onSelectConstructionSite,
+  contractorSelectStyle,
+  selectCollapsedStyle,
+  selectDropdownStyle,
+}) => (
+  <Card size="small">
+    <Row gutter={[12, 12]}>
+      <Col xs={24} sm={12}>
+        <Space direction="vertical" size={8} style={{ width: "100%" }}>
+          <Text strong>Инструкции</Text>
+          {latestInstruction ? (
+            <>
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                disabled={!latestInstruction.fileId}
+                onClick={() => onDownloadInstructionFile(latestInstruction)}
+              >
+                Скачать инструкцию
+              </Button>
+              {settingsInstructions.length > 1 && (
+                <>
+                  <Divider style={{ margin: "8px 0" }} />
+                  <List
+                    size="small"
+                    dataSource={settingsInstructions}
+                    locale={{ emptyText: "Инструкции не найдены" }}
+                    renderItem={(item) => (
+                      <List.Item
+                        actions={
+                          item.fileId
+                            ? [
+                                <Button
+                                  key="download"
+                                  size="small"
+                                  icon={<DownloadOutlined />}
+                                  onClick={() => onDownloadInstructionFile(item)}
+                                >
+                                  Скачать
+                                </Button>,
+                              ]
+                            : []
+                        }
+                      >
+                        <List.Item.Meta
+                          title={dayjs(item.createdAt).format("DD.MM.YYYY HH:mm")}
+                          description={item.text || "Без текста"}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </>
+              )}
+            </>
+          ) : (
+            <Empty description="Инструкции не добавлены" />
+          )}
+        </Space>
+      </Col>
+      <Col xs={24} sm={12}>
+        <Space direction="vertical" size={8} style={{ width: "100%" }}>
+          <Text>Объект строительства</Text>
+          <Select
+            placeholder="Объект"
+            size="large"
+            options={constructionSiteOptions}
+            value={selectedConstructionSiteId}
+            onChange={onSelectConstructionSite}
+            allowClear
+            style={contractorSelectStyle || selectCollapsedStyle}
+            popupMatchSelectWidth={false}
+            styles={{ popup: { root: selectDropdownStyle } }}
+          />
+        </Space>
+      </Col>
+    </Row>
+  </Card>
+);
+
+const StaffFiltersCard = ({
+  constructionSiteOptions,
+  selectedConstructionSiteId,
+  onSelectConstructionSite,
+  counterpartyOptions,
+  selectedCounterpartyId,
+  onSelectCounterparty,
+  selectCollapsedStyle,
+  selectDropdownStyle,
+  onTempAdmit,
+  onManualAdmit,
+  onBlockContractor,
+}) => (
+  <Card size="small">
+    <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Text>Фильтры</Text>
+      <Space direction="horizontal" size={8} style={{ width: "100%" }} wrap>
+        <Select
+          placeholder="Объект"
+          size="large"
+          options={constructionSiteOptions}
+          value={selectedConstructionSiteId}
+          onChange={onSelectConstructionSite}
+          allowClear
+          style={selectCollapsedStyle}
+          popupMatchSelectWidth={false}
+          styles={{ popup: { root: selectDropdownStyle } }}
+        />
+        <Select
+          placeholder="Подрядчик"
+          size="large"
+          options={counterpartyOptions}
+          value={selectedCounterpartyId}
+          onChange={onSelectCounterparty}
+          allowClear
+          style={selectCollapsedStyle}
+          popupMatchSelectWidth={false}
+          styles={{ popup: { root: selectDropdownStyle } }}
+        />
+        <Button
+          size="small"
+          onClick={() => onTempAdmit?.(selectedCounterpartyId)}
+          disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
+          style={{ borderColor: "#faad14", color: "#d48806" }}
+        >
+          Временно допустить
+        </Button>
+        <Button
+          size="small"
+          onClick={() => onManualAdmit?.(selectedCounterpartyId)}
+          disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
+          style={{ borderColor: "#52c41a", color: "#389e0d" }}
+        >
+          Допустить
+        </Button>
+        <Button
+          size="small"
+          danger
+          onClick={() => onBlockContractor?.(selectedCounterpartyId)}
+          disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
+        >
+          Заблокировать
+        </Button>
+      </Space>
+    </Space>
+  </Card>
+);
+
+const ContractorStatsCard = ({ contractorLoading, normalizedStats }) => (
+  <Card size="small" loading={contractorLoading}>
+    <Row gutter={[12, 12]} align="middle">
+      <Col flex="auto">
+        <Space size={24} wrap>
+          <Statistic title="Всего документов" value={normalizedStats.total} />
+          <Statistic title="Загружены" value={normalizedStats.uploaded} />
+          <Statistic title="Подтверждены" value={normalizedStats.approved} />
+          <Statistic title="Отклонены" value={normalizedStats.rejected} />
+        </Space>
+      </Col>
+    </Row>
+  </Card>
+);
+
+const ContractorCommentsCard = ({
+  contractorCommentsLoading,
+  contractorComments,
+  contractorCommentText,
+  onContractorCommentTextChange,
+  contractorCommentEnabled,
+  onAddContractorComment,
+  contractorCommentEditOpen,
+  contractorCommentForm,
+  onCloseContractorCommentEdit,
+  onUpdateContractorComment,
+  onOpenEditContractorComment,
+  onDeleteContractorComment,
+}) => (
+  <Card size="small">
+    <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Title level={5} style={{ margin: 0 }}>
+        Комментарии по подрядчику
+      </Title>
+      <List
+        loading={contractorCommentsLoading}
+        dataSource={contractorComments}
+        locale={{ emptyText: "Комментариев пока нет" }}
+        renderItem={(item) => {
+          const creatorName = [item.creator?.lastName, item.creator?.firstName]
+            .filter(Boolean)
+            .join(" ");
+          const title = creatorName
+            ? `${creatorName} • ${dayjs(item.createdAt).format("DD.MM.YYYY HH:mm")}`
+            : dayjs(item.createdAt).format("DD.MM.YYYY HH:mm");
+
+          return (
+            <List.Item
+              actions={[
+                <Tooltip key="edit" title="Редактировать">
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => onOpenEditContractorComment(item)}
+                  />
+                </Tooltip>,
+                <Tooltip key="delete" title="Удалить">
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => onDeleteContractorComment(item)}
+                  />
+                </Tooltip>,
+              ]}
+            >
+              <List.Item.Meta title={title} description={item.text} />
+            </List.Item>
+          );
+        }}
+      />
+      <Input.TextArea
+        rows={3}
+        placeholder="Добавить комментарий"
+        value={contractorCommentText}
+        onChange={onContractorCommentTextChange}
+        disabled={!contractorCommentEnabled}
+      />
+      <Button
+        type="primary"
+        onClick={onAddContractorComment}
+        disabled={!contractorCommentEnabled || !contractorCommentText.trim()}
+      >
+        Добавить комментарий
+      </Button>
+    </Space>
+    <Modal
+      open={contractorCommentEditOpen}
+      title="Редактировать комментарий"
+      onCancel={onCloseContractorCommentEdit}
+      onOk={onUpdateContractorComment}
+      okText="Сохранить"
+      cancelText="Отмена"
+    >
+      <Form form={contractorCommentForm} layout="vertical">
+        <Form.Item
+          name="text"
+          label="Комментарий"
+          rules={[{ required: true, message: "Введите комментарий" }]}
+        >
+          <Input.TextArea rows={3} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  </Card>
+);
+
+const ContractorDocumentsCard = ({
+  contractorTree,
+  statusMeta,
+  isStaff,
+  isContractorUser,
+  uploadingDocId,
+  onDownloadTemplate,
+  onDownloadContractorFile,
+  onPreviewContractorFile,
+  onDeleteContractorFile,
+  onOpenDocumentComments,
+  onUploadClick,
+  onApprove,
+  onReject,
+}) => (
+  <Card size="small">
+    <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Title level={5} style={{ margin: 0 }}>
+        Документы подрядчика
+      </Title>
+      <ContractorDocumentsTable
+        contractorTree={contractorTree}
+        statusMeta={statusMeta}
+        isStaff={isStaff}
+        isContractorUser={isContractorUser}
+        collapseSingleDocumentSubgroups
+        uploadingDocId={uploadingDocId}
+        onDownloadTemplate={onDownloadTemplate}
+        onDownloadContractorFile={onDownloadContractorFile}
+        onPreviewContractorFile={onPreviewContractorFile}
+        onDeleteContractorFile={onDeleteContractorFile}
+        onOpenDocumentComments={onOpenDocumentComments}
+        onUploadClick={onUploadClick}
+        onApprove={onApprove}
+        onReject={onReject}
+      />
+    </Space>
+  </Card>
+);
+
 const ContractorTab = ({
   isStaff,
   isContractorUser,
@@ -80,270 +380,76 @@ const ContractorTab = ({
       style={{ display: "none" }}
       onChange={onFileChange}
     />
+
     {!isStaff && (
-      <Card size="small">
-        <Row gutter={[12, 12]}>
-          <Col xs={24} sm={12}>
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Text strong>Инструкции</Text>
-              {latestInstruction ? (
-                <>
-                  <Button
-                    size="small"
-                    icon={<DownloadOutlined />}
-                    disabled={!latestInstruction.fileId}
-                    onClick={() => onDownloadInstructionFile(latestInstruction)}
-                  >
-                    Скачать инструкцию
-                  </Button>
-                  {settingsInstructions.length > 1 && (
-                    <>
-                      <Divider style={{ margin: "8px 0" }} />
-                      <List
-                        size="small"
-                        dataSource={settingsInstructions}
-                        locale={{ emptyText: "Инструкции не найдены" }}
-                        renderItem={(item) => (
-                          <List.Item
-                            actions={[
-                              item.fileId ? (
-                                <Button
-                                  size="small"
-                                  icon={<DownloadOutlined />}
-                                  onClick={() =>
-                                    onDownloadInstructionFile(item)
-                                  }
-                                >
-                                  Скачать
-                                </Button>
-                              ) : null,
-                            ]}
-                          >
-                            <List.Item.Meta
-                              title={dayjs(item.createdAt).format(
-                                "DD.MM.YYYY HH:mm",
-                              )}
-                              description={item.text || "Без текста"}
-                            />
-                          </List.Item>
-                        )}
-                      />
-                    </>
-                  )}
-                </>
-              ) : (
-                <Empty description="Инструкции не добавлены" />
-              )}
-            </Space>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Text>Объект строительства</Text>
-              <Select
-                placeholder="Объект"
-                size="large"
-                options={constructionSiteOptions}
-                value={selectedConstructionSiteId}
-                onChange={onSelectConstructionSite}
-                allowClear
-                style={contractorSelectStyle || selectCollapsedStyle}
-                popupMatchSelectWidth={false}
-                styles={{ popup: { root: selectDropdownStyle } }}
-              />
-            </Space>
-          </Col>
-        </Row>
-      </Card>
+      <InstructionCard
+        latestInstruction={latestInstruction}
+        settingsInstructions={settingsInstructions}
+        onDownloadInstructionFile={onDownloadInstructionFile}
+        constructionSiteOptions={constructionSiteOptions}
+        selectedConstructionSiteId={selectedConstructionSiteId}
+        onSelectConstructionSite={onSelectConstructionSite}
+        contractorSelectStyle={contractorSelectStyle}
+        selectCollapsedStyle={selectCollapsedStyle}
+        selectDropdownStyle={selectDropdownStyle}
+      />
     )}
+
     {isStaff && (
-      <Card size="small">
-        <Space direction="vertical" size={8} style={{ width: "100%" }}>
-          <Text>Фильтры</Text>
-          <Space direction="horizontal" size={8} style={{ width: "100%" }} wrap>
-            <Select
-              placeholder="Объект"
-              size="large"
-              options={constructionSiteOptions}
-              value={selectedConstructionSiteId}
-              onChange={onSelectConstructionSite}
-              allowClear
-              style={selectCollapsedStyle}
-              popupMatchSelectWidth={false}
-              styles={{ popup: { root: selectDropdownStyle } }}
-            />
-            <Select
-              placeholder="Подрядчик"
-              size="large"
-              options={counterpartyOptions}
-              value={selectedCounterpartyId}
-              onChange={onSelectCounterparty}
-              allowClear
-              style={selectCollapsedStyle}
-              popupMatchSelectWidth={false}
-              styles={{ popup: { root: selectDropdownStyle } }}
-            />
-            <Button
-              size="small"
-              onClick={() => onTempAdmit?.(selectedCounterpartyId)}
-              disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
-              style={{
-                borderColor: "#faad14",
-                color: "#d48806",
-              }}
-            >
-              Временно допустить
-            </Button>
-            <Button
-              size="small"
-              onClick={() => onManualAdmit?.(selectedCounterpartyId)}
-              disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
-              style={{
-                borderColor: "#52c41a",
-                color: "#389e0d",
-              }}
-            >
-              Допустить
-            </Button>
-            <Button
-              size="small"
-              danger
-              onClick={() => onBlockContractor?.(selectedCounterpartyId)}
-              disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
-            >
-              Заблокировать
-            </Button>
-          </Space>
-        </Space>
-      </Card>
+      <StaffFiltersCard
+        constructionSiteOptions={constructionSiteOptions}
+        selectedConstructionSiteId={selectedConstructionSiteId}
+        onSelectConstructionSite={onSelectConstructionSite}
+        counterpartyOptions={counterpartyOptions}
+        selectedCounterpartyId={selectedCounterpartyId}
+        onSelectCounterparty={onSelectCounterparty}
+        selectCollapsedStyle={selectCollapsedStyle}
+        selectDropdownStyle={selectDropdownStyle}
+        onTempAdmit={onTempAdmit}
+        onManualAdmit={onManualAdmit}
+        onBlockContractor={onBlockContractor}
+      />
     )}
+
     {hasContractorSelection && (
       <>
-        <Card size="small" loading={contractorLoading}>
-          <Row gutter={[12, 12]} align="middle">
-            <Col flex="auto">
-              <Space size={24} wrap>
-                <Statistic
-                  title="Всего документов"
-                  value={normalizedStats.total}
-                />
-                <Statistic title="Загружены" value={normalizedStats.uploaded} />
-                <Statistic
-                  title="Подтверждены"
-                  value={normalizedStats.approved}
-                />
-                <Statistic title="Отклонены" value={normalizedStats.rejected} />
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-        {isStaff && (
-          <Card size="small">
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Title level={5} style={{ margin: 0 }}>
-                Комментарии по подрядчику
-              </Title>
-              <List
-                loading={contractorCommentsLoading}
-                dataSource={contractorComments}
-                locale={{ emptyText: "Комментариев пока нет" }}
-                renderItem={(item) => {
-                  const creatorName = [
-                    item.creator?.lastName,
-                    item.creator?.firstName,
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
-                  const title = creatorName
-                    ? `${creatorName} • ${dayjs(item.createdAt).format(
-                        "DD.MM.YYYY HH:mm",
-                      )}`
-                    : dayjs(item.createdAt).format("DD.MM.YYYY HH:mm");
+        <ContractorStatsCard
+          contractorLoading={contractorLoading}
+          normalizedStats={normalizedStats}
+        />
 
-                  return (
-                    <List.Item
-                      actions={[
-                        <Tooltip key="edit" title="Редактировать">
-                          <Button
-                            size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => onOpenEditContractorComment(item)}
-                          />
-                        </Tooltip>,
-                        <Tooltip key="delete" title="Удалить">
-                          <Button
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => onDeleteContractorComment(item)}
-                          />
-                        </Tooltip>,
-                      ]}
-                    >
-                      <List.Item.Meta title={title} description={item.text} />
-                    </List.Item>
-                  );
-                }}
-              />
-              <Input.TextArea
-                rows={3}
-                placeholder="Добавить комментарий"
-                value={contractorCommentText}
-                onChange={onContractorCommentTextChange}
-                disabled={!contractorCommentEnabled}
-              />
-              <Button
-                type="primary"
-                onClick={onAddContractorComment}
-                disabled={
-                  !contractorCommentEnabled || !contractorCommentText.trim()
-                }
-              >
-                Добавить комментарий
-              </Button>
-            </Space>
-            <Modal
-              open={contractorCommentEditOpen}
-              title="Редактировать комментарий"
-              onCancel={onCloseContractorCommentEdit}
-              onOk={onUpdateContractorComment}
-              okText="Сохранить"
-              cancelText="Отмена"
-            >
-              <Form form={contractorCommentForm} layout="vertical">
-                <Form.Item
-                  name="text"
-                  label="Комментарий"
-                  rules={[{ required: true, message: "Введите комментарий" }]}
-                >
-                  <Input.TextArea rows={3} />
-                </Form.Item>
-              </Form>
-            </Modal>
-          </Card>
+        {isStaff && (
+          <ContractorCommentsCard
+            contractorCommentsLoading={contractorCommentsLoading}
+            contractorComments={contractorComments}
+            contractorCommentText={contractorCommentText}
+            onContractorCommentTextChange={onContractorCommentTextChange}
+            contractorCommentEnabled={contractorCommentEnabled}
+            onAddContractorComment={onAddContractorComment}
+            contractorCommentEditOpen={contractorCommentEditOpen}
+            contractorCommentForm={contractorCommentForm}
+            onCloseContractorCommentEdit={onCloseContractorCommentEdit}
+            onUpdateContractorComment={onUpdateContractorComment}
+            onOpenEditContractorComment={onOpenEditContractorComment}
+            onDeleteContractorComment={onDeleteContractorComment}
+          />
         )}
-        <Card size="small">
-          <Space direction="vertical" size={8} style={{ width: "100%" }}>
-            <Title level={5} style={{ margin: 0 }}>
-              Документы подрядчика
-            </Title>
-            <ContractorDocumentsTable
-              contractorTree={contractorTree}
-              statusMeta={statusMeta}
-              isStaff={isStaff}
-              isContractorUser={isContractorUser}
-              collapseSingleDocumentSubgroups
-              uploadingDocId={uploadingDocId}
-              onDownloadTemplate={onDownloadTemplate}
-              onDownloadContractorFile={onDownloadContractorFile}
-              onPreviewContractorFile={onPreviewContractorFile}
-              onDeleteContractorFile={onDeleteContractorFile}
-              onOpenDocumentComments={onOpenDocumentComments}
-              onUploadClick={onUploadClick}
-              onApprove={onApprove}
-              onReject={onReject}
-            />
-          </Space>
-        </Card>
+
+        <ContractorDocumentsCard
+          contractorTree={contractorTree}
+          statusMeta={statusMeta}
+          isStaff={isStaff}
+          isContractorUser={isContractorUser}
+          uploadingDocId={uploadingDocId}
+          onDownloadTemplate={onDownloadTemplate}
+          onDownloadContractorFile={onDownloadContractorFile}
+          onPreviewContractorFile={onPreviewContractorFile}
+          onDeleteContractorFile={onDeleteContractorFile}
+          onOpenDocumentComments={onOpenDocumentComments}
+          onUploadClick={onUploadClick}
+          onApprove={onApprove}
+          onReject={onReject}
+        />
       </>
     )}
   </Space>

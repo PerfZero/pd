@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Table,
   Button,
@@ -21,51 +21,232 @@ import settingsService from "../services/settingsService";
 import { useAuthStore } from "../store/authStore";
 import * as XLSX from "xlsx";
 
+const PAGE_SIZE = 50;
+
+const createColumns = ({ currentPage, canEditAndDelete, onEdit, onDelete }) => [
+  {
+    title: "№",
+    key: "index",
+    width: "10%",
+    render: (_, __, index) => (currentPage - 1) * PAGE_SIZE + index + 1,
+  },
+  {
+    title: "Название должности",
+    dataIndex: "name",
+    key: "name",
+    width: "70%",
+    sorter: (a, b) => a.name.localeCompare(b.name),
+  },
+  {
+    title: "Действия",
+    key: "actions",
+    width: "10%",
+    render: (_, record) => (
+      <Space size="small">
+        {canEditAndDelete ? (
+          <>
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+              title="Редактировать"
+            />
+            <Popconfirm
+              title="Удалить должность?"
+              description="Вы уверены, что хотите удалить эту должность?"
+              onConfirm={() => onDelete(record.id)}
+              okText="Да"
+              cancelText="Нет"
+            >
+              <Button
+                type="link"
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                title="Удалить"
+              />
+            </Popconfirm>
+          </>
+        ) : (
+          <span style={{ color: "#999", fontSize: 12 }}>Нет прав</span>
+        )}
+      </Space>
+    ),
+  },
+];
+
+const PositionsHeader = ({
+  canEditAndDelete,
+  onSearch,
+  onImport,
+  onAdd,
+}) => (
+  <div
+    style={{
+      marginBottom: 8,
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+    }}
+  >
+    <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Должности</h1>
+    <Space size="small">
+      <Input
+        placeholder="Поиск"
+        allowClear
+        style={{ width: 200 }}
+        onChange={(e) => onSearch(e.target.value)}
+        size="small"
+      />
+      {canEditAndDelete && (
+        <>
+          <Upload accept=".xlsx, .xls" beforeUpload={onImport} showUploadList={false}>
+            <Button icon={<UploadOutlined />} size="small">
+              Импорт
+            </Button>
+          </Upload>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd} size="small">
+            Добавить
+          </Button>
+        </>
+      )}
+    </Space>
+  </div>
+);
+
+const PositionFormModal = ({
+  form,
+  loading,
+  visible,
+  editingPosition,
+  onOk,
+  onCancel,
+}) => (
+  <Modal
+    title={editingPosition ? "Редактировать должность" : "Добавить должность"}
+    open={visible}
+    onOk={onOk}
+    onCancel={onCancel}
+    okText="Сохранить"
+    cancelText="Отмена"
+    confirmLoading={loading}
+  >
+    <Form form={form} layout="vertical">
+      <Form.Item
+        name="name"
+        label="Название должности"
+        rules={[
+          { required: true, message: "Введите название должности" },
+          { max: 255, message: "Максимум 255 символов" },
+        ]}
+      >
+        <Input placeholder="Введите название должности" />
+      </Form.Item>
+    </Form>
+  </Modal>
+);
+
+const showImportResult = ({ processed, errors, total }) => {
+  Modal.success({
+    title: "Импорт завершён",
+    content: (
+      <div>
+        <p>
+          <strong>Всего записей в файле:</strong> {total}
+        </p>
+        <p>
+          <strong>Успешно обработано:</strong> {processed}
+        </p>
+        {errors.length > 0 && (
+          <>
+            <p style={{ color: "red" }}>
+              <strong>Ошибок:</strong> {errors.length}
+            </p>
+            <div style={{ maxHeight: 200, overflow: "auto", marginTop: 8 }}>
+              <ul>
+                {errors.map((item) => (
+                  <li
+                    key={`${item.name || "item"}-${item.error || "error"}`}
+                    style={{ color: "red" }}
+                  >
+                    {item.name} - {item.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+      </div>
+    ),
+    width: 600,
+  });
+};
+
 const PositionsPage = () => {
   const { message } = App.useApp();
-  const [positions, setPositions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchText, setSearchText] = useState("");
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingPosition, setEditingPosition] = useState(null);
-  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const [form] = Form.useForm();
   const { user } = useAuthStore();
+  const [state, setState] = useState({
+    positions: [],
+    loading: false,
+    totalCount: 0,
+    currentPage: 1,
+    searchText: "",
+    defaultCounterpartyId: null,
+    modal: {
+      visible: false,
+      editingPosition: null,
+    },
+  });
 
-  // Проверяем, является ли текущий пользователь пользователем контрагента по умолчанию
+  const {
+    positions,
+    loading,
+    totalCount,
+    currentPage,
+    searchText,
+    defaultCounterpartyId,
+    modal,
+  } = state;
+
   const canEditAndDelete =
     user?.role === "admin" || user?.counterpartyId === defaultCounterpartyId;
 
-  // Загрузка должностей
   const fetchPositions = useCallback(
     async (page = 1, search = "") => {
       try {
-        setLoading(true);
+        setState((prev) => ({ ...prev, loading: true }));
         const response = await positionService.getAll({
           page,
-          limit: 50,
+          limit: PAGE_SIZE,
           search,
         });
-        setPositions(response.data.data.positions);
-        setTotalCount(response.data.data.totalCount);
-        setCurrentPage(page);
+
+        setState((prev) => ({
+          ...prev,
+          positions: response.data.data.positions,
+          totalCount: response.data.data.totalCount,
+          currentPage: page,
+        }));
       } catch (error) {
         console.error("Error fetching positions:", error);
         message.error(error.userMessage || "Ошибка загрузки должностей");
       } finally {
-        setLoading(false);
+        setState((prev) => ({ ...prev, loading: false }));
       }
     },
     [message],
   );
 
-  // Загрузка настроек контрагента по умолчанию
   const fetchDefaultCounterparty = useCallback(async () => {
     try {
       const response = await settingsService.getPublicSettings();
-      setDefaultCounterpartyId(response.data?.data?.defaultCounterpartyId);
+      setState((prev) => ({
+        ...prev,
+        defaultCounterpartyId: response.data?.data?.defaultCounterpartyId,
+      }));
     } catch (error) {
       console.error("Error loading default counterparty:", error);
     }
@@ -76,74 +257,73 @@ const PositionsPage = () => {
     fetchDefaultCounterparty();
   }, [fetchPositions, fetchDefaultCounterparty]);
 
-  // Поиск
   const handleSearch = (value) => {
-    setSearchText(value);
+    setState((prev) => ({ ...prev, searchText: value }));
     fetchPositions(1, value);
   };
 
-  // Открыть модальное окно
   const handleAdd = () => {
-    setEditingPosition(null);
+    setState((prev) => ({
+      ...prev,
+      modal: { visible: true, editingPosition: null },
+    }));
     form.resetFields();
-    setIsModalVisible(true);
   };
 
   const handleEdit = (position) => {
-    setEditingPosition(position);
+    setState((prev) => ({
+      ...prev,
+      modal: { visible: true, editingPosition: position },
+    }));
     form.setFieldsValue({ name: position.name });
-    setIsModalVisible(true);
   };
 
-  // Сохранить должность
+  const handleCloseModal = () => {
+    setState((prev) => ({
+      ...prev,
+      modal: { visible: false, editingPosition: null },
+    }));
+    form.resetFields();
+  };
+
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      setLoading(true);
+      setState((prev) => ({ ...prev, loading: true }));
 
-      if (editingPosition) {
-        await positionService.update(editingPosition.id, values);
+      if (modal.editingPosition) {
+        await positionService.update(modal.editingPosition.id, values);
         message.success("Должность обновлена");
       } else {
         await positionService.create(values);
         message.success("Должность создана");
       }
 
-      setIsModalVisible(false);
-      form.resetFields();
+      handleCloseModal();
       fetchPositions(currentPage, searchText);
     } catch (error) {
       console.error("Error saving position:", error);
-      if (error.errorFields) {
-        // Ошибка валидации формы
-        return;
-      }
-      message.error(
-        error.response?.data?.message || "Ошибка сохранения должности",
-      );
+      if (error.errorFields) return;
+      message.error(error.response?.data?.message || "Ошибка сохранения должности");
     } finally {
-      setLoading(false);
+      setState((prev) => ({ ...prev, loading: false }));
     }
   };
 
-  // Удалить должность
   const handleDelete = async (id) => {
     try {
-      setLoading(true);
+      setState((prev) => ({ ...prev, loading: true }));
       await positionService.delete(id);
       message.success("Должность удалена");
       fetchPositions(currentPage, searchText);
     } catch (error) {
       console.error("Error deleting position:", error);
-      message.error(
-        error.response?.data?.message || "Ошибка удаления должности",
-      );
+      message.error(error.response?.data?.message || "Ошибка удаления должности");
     } finally {
-      setLoading(false);
+      setState((prev) => ({ ...prev, loading: false }));
     }
   };
 
-  // Импорт из Excel
   const handleImportExcel = (file) => {
     const reader = new FileReader();
 
@@ -151,173 +331,55 @@ const PositionsPage = () => {
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
-
-        // Читаем первый лист
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-        // Извлекаем названия должностей из столбца A (индекс 0)
         const positionNames = jsonData
-          .map((row) => row[0]) // Берём первый столбец
-          .filter(
-            (name) => name && typeof name === "string" && name.trim() !== "",
-          );
+          .map((row) => row[0])
+          .filter((name) => name && typeof name === "string" && name.trim() !== "");
 
         if (positionNames.length === 0) {
           message.warning("В файле Excel не найдено должностей в столбце A");
           return;
         }
 
-        // Отправляем на сервер
-        setLoading(true);
+        setState((prev) => ({ ...prev, loading: true }));
         const response = await positionService.import(positionNames);
-
         const { processed, errors, total } = response.data.data;
 
-        // Формируем сообщение о результатах
-        Modal.success({
-          title: "Импорт завершён",
-          content: (
-            <div>
-              <p>
-                <strong>Всего записей в файле:</strong> {total}
-              </p>
-              <p>
-                <strong>Успешно обработано:</strong> {processed}
-              </p>
-              {errors.length > 0 && (
-                <>
-                  <p style={{ color: "red" }}>
-                    <strong>Ошибок:</strong> {errors.length}
-                  </p>
-                  <div
-                    style={{ maxHeight: 200, overflow: "auto", marginTop: 8 }}
-                  >
-                    <ul>
-                      {errors.map((item, index) => (
-                        <li key={index} style={{ color: "red" }}>
-                          {item.name} - {item.error}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              )}
-            </div>
-          ),
-          width: 600,
-        });
-
+        showImportResult({ processed, errors, total });
         fetchPositions(currentPage, searchText);
       } catch (error) {
         console.error("Error importing Excel:", error);
         message.error("Ошибка импорта файла Excel");
       } finally {
-        setLoading(false);
+        setState((prev) => ({ ...prev, loading: false }));
       }
     };
 
     reader.readAsArrayBuffer(file);
-    return false; // Предотвращаем автоматическую загрузку
+    return false;
   };
 
-  // Колонки таблицы
-  const columns = [
-    {
-      title: "№",
-      key: "index",
-      width: "10%",
-      render: (_, __, index) => (currentPage - 1) * 50 + index + 1,
-    },
-    {
-      title: "Название должности",
-      dataIndex: "name",
-      key: "name",
-      width: "70%",
-      sorter: (a, b) => a.name.localeCompare(b.name),
-    },
-    {
-      title: "Действия",
-      key: "actions",
-      width: "10%",
-      render: (_, record) => (
-        <Space size="small">
-          {canEditAndDelete ? (
-            <>
-              <Button
-                type="link"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEdit(record)}
-                title="Редактировать"
-              />
-              <Popconfirm
-                title="Удалить должность?"
-                description="Вы уверены, что хотите удалить эту должность?"
-                onConfirm={() => handleDelete(record.id)}
-                okText="Да"
-                cancelText="Нет"
-              >
-                <Button
-                  type="link"
-                  danger
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  title="Удалить"
-                />
-              </Popconfirm>
-            </>
-          ) : (
-            <span style={{ color: "#999", fontSize: 12 }}>Нет прав</span>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () =>
+      createColumns({
+        currentPage,
+        canEditAndDelete,
+        onEdit: handleEdit,
+        onDelete: handleDelete,
+      }),
+    [canEditAndDelete, currentPage],
+  );
 
   return (
     <div style={{ padding: "12px 16px" }}>
-      <div
-        style={{
-          marginBottom: 8,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Должности</h1>
-        <Space size="small">
-          <Input
-            placeholder="Поиск"
-            allowClear
-            style={{ width: 200 }}
-            onChange={(e) => handleSearch(e.target.value)}
-            size="small"
-          />
-          {canEditAndDelete && (
-            <>
-              <Upload
-                accept=".xlsx, .xls"
-                beforeUpload={handleImportExcel}
-                showUploadList={false}
-              >
-                <Button icon={<UploadOutlined />} size="small">
-                  Импорт
-                </Button>
-              </Upload>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-                size="small"
-              >
-                Добавить
-              </Button>
-            </>
-          )}
-        </Space>
-      </div>
+      <PositionsHeader
+        canEditAndDelete={canEditAndDelete}
+        onSearch={handleSearch}
+        onImport={handleImportExcel}
+        onAdd={handleAdd}
+      />
 
       <Table
         columns={columns}
@@ -328,7 +390,7 @@ const PositionsPage = () => {
         scroll={{ y: "calc(100vh - 320px)" }}
         pagination={{
           current: currentPage,
-          pageSize: 50,
+          pageSize: PAGE_SIZE,
           total: totalCount,
           onChange: (page) => fetchPositions(page, searchText),
           showSizeChanger: true,
@@ -338,34 +400,14 @@ const PositionsPage = () => {
         }}
       />
 
-      {/* Модальное окно для добавления/редактирования */}
-      <Modal
-        title={
-          editingPosition ? "Редактировать должность" : "Добавить должность"
-        }
-        open={isModalVisible}
+      <PositionFormModal
+        form={form}
+        loading={loading}
+        visible={modal.visible}
+        editingPosition={modal.editingPosition}
         onOk={handleSave}
-        onCancel={() => {
-          setIsModalVisible(false);
-          form.resetFields();
-        }}
-        okText="Сохранить"
-        cancelText="Отмена"
-        confirmLoading={loading}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Название должности"
-            rules={[
-              { required: true, message: "Введите название должности" },
-              { max: 255, message: "Максимум 255 символов" },
-            ]}
-          >
-            <Input placeholder="Введите название должности" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onCancel={handleCloseModal}
+      />
     </div>
   );
 };
