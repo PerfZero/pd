@@ -22,7 +22,7 @@ const sanitizeContractPayload = (payload = {}) => {
 };
 
 // Получить все договоры
-export const getAllContracts = async (req, res) => {
+export const getAllContracts = async (req, res, next) => {
   try {
     const {
       type,
@@ -85,16 +85,12 @@ export const getAllContracts = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching contracts:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении договоров",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Получить договор по ID
-export const getContractById = async (req, res) => {
+export const getContractById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -119,16 +115,12 @@ export const getContractById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching contract:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении договора",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Создать договор
-export const createContract = async (req, res) => {
+export const createContract = async (req, res, next) => {
   try {
     const payload = sanitizeContractPayload(req.body);
     if (Object.keys(payload).length === 0) {
@@ -163,16 +155,12 @@ export const createContract = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при создании договора",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Обновить договор
-export const updateContract = async (req, res) => {
+export const updateContract = async (req, res, next) => {
   try {
     const { id } = req.params;
     const contract = await Contract.findByPk(id);
@@ -203,16 +191,12 @@ export const updateContract = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating contract:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при обновлении договора",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Удалить договор
-export const deleteContract = async (req, res) => {
+export const deleteContract = async (req, res, next) => {
   try {
     const { id } = req.params;
     const contract = await Contract.findByPk(id);
@@ -232,10 +216,6 @@ export const deleteContract = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting contract:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при удалении договора",
-      error: error.message,
-    });
+    next(error);
   }
 };

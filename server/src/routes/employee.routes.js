@@ -41,6 +41,7 @@ const checkInnRateLimiter = rateLimit({
 
 // Все маршруты требуют аутентификации
 router.use(authenticate);
+router.use(authorize("admin", "manager", "user"));
 
 // Validation rules
 // Для черновиков - мягкая валидация (только фамилия обязательна)

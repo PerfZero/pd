@@ -46,10 +46,20 @@ export const errorHandler = (err, req, res, next) => {
 
   // Sequelize unique constraint error
   if (err.name === "SequelizeUniqueConstraintError") {
-    return res.status(409).json({
+    const response = {
       success: false,
       message: "Resource already exists",
-      error: err.errors[0]?.message || "Unique constraint violation",
+    };
+
+    if (process.env.NODE_ENV === "development") {
+      response.errors = (err.errors || []).map((item) => ({
+        field: item.path,
+        message: item.message,
+      }));
+    }
+
+    return res.status(409).json({
+      ...response,
     });
   }
 

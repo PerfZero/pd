@@ -48,6 +48,120 @@ const employeeAccessInclude = [
   },
 ];
 
+const EMPLOYEE_UPDATE_ALLOWED_FIELDS = new Set([
+  "firstName",
+  "lastName",
+  "middleName",
+  "gender",
+  "positionId",
+  "citizenshipId",
+  "birthCountryId",
+  "birthDate",
+  "inn",
+  "snils",
+  "kig",
+  "passportNumber",
+  "passportDate",
+  "passportIssuer",
+  "passportType",
+  "passportExpiryDate",
+  "kigEndDate",
+  "registrationAddress",
+  "patentNumber",
+  "patentIssueDate",
+  "blankNumber",
+  "email",
+  "phone",
+  "notes",
+]);
+
+const EMPLOYEE_ALLOWED_ROLES = new Set(["admin", "manager", "user"]);
+
+const ensureEmployeeRoleAllowed = (userRole) => {
+  if (!EMPLOYEE_ALLOWED_ROLES.has(userRole)) {
+    throw new AppError("Недостаточно прав", 403);
+  }
+};
+
+const filterEmployeeMutableFields = (
+  payload = {},
+  { normalizeEmptyString = false } = {},
+) => {
+  const sanitized = {};
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (!EMPLOYEE_UPDATE_ALLOWED_FIELDS.has(key)) {
+      return;
+    }
+
+    if (normalizeEmptyString && (value === "" || value === undefined)) {
+      sanitized[key] = null;
+      return;
+    }
+
+    sanitized[key] = value;
+  });
+
+  return sanitized;
+};
+
+const buildInnLookupEmployeePayload = (employee) => {
+  const source = employee?.toJSON ? employee.toJSON() : employee || {};
+
+  return {
+    id: source.id,
+    firstName: source.firstName || null,
+    lastName: source.lastName || null,
+    middleName: source.middleName || null,
+    birthDate: source.birthDate || null,
+    positionId: source.positionId || null,
+    position: source.position
+      ? {
+          id: source.position.id,
+          name: source.position.name,
+        }
+      : null,
+    citizenship: source.citizenship
+      ? {
+          id: source.citizenship.id,
+          name: source.citizenship.name,
+          code: source.citizenship.code,
+          requiresPatent: source.citizenship.requiresPatent,
+        }
+      : null,
+    employeeCounterpartyMappings: Array.isArray(
+      source.employeeCounterpartyMappings,
+    )
+      ? source.employeeCounterpartyMappings.map((mapping) => ({
+          id: mapping.id,
+          counterpartyId: mapping.counterpartyId,
+          departmentId: mapping.departmentId,
+          constructionSiteId: mapping.constructionSiteId,
+          counterparty: mapping.counterparty
+            ? {
+                id: mapping.counterparty.id,
+                name: mapping.counterparty.name,
+                type: mapping.counterparty.type,
+              }
+            : null,
+          department: mapping.department
+            ? {
+                id: mapping.department.id,
+                name: mapping.department.name,
+              }
+            : null,
+          constructionSite: mapping.constructionSite
+            ? {
+                id: mapping.constructionSite.id,
+                shortName: mapping.constructionSite.shortName,
+                fullName: mapping.constructionSite.fullName,
+              }
+            : null,
+        }))
+      : [],
+  };
+};
+
 // Функция для вычисления статуса заполнения карточки сотрудника
 // с учетом конфигурации обязательных полей контрагента
 const calculateStatusCard = (
@@ -142,6 +256,7 @@ export const getAllEmployees = async (req, res, next) => {
     const userId = req.user.id;
     const userRole = req.user.role;
     const userCounterpartyId = req.user.counterpartyId;
+    ensureEmployeeRoleAllowed(userRole);
 
     const where = { isDeleted: false };
 
@@ -685,7 +800,9 @@ export const createEmployee = async (req, res, next) => {
       );
 
       // Проверяем, что сотрудник существует
-      const existingEmployee = await Employee.findByPk(employeeId);
+      const existingEmployee = await Employee.findByPk(employeeId, {
+        include: employeeAccessInclude,
+      });
       if (!existingEmployee) {
         return res.status(404).json({
           success: false,
@@ -701,6 +818,21 @@ export const createEmployee = async (req, res, next) => {
         return next(
           new AppError(
             "Привязка сотрудников доступна только в контрагенте по умолчанию",
+            403,
+          ),
+        );
+      }
+
+      const isEmployeeInDefaultCounterparty =
+        existingEmployee.employeeCounterpartyMappings?.some(
+          (mapping) =>
+            String(mapping.counterpartyId) === String(defaultCounterpartyId),
+        ) || false;
+
+      if (!isEmployeeInDefaultCounterparty) {
+        return next(
+          new AppError(
+            "Недостаточно прав. Сотрудник не принадлежит вашей организации.",
             403,
           ),
         );
@@ -744,9 +876,13 @@ export const createEmployee = async (req, res, next) => {
         ...cleanEmployeeData
       } = req.body;
 
+      const linkingUpdateData = filterEmployeeMutableFields(cleanEmployeeData, {
+        normalizeEmptyString: true,
+      });
+
       // Обновляем сотрудника
       await existingEmployee.update({
-        ...cleanEmployeeData,
+        ...linkingUpdateData,
         updatedBy: req.user.id,
       });
 
@@ -1041,23 +1177,12 @@ export const updateEmployee = async (req, res, next) => {
 
     // Очищаем данные - преобразуем пустые строки в null для всех полей
     const cleanedData = {};
-    const uuidFields = ["positionId", "citizenshipId"];
-    const dateFields = ["birthDate", "passportDate", "patentIssueDate"];
-    const fieldsToIgnore = [
-      "id",
-      "createdBy",
-      "createdAt",
-      "updatedAt",
-      "created_by",
-      "updated_at",
-      "citizenship",
-      "position",
-      "employeeCounterpartyMappings",
-    ];
+    const ignoredFields = [];
 
     Object.keys(updateData).forEach((key) => {
-      // Пропускаем системные поля
-      if (fieldsToIgnore.includes(key)) {
+      // Разрешаем обновлять только явно перечисленные поля
+      if (!EMPLOYEE_UPDATE_ALLOWED_FIELDS.has(key)) {
+        ignoredFields.push(key);
         return;
       }
 
@@ -1070,6 +1195,13 @@ export const updateEmployee = async (req, res, next) => {
         cleanedData[key] = value;
       }
     });
+
+    if (ignoredFields.length > 0 && process.env.NODE_ENV === "development") {
+      console.log(
+        "Ignored non-whitelisted employee update fields:",
+        ignoredFields,
+      );
+    }
 
     const updates = {
       ...cleanedData,
@@ -1085,50 +1217,6 @@ export const updateEmployee = async (req, res, next) => {
         success: false,
         message: "Сотрудник не найден",
       });
-    }
-
-    // 🔗 ВАРИАНТ Б: АВТОМАТИЧЕСКАЯ ПРИВЯЗКА
-    // Если пользователь из default контрагента пытается обновить существующего сотрудника,
-    // которого он не создавал, но который находится в том же контрагенте - автоматически привяжем его
-    const defaultCounterpartyId = await Setting.getSetting(
-      "default_counterparty_id",
-    );
-    if (
-      req.user.counterpartyId === defaultCounterpartyId &&
-      req.user.role === "user"
-    ) {
-      // Проверяем, есть ли уже связь в user_employee_mapping
-      const existingMapping = await UserEmployeeMapping.findOne({
-        where: {
-          userId: req.user.id,
-          employeeId: id,
-          counterpartyId: null, // Для default контрагента
-        },
-      });
-
-      // Если связи нет, проверяем что сотрудник в default контрагенте
-      if (!existingMapping) {
-        const employeeInDefaultCounterparty =
-          await EmployeeCounterpartyMapping.findOne({
-            where: {
-              employeeId: id,
-              counterpartyId: defaultCounterpartyId,
-            },
-          });
-
-        // Если сотрудник в default контрагенте - автоматически привязываем его
-        if (employeeInDefaultCounterparty) {
-          console.log(
-            `🔗 АВТОМАТИЧЕСКАЯ ПРИВЯЗКА: Привязываем сотрудника ${id} к пользователю ${req.user.id}`,
-          );
-          await UserEmployeeMapping.create({
-            userId: req.user.id,
-            employeeId: id,
-            counterpartyId: null, // Для default контрагента
-          });
-          console.log(`✅ Сотрудник успешно привязан к пользователю`);
-        }
-      }
     }
 
     // ПРОВЕРКА ПРАВ ДОСТУПА
@@ -2598,7 +2686,7 @@ export const checkEmployeeByInn = async (req, res, next) => {
       return res.json({
         success: true,
         data: {
-          employee: employeeInUserAccess.toJSON(),
+          employee: buildInnLookupEmployeePayload(employeeInUserAccess),
           exists: true,
           isOwner: true, // Сотрудник создан этим пользователем или найден в его контрагенте
         },
@@ -2658,7 +2746,9 @@ export const checkEmployeeByInn = async (req, res, next) => {
           return res.json({
             success: true,
             data: {
-              employee: employeeInSameCounterparty.toJSON(),
+              employee: buildInnLookupEmployeePayload(
+                employeeInSameCounterparty,
+              ),
               exists: true,
               isOwner: false, // Сотрудник создан другим пользователем
               canLink: true, // Разрешить привязать к текущему пользователю
@@ -3190,6 +3280,7 @@ export const getActiveEmployeesForExport = async (req, res, next) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
     const userCounterpartyId = req.user?.counterpartyId;
+    ensureEmployeeRoleAllowed(userRole);
 
     // Основной фильтр
     const where = {};

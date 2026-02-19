@@ -2,7 +2,7 @@ import { Citizenship, CitizenshipSynonym } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Получить все гражданства с синонимами
-export const getAllCitizenships = async (req, res) => {
+export const getAllCitizenships = async (req, res, next) => {
   try {
     const { search = '' } = req.query;
     
@@ -31,16 +31,12 @@ export const getAllCitizenships = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching citizenships:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при получении списка гражданств',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 // Создать новое гражданство
-export const createCitizenship = async (req, res) => {
+export const createCitizenship = async (req, res, next) => {
   try {
     const { name, code, requiresPatent } = req.body;
     
@@ -76,16 +72,12 @@ export const createCitizenship = async (req, res) => {
       });
     }
     
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при создании гражданства',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 // Обновить гражданство
-export const updateCitizenship = async (req, res) => {
+export const updateCitizenship = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, code, requiresPatent } = req.body;
@@ -120,16 +112,12 @@ export const updateCitizenship = async (req, res) => {
       });
     }
     
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при обновлении гражданства',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 // Добавить синоним к гражданству
-export const addSynonym = async (req, res) => {
+export const addSynonym = async (req, res, next) => {
   try {
     const { citizenshipId } = req.params;
     const { synonym } = req.body;
@@ -170,16 +158,12 @@ export const addSynonym = async (req, res) => {
       });
     }
     
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при добавлении синонима',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 // Обновить синоним
-export const updateSynonym = async (req, res) => {
+export const updateSynonym = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { synonym } = req.body;
@@ -217,16 +201,12 @@ export const updateSynonym = async (req, res) => {
       });
     }
     
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при обновлении синонима',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 // Удалить синоним
-export const deleteSynonym = async (req, res) => {
+export const deleteSynonym = async (req, res, next) => {
   try {
     const { id } = req.params;
     
@@ -247,16 +227,12 @@ export const deleteSynonym = async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting synonym:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при удалении синонима',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 // Удалить гражданство
-export const deleteCitizenship = async (req, res) => {
+export const deleteCitizenship = async (req, res, next) => {
   try {
     const { id } = req.params;
     
@@ -282,11 +258,7 @@ export const deleteCitizenship = async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting citizenship:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при удалении гражданства',
-      error: error.message
-    });
+    next(error);
   }
 };
 

@@ -146,11 +146,7 @@ export const getAllCounterparties = async (req, res, next) => {
     if (error.statusCode) {
       return next(error);
     }
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении контрагентов",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -233,11 +229,7 @@ export const getCounterpartyById = async (req, res, next) => {
     if (error.statusCode) {
       return next(error);
     }
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении контрагента",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -352,11 +344,7 @@ export const createCounterparty = async (req, res, next) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при создании контрагента",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -469,11 +457,7 @@ export const updateCounterparty = async (req, res, next) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при обновлении контрагента",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -542,16 +526,12 @@ export const deleteCounterparty = async (req, res, next) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при удалении контрагента",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Получить статистику по контрагентам
-export const getCounterpartiesStats = async (req, res) => {
+export const getCounterpartiesStats = async (req, res, next) => {
   try {
     const stats = await Counterparty.findAll({
       attributes: [
@@ -567,16 +547,12 @@ export const getCounterpartiesStats = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching counterparties stats:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении статистики",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Генерация уникального кода регистрации для контрагента
-export const generateRegistrationCode = async (req, res) => {
+export const generateRegistrationCode = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -643,11 +619,7 @@ export const generateRegistrationCode = async (req, res) => {
     });
   } catch (error) {
     console.error("Error generating registration code:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при генерации кода регистрации",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -702,11 +674,7 @@ export const getCounterpartyConstructionSites = async (req, res, next) => {
     if (error.statusCode) {
       return next(error);
     }
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении объектов контрагента",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -808,16 +776,12 @@ export const saveCounterpartyConstructionSites = async (req, res, next) => {
     if (error.statusCode) {
       return next(error);
     }
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при сохранении объектов контрагента",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Получить список доступных контрагентов для текущего пользователя
-export const getAvailableCounterparties = async (req, res) => {
+export const getAvailableCounterparties = async (req, res, next) => {
   try {
     const defaultCounterpartyId = await Setting.getSetting(
       "default_counterparty_id",
@@ -871,10 +835,6 @@ export const getAvailableCounterparties = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching available counterparties:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении списка контрагентов",
-      error: error.message,
-    });
+    next(error);
   }
 };

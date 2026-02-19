@@ -127,7 +127,7 @@ export const uploadApplicationFiles = async (req, res, next) => {
         console.error(`❌ Error uploading file ${file.originalname}:`, error.message);
         errors.push({
           fileName: file.originalname,
-          error: error.message
+          error: process.env.NODE_ENV === "development" ? error.message : undefined
         });
         // Продолжаем загрузку остальных файлов
       }

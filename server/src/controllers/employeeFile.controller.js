@@ -193,7 +193,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
         });
         errors.push({
           fileName: file.originalname,
-          error: error.message
+          error: process.env.NODE_ENV === "development" ? error.message : undefined
         });
         // Продолжаем загрузку остальных файлов
       }

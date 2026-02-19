@@ -276,7 +276,7 @@ const generateApplicationNumber = async (constructionSiteId) => {
 };
 
 // Получить все заявки
-export const getAllApplications = async (req, res) => {
+export const getAllApplications = async (req, res, next) => {
   try {
     const { counterpartyId, status, page = 1, limit = 10 } = req.query;
 
@@ -406,16 +406,12 @@ export const getAllApplications = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching applications:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении заявок",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Получить заявку по ID
-export const getApplicationById = async (req, res) => {
+export const getApplicationById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -520,11 +516,7 @@ export const getApplicationById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching application:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении заявки",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -845,11 +837,7 @@ export const createApplication = async (req, res, next) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при создании заявки",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -1085,16 +1073,12 @@ export const updateApplication = async (req, res, next) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при обновлении заявки",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Удалить заявку
-export const deleteApplication = async (req, res) => {
+export const deleteApplication = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -1206,16 +1190,12 @@ export const deleteApplication = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error("Error deleting application:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при удалении заявки",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Копировать заявку
-export const copyApplication = async (req, res) => {
+export const copyApplication = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -1297,11 +1277,7 @@ export const copyApplication = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error("Error copying application:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при копировании заявки",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -1391,11 +1367,7 @@ export const getContractsForApplication = async (req, res, next) => {
     if (error.statusCode) {
       return next(error);
     }
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении договоров",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -1450,16 +1422,12 @@ export const getEmployeesForApplication = async (req, res, next) => {
     if (error.statusCode) {
       return next(error);
     }
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении сотрудников",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Экспортировать заявку в Word
-export const exportApplicationToWord = async (req, res) => {
+export const exportApplicationToWord = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -1496,11 +1464,7 @@ export const exportApplicationToWord = async (req, res) => {
     res.send(buffer);
   } catch (error) {
     console.error("Error exporting application to Word:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при экспорте заявки",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -1604,11 +1568,7 @@ export const downloadDeveloperBiometricConsents = async (req, res, next) => {
     archive.on("error", (err) => {
       console.error("Archiver error:", err);
       if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: "Ошибка при создании архива",
-          error: err.message,
-        });
+        next(err);
       }
     });
 
@@ -1659,11 +1619,7 @@ export const downloadDeveloperBiometricConsents = async (req, res, next) => {
 
     // Проверяем, был ли уже отправлен заголовок ответа
     if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        message: "Ошибка при выгрузке согласий",
-        error: error.message,
-      });
+      next(error);
     }
   }
 };

@@ -15,7 +15,7 @@ const sanitizeConstructionSitePayload = (payload = {}) => {
 };
 
 // Получить все объекты строительства
-export const getAllConstructionSites = async (req, res) => {
+export const getAllConstructionSites = async (req, res, next) => {
   try {
     const { search, page = 1, limit = 10 } = req.query;
     const safePage = Math.max(parseInt(page, 10) || 1, 1);
@@ -58,16 +58,12 @@ export const getAllConstructionSites = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching construction sites:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении объектов строительства",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Получить объект по ID
-export const getConstructionSiteById = async (req, res) => {
+export const getConstructionSiteById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -94,16 +90,12 @@ export const getConstructionSiteById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching construction site:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при получении объекта строительства",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Создать объект строительства
-export const createConstructionSite = async (req, res) => {
+export const createConstructionSite = async (req, res, next) => {
   try {
     const payload = sanitizeConstructionSitePayload(req.body);
     if (Object.keys(payload).length === 0) {
@@ -138,16 +130,12 @@ export const createConstructionSite = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при создании объекта строительства",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Обновить объект строительства
-export const updateConstructionSite = async (req, res) => {
+export const updateConstructionSite = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -192,16 +180,12 @@ export const updateConstructionSite = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при обновлении объекта строительства",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Удалить объект строительства
-export const deleteConstructionSite = async (req, res) => {
+export const deleteConstructionSite = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -234,10 +218,6 @@ export const deleteConstructionSite = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting construction site:", error);
-    res.status(500).json({
-      success: false,
-      message: "Ошибка при удалении объекта строительства",
-      error: error.message,
-    });
+    next(error);
   }
 };

@@ -422,7 +422,7 @@ export const batchMutateSkudAccess = async (req, res, next) => {
         return {
           employeeId,
           success: false,
-          error: error.message,
+          error: process.env.NODE_ENV === "development" ? error.message : undefined,
         };
       }
     };

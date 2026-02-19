@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import {
   getAllCounterparties,
   getCounterpartyById,
@@ -9,9 +9,9 @@ import {
   generateRegistrationCode,
   getCounterpartyConstructionSites,
   saveCounterpartyConstructionSites,
-  getAvailableCounterparties
-} from '../controllers/counterparty.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+  getAvailableCounterparties,
+} from "../controllers/counterparty.controller.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -21,20 +21,35 @@ router.use(authenticate);
 // ======================================
 // ЧТЕНИЕ - доступно всем авторизованным пользователям
 // ======================================
-router.get('/', getAllCounterparties);
-router.get('/available', getAvailableCounterparties); // Список доступных контрагентов для выбора
-router.get('/stats', getCounterpartiesStats);
-router.get('/:id', getCounterpartyById);
-router.get('/:id/construction-sites', getCounterpartyConstructionSites);
+router.get("/", authorize("admin", "user"), getAllCounterparties);
+router.get(
+  "/available",
+  authorize("admin", "user", "manager", "ot_admin", "ot_engineer"),
+  getAvailableCounterparties,
+); // Список доступных контрагентов для выбора
+router.get("/stats", authorize("admin", "user"), getCounterpartiesStats);
+router.get("/:id", authorize("admin", "user"), getCounterpartyById);
+router.get(
+  "/:id/construction-sites",
+  authorize("admin", "user"),
+  getCounterpartyConstructionSites,
+);
 
 // ======================================
 // ИЗМЕНЕНИЕ - только для администраторов и пользователей (не default)
 // ======================================
-router.post('/', authorize('admin', 'user'), createCounterparty);
-router.post('/:id/generate-registration-code', authorize('admin'), generateRegistrationCode);
-router.post('/:id/construction-sites', authorize('admin', 'user'), saveCounterpartyConstructionSites);
-router.put('/:id', authorize('admin', 'user'), updateCounterparty);
-router.delete('/:id', authorize('admin'), deleteCounterparty);
+router.post("/", authorize("admin", "user"), createCounterparty);
+router.post(
+  "/:id/generate-registration-code",
+  authorize("admin"),
+  generateRegistrationCode,
+);
+router.post(
+  "/:id/construction-sites",
+  authorize("admin", "user"),
+  saveCounterpartyConstructionSites,
+);
+router.put("/:id", authorize("admin", "user"), updateCounterparty);
+router.delete("/:id", authorize("admin"), deleteCounterparty);
 
 export default router;
-

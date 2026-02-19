@@ -462,11 +462,7 @@ export const downloadCounterpartyDocumentsZip = async (req, res, next) => {
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.on("error", (error) => {
       if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: "Ошибка при создании архива",
-          error: error.message,
-        });
+        next(error);
       }
     });
 

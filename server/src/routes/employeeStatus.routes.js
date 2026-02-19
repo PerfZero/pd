@@ -23,7 +23,7 @@ router.post('/employees/statuses/batch', authenticate, employeeStatusController.
 router.get('/employees/:employeeId/with-statuses', authenticate, employeeStatusController.getEmployeeWithStatuses);
 
 // Список сотрудников со статусами
-router.get('/employees/with-statuses', authenticate, employeeStatusController.getEmployeesWithStatuses);
+router.get('/employees/with-statuses', authenticate, authorize('admin', 'manager', 'user'), employeeStatusController.getEmployeesWithStatuses);
 
 // Установить новый статус (требует прав admin)
 router.post('/employees/:employeeId/status', authenticate, authorize('admin'), employeeStatusController.setEmployeeStatus);

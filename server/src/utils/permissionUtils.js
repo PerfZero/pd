@@ -31,8 +31,9 @@ export const checkEmployeeAccess = async (
   if (user.counterpartyId === defaultCounterpartyId) {
     // Пользователи дефолтного контрагента (бюро пропусков)
 
-    // ✅ Для операции READ - разрешаем доступ к ЛЮБЫМ сотрудникам default контрагента
-    if (operation === "read") {
+    // Для менеджера default-контрагента разрешаем чтение сотрудников этого контрагента.
+    // Для обычных пользователей чтение/запись только по персональной привязке.
+    if (operation === "read" && user.role === "manager") {
       // Проверяем, что сотрудник действительно относится к default контрагенту
       let belongsToDefaultCounterparty = false;
 
@@ -62,8 +63,7 @@ export const checkEmployeeAccess = async (
       return true; // Разрешаем чтение
     }
 
-    // ✅ Для операции WRITE - проверяем наличие связи в user_employee_mapping
-    // Если связь есть - разрешаем редактирование (даже если сотрудник создан другим пользователем)
+    // Для остальных случаев (включая read/write для user) требуется персональная привязка.
     const userEmployeeLink = await UserEmployeeMapping.findOne({
       where: {
         userId: user.id,
@@ -161,7 +161,7 @@ export const getAccessibleEmployeeIds = async (
   let allowedIds = [];
 
   if (user.counterpartyId === defaultCounterpartyId) {
-    if (operation === "read") {
+    if (operation === "read" && user.role === "manager") {
       const mappings = await EmployeeCounterpartyMapping.findAll({
         where: {
           employeeId: { [Op.in]: uniqueIds },

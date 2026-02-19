@@ -149,9 +149,13 @@ export const employeeStatusController = {
   async getEmployeesWithStatuses(req, res, next) {
     try {
       const { limit = 50, offset = 0 } = req.query;
+      const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+      const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+
       const result = await EmployeeStatusService.getEmployeesWithStatuses({
-        limit: parseInt(limit),
-        offset: parseInt(offset),
+        user: req.user,
+        limit: parsedLimit,
+        offset: parsedOffset,
       });
       res.json(result);
     } catch (error) {

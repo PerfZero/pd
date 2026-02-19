@@ -9,9 +9,28 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Проверяем наличие SSL сертификата
-const certPath = path.join(__dirname, '../../cert/root.crt');
+const isSslEnabled = process.env.DB_SSL === 'true';
+const caFromEnv = process.env.DB_SSL_CA
+  ? process.env.DB_SSL_CA.replace(/\\n/g, '\n')
+  : null;
+const certPath = process.env.DB_SSL_CA_PATH
+  ? path.resolve(process.env.DB_SSL_CA_PATH)
+  : path.join(__dirname, '../../cert/root.crt');
 const hasCertificate = fs.existsSync(certPath);
+
+if (isSslEnabled && !caFromEnv && !hasCertificate) {
+  throw new Error(
+    `DB_SSL=true, but no CA certificate configured. Provide DB_SSL_CA or DB_SSL_CA_PATH (checked path: ${certPath})`
+  );
+}
+
+const sslConfig = isSslEnabled
+  ? {
+      require: true,
+      rejectUnauthorized: true,
+      ca: caFromEnv || fs.readFileSync(certPath).toString(),
+    }
+  : false;
 
 const config = {
   host: process.env.DB_HOST,
@@ -21,11 +40,7 @@ const config = {
   password: process.env.DB_PASSWORD,
   dialect: 'postgres',
   dialectOptions: {
-    ssl: process.env.DB_SSL === 'true' ? {
-      require: true,
-      rejectUnauthorized: hasCertificate,
-      ...(hasCertificate && { ca: fs.readFileSync(certPath).toString() })
-    } : false
+    ssl: sslConfig,
   },
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
@@ -49,4 +64,3 @@ export const sequelize = new Sequelize(
 );
 
 export default sequelize;
-
