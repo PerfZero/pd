@@ -8,6 +8,7 @@ import {
   Typography,
   Dropdown,
   Popover,
+  Tooltip as AntTooltip,
 } from "antd";
 import {
   DownloadOutlined,
@@ -164,6 +165,14 @@ const ContractorDocumentsTable = ({
     },
     [allCategoryKeys],
   );
+
+  const handleExpandAll = useCallback(() => {
+    setCollapsedCategoryKeys([]);
+  }, []);
+
+  const handleCollapseAll = useCallback(() => {
+    setCollapsedCategoryKeys(allCategoryKeys);
+  }, [allCategoryKeys]);
 
   const getDocumentPayload = (record) =>
     record?.type === "document" ? record : record?.singleDocument || null;
@@ -492,6 +501,33 @@ const ContractorDocumentsTable = ({
 
   return (
     <>
+      <Space
+        size={8}
+        style={{
+          width: "100%",
+          justifyContent: "flex-end",
+          marginBottom: 8,
+        }}
+      >
+        <AntTooltip title="Развернуть все">
+          <Button
+            size="small"
+            onClick={handleExpandAll}
+            disabled={allCategoryKeys.length === 0}
+          >
+            +
+          </Button>
+        </AntTooltip>
+        <AntTooltip title="Свернуть все">
+          <Button
+            size="small"
+            onClick={handleCollapseAll}
+            disabled={allCategoryKeys.length === 0}
+          >
+            -
+          </Button>
+        </AntTooltip>
+      </Space>
       <style>{`
         .ot-contractor-docs-table .ant-table {
           border: 1px solid #d7e3f0;
