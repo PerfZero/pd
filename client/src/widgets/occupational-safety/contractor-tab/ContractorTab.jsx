@@ -67,7 +67,9 @@ const InstructionCard = ({
                                   key="download"
                                   size="small"
                                   icon={<DownloadOutlined />}
-                                  onClick={() => onDownloadInstructionFile(item)}
+                                  onClick={() =>
+                                    onDownloadInstructionFile(item)
+                                  }
                                 >
                                   Скачать
                                 </Button>,
@@ -76,7 +78,9 @@ const InstructionCard = ({
                         }
                       >
                         <List.Item.Meta
-                          title={dayjs(item.createdAt).format("DD.MM.YYYY HH:mm")}
+                          title={dayjs(item.createdAt).format(
+                            "DD.MM.YYYY HH:mm",
+                          )}
                           description={item.text || "Без текста"}
                         />
                       </List.Item>
@@ -153,7 +157,6 @@ const StaffFiltersCard = ({
           size="small"
           onClick={() => onTempAdmit?.(selectedCounterpartyId)}
           disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
-          style={{ borderColor: "#faad14", color: "#d48806" }}
         >
           Временно допустить
         </Button>
@@ -161,7 +164,6 @@ const StaffFiltersCard = ({
           size="small"
           onClick={() => onManualAdmit?.(selectedCounterpartyId)}
           disabled={!selectedConstructionSiteId || !selectedCounterpartyId}
-          style={{ borderColor: "#52c41a", color: "#389e0d" }}
         >
           Допустить
         </Button>
