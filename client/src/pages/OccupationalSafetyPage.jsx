@@ -4,7 +4,7 @@ import ObjectTab from "@/pages/occupationalSafety/ObjectTab";
 import ContractorTab from "@/widgets/occupational-safety/contractor-tab/ContractorTab";
 import SettingsTab from "@/widgets/occupational-safety/settings-tab/SettingsTab";
 import OtModals from "@/pages/occupationalSafety/OtModals";
-import useOccupationalSafety from "@/pages/occupationalSafety/useOccupationalSafety.jsx";
+import useOccupationalSafety from "@/pages/occupationalSafety/useOccupationalSafety.js";
 
 const { Title } = Typography;
 
