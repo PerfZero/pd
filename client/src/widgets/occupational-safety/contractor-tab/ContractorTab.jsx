@@ -304,9 +304,6 @@ const ContractorDocumentsCard = ({
 }) => (
   <Card size="small">
     <Space direction="vertical" size={8} style={{ width: "100%" }}>
-      <Title level={5} style={{ margin: 0 }}>
-        Документы подрядчика
-      </Title>
       <ContractorDocumentsTable
         contractorTree={contractorTree}
         statusMeta={statusMeta}

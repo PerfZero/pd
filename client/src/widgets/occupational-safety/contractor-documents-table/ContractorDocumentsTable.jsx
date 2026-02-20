@@ -505,28 +505,35 @@ const ContractorDocumentsTable = ({
         size={8}
         style={{
           width: "100%",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: 8,
         }}
+        wrap
       >
-        <AntTooltip title="Развернуть все">
-          <Button
-            size="small"
-            onClick={handleExpandAll}
-            disabled={allCategoryKeys.length === 0}
-          >
-            Развернуть все
-          </Button>
-        </AntTooltip>
-        <AntTooltip title="Свернуть все">
-          <Button
-            size="small"
-            onClick={handleCollapseAll}
-            disabled={allCategoryKeys.length === 0}
-          >
-            Свернуть все
-          </Button>
-        </AntTooltip>
+        <Text strong style={{ fontSize: 18 }}>
+          Документы подрядчика
+        </Text>
+        <Space size={8} wrap>
+          <AntTooltip title="Развернуть все">
+            <Button
+              size="small"
+              onClick={handleExpandAll}
+              disabled={allCategoryKeys.length === 0}
+            >
+              Развернуть все
+            </Button>
+          </AntTooltip>
+          <AntTooltip title="Свернуть все">
+            <Button
+              size="small"
+              onClick={handleCollapseAll}
+              disabled={allCategoryKeys.length === 0}
+            >
+              Свернуть все
+            </Button>
+          </AntTooltip>
+        </Space>
       </Space>
       <style>{`
         .ot-contractor-docs-table .ant-table {
