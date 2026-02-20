@@ -125,6 +125,9 @@ const ObjectTab = ({
                 const totalRequired = item.totalRequired || 0;
                 const approvedRequired = item.approvedRequired || 0;
                 const missingRequired = item.missingRequired || 0;
+                const contractorId = item.counterparty?.id;
+                const contractorName =
+                  item.counterparty?.name || item.counterparty?.id;
                 return (
                   <Card
                     size="small"
@@ -140,70 +143,94 @@ const ObjectTab = ({
                         style={{
                           width: "100%",
                           justifyContent: "space-between",
+                          alignItems: "center",
                         }}
+                        wrap
                       >
-                        <Typography.Link
-                          onClick={() => {
-                            if (item.counterparty?.id) {
-                              onOpenContractor(item.counterparty.id);
-                            }
-                          }}
-                          disabled={!item.counterparty?.id}
-                          style={{ fontWeight: 600 }}
-                        >
-                          {item.counterparty?.name || item.counterparty?.id}
-                        </Typography.Link>
-                        <Tag color={meta.color}>{meta.text}</Tag>
+                        <Space size={8} wrap>
+                          <Typography.Link
+                            onClick={() => {
+                              if (contractorId) {
+                                onOpenContractor(contractorId);
+                              }
+                            }}
+                            disabled={!contractorId}
+                            style={{ fontWeight: 600 }}
+                          >
+                            {contractorName}
+                          </Typography.Link>
+                          <Tag
+                            color="default"
+                            style={{ marginInlineEnd: 0, borderRadius: 10 }}
+                          >
+                            {meta.text}
+                          </Tag>
+                        </Space>
+                        {isStaff && (
+                          <Space
+                            size={8}
+                            wrap
+                            style={{ justifyContent: "flex-end" }}
+                          >
+                            <Button
+                              size="small"
+                              onClick={() => onTempAdmit(contractorId)}
+                              disabled={!contractorId}
+                            >
+                              Временно допустить
+                            </Button>
+                            <Button
+                              size="small"
+                              type="primary"
+                              onClick={() => onManualAdmit(contractorId)}
+                              disabled={!contractorId}
+                            >
+                              Допустить
+                            </Button>
+                            <Button
+                              size="small"
+                              danger
+                              onClick={() => onBlockContractor(contractorId)}
+                              disabled={!contractorId}
+                            >
+                              Заблокировать
+                            </Button>
+                          </Space>
+                        )}
                       </Space>
-                      <Space wrap>
+                      <Space size={8} wrap>
                         {totalRequired > 0 ? (
-                          <Tag color="blue">
+                          <Tag
+                            color="default"
+                            style={{ marginInlineEnd: 0, borderRadius: 10 }}
+                          >
                             Обязательные: {approvedRequired}/{totalRequired}
                           </Tag>
                         ) : (
-                          <Tag color="default">Нет обязательных документов</Tag>
+                          <Tag
+                            color="default"
+                            style={{ marginInlineEnd: 0, borderRadius: 10 }}
+                          >
+                            Нет обязательных документов
+                          </Tag>
                         )}
                         {missingRequired > 0 && (
-                          <Tag color="red">Не хватает: {missingRequired}</Tag>
+                          <Tag
+                            color="default"
+                            style={{ marginInlineEnd: 0, borderRadius: 10 }}
+                          >
+                            Не хватает: {missingRequired}
+                          </Tag>
                         )}
-                        {item.isManual && <Tag color="gold">Ручной статус</Tag>}
+                        {item.isManual && (
+                          <Tag
+                            color="default"
+                            style={{ marginInlineEnd: 0, borderRadius: 10 }}
+                          >
+                            Ручной статус
+                          </Tag>
+                        )}
                       </Space>
-                      {isStaff && (
-                        <Space size={8} wrap>
-                          <Button
-                            size="small"
-                            onClick={() => onTempAdmit(item.counterparty?.id)}
-                            disabled={!item.counterparty?.id}
-                            style={{
-                              borderColor: "#faad14",
-                              color: "#d48806",
-                            }}
-                          >
-                            Временно допустить
-                          </Button>
-                          <Button
-                            size="small"
-                            onClick={() => onManualAdmit(item.counterparty?.id)}
-                            disabled={!item.counterparty?.id}
-                            style={{
-                              borderColor: "#52c41a",
-                              color: "#389e0d",
-                            }}
-                          >
-                            Допустить
-                          </Button>
-                          <Button
-                            size="small"
-                            danger
-                            onClick={() =>
-                              onBlockContractor(item.counterparty?.id)
-                            }
-                            disabled={!item.counterparty?.id}
-                          >
-                            Заблокировать
-                          </Button>
-                        </Space>
-                      )}
                     </Space>
                   </Card>
                 );
