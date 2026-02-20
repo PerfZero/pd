@@ -7,10 +7,8 @@ import {
   TeamOutlined,
   ShopOutlined,
   BankOutlined,
-  FileTextOutlined,
   ControlOutlined,
   SafetyCertificateOutlined,
-  BarChartOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import settingsService from "@/services/settingsService";
@@ -73,16 +71,6 @@ const Sidebar = () => {
       icon: <TeamOutlined />,
       label: t("menu.employees"),
     },
-    {
-      key: "/counterparty-documents",
-      icon: <FileTextOutlined />,
-      label: t("menu.counterpartyDocuments"),
-    },
-    {
-      key: "/analytics",
-      icon: <BarChartOutlined />,
-      label: t("menu.analytics"),
-    },
   ];
 
   if (showOtMenu) {
@@ -110,16 +98,6 @@ const Sidebar = () => {
       label: t("menu.employees"),
     },
     {
-      key: "/counterparty-documents",
-      icon: <FileTextOutlined />,
-      label: t("menu.counterpartyDocuments"),
-    },
-    {
-      key: "/analytics",
-      icon: <BarChartOutlined />,
-      label: t("menu.analytics"),
-    },
-    {
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
       label: t("menu.ot"),
@@ -143,11 +121,6 @@ const Sidebar = () => {
 
   const engineerMenuItems = [
     {
-      key: "/analytics",
-      icon: <BarChartOutlined />,
-      label: t("menu.analytics"),
-    },
-    {
       key: "/ot",
       icon: <SafetyCertificateOutlined />,
       label: t("menu.ot"),
@@ -160,18 +133,7 @@ const Sidebar = () => {
   ];
 
   const otAdminMenuItems = [...engineerMenuItems];
-  const managerMenuItems = [
-    {
-      key: "/counterparty-documents",
-      icon: <FileTextOutlined />,
-      label: t("menu.counterpartyDocuments"),
-    },
-    {
-      key: "/analytics",
-      icon: <BarChartOutlined />,
-      label: t("menu.analytics"),
-    },
-  ];
+  const managerMenuItems = [];
 
   // Выбираем меню на основе роли пользователя
   let menuItems = [];

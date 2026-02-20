@@ -6,8 +6,6 @@ import {
   SettingOutlined,
   TeamOutlined,
   SafetyCertificateOutlined,
-  FileTextOutlined,
-  BarChartOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import { useTranslation } from "react-i18next";
@@ -23,7 +21,6 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const { t } = useTranslation();
   const isOtEngineer = user?.role === "ot_engineer";
   const isOtAdmin = user?.role === "ot_admin";
-  const isManager = user?.role === "manager";
 
   // Верхняя часть меню (для админов и пользователей)
   const topMenuItems = [];
@@ -34,28 +31,6 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       key: "/employees",
       icon: <TeamOutlined />,
       label: t("menu.employees"),
-    });
-  }
-
-  if (user?.role === "admin" || user?.role === "user" || isManager) {
-    topMenuItems.push({
-      key: "/counterparty-documents",
-      icon: <FileTextOutlined />,
-      label: t("menu.counterpartyDocuments"),
-    });
-  }
-
-  if (
-    user?.role === "admin" ||
-    user?.role === "user" ||
-    isOtEngineer ||
-    isOtAdmin ||
-    isManager
-  ) {
-    topMenuItems.push({
-      key: "/analytics",
-      icon: <BarChartOutlined />,
-      label: t("menu.analytics"),
     });
   }
 
