@@ -16,7 +16,6 @@ import CitizenshipsPage from "./CitizenshipsPage";
 import CounterpartiesPage from "./CounterpartiesPage";
 import MobileCounterpartiesPage from "./MobileCounterpartiesPage";
 import ExportPage from "./ExportPage";
-import MarkedEmployeesPage from "./MarkedEmployeesPage";
 import TrashPage from "./TrashPage";
 import DocumentSamplesPage from "./DocumentSamplesPage";
 
@@ -36,7 +35,6 @@ const AdministrationPage = () => {
     "counterparties",
     "citizenships",
     "export",
-    "marked-employees",
     "trash",
     "document-samples",
     "settings",
@@ -76,11 +74,6 @@ const AdministrationPage = () => {
       key: "export",
       label: renderTabLabel(DownloadOutlined, "Выгрузка"),
       children: <ExportPage />,
-    },
-    {
-      key: "marked-employees",
-      label: renderTabLabel(DeleteOutlined, "На удаление"),
-      children: <MarkedEmployeesPage />,
     },
     {
       key: "trash",
