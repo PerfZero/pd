@@ -160,7 +160,7 @@ const ObjectTab = ({
                             {contractorName}
                           </Typography.Link>
                           <Tag
-                            color="default"
+                            color={meta?.color || "default"}
                             style={{ marginInlineEnd: 0, borderRadius: 10 }}
                           >
                             {meta.text}
@@ -181,9 +181,13 @@ const ObjectTab = ({
                             </Button>
                             <Button
                               size="small"
-                              type="primary"
                               onClick={() => onManualAdmit(contractorId)}
                               disabled={!contractorId}
+                              style={{
+                                borderColor: "#52c41a",
+                                color: "#389e0d",
+                                background: "#fff",
+                              }}
                             >
                               Допустить
                             </Button>
