@@ -66,7 +66,7 @@ const SettingsCategoriesCard = memo(
                   onClick={() => setExpandedKeys(allExpandableKeys)}
                   disabled={allExpandableKeys.length === 0}
                 >
-                  +
+                  Развернуть все
                 </Button>
               </Tooltip>
               <Tooltip title="Свернуть все">
@@ -75,7 +75,7 @@ const SettingsCategoriesCard = memo(
                   onClick={() => setExpandedKeys([])}
                   disabled={allExpandableKeys.length === 0}
                 >
-                  -
+                  Свернуть все
                 </Button>
               </Tooltip>
               <Button

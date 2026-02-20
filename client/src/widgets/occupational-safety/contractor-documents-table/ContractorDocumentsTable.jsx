@@ -515,7 +515,7 @@ const ContractorDocumentsTable = ({
             onClick={handleExpandAll}
             disabled={allCategoryKeys.length === 0}
           >
-            +
+            Развернуть все
           </Button>
         </AntTooltip>
         <AntTooltip title="Свернуть все">
@@ -524,7 +524,7 @@ const ContractorDocumentsTable = ({
             onClick={handleCollapseAll}
             disabled={allCategoryKeys.length === 0}
           >
-            -
+            Свернуть все
           </Button>
         </AntTooltip>
       </Space>
