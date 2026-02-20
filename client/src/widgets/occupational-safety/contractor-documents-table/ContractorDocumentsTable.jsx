@@ -505,9 +505,9 @@ const ContractorDocumentsTable = ({
         size={8}
         style={{
           width: "100%",
-          justifyContent: "space-between",
+          justifyContent: "flex-start",
           alignItems: "center",
-          marginBottom: 8,
+          marginBottom: 12,
         }}
         wrap
       >

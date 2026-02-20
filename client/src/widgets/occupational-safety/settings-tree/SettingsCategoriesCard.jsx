@@ -52,14 +52,14 @@ const SettingsCategoriesCard = memo(
               width: "100%",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "flex-start",
+              alignItems: "center",
               gap: 12,
             }}
           >
-            <Title level={5} style={{ margin: 0, flex: 1, minWidth: 0 }}>
-              Категории и документы
-            </Title>
-            <Space size={8} wrap style={{ justifyContent: "flex-end" }}>
+            <Space size={8} wrap style={{ minWidth: 0 }}>
+              <Title level={5} style={{ margin: 0, minWidth: 0 }}>
+                Категории и документы
+              </Title>
               <Tooltip title="Развернуть все">
                 <Button
                   size="small"
@@ -78,6 +78,8 @@ const SettingsCategoriesCard = memo(
                   Свернуть все
                 </Button>
               </Tooltip>
+            </Space>
+            <Space size={8} wrap style={{ justifyContent: "flex-end" }}>
               <Button
                 size="small"
                 type="primary"
