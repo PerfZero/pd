@@ -11,8 +11,6 @@ import AddEmployeePage from "./pages/employees/AddEmployeePage";
 import ApplicationRequestPage from "./pages/employees/ApplicationRequestPage";
 import PassesPage from "./pages/PassesPage";
 import CounterpartiesPage from "./pages/CounterpartiesPage";
-import ConstructionSitesPage from "./pages/ConstructionSitesPage";
-import ContractsPage from "./pages/ContractsPage";
 import CounterpartyDocumentsPage from "./pages/CounterpartyDocumentsPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import AdministrationPage from "./pages/AdministrationPage";
@@ -116,7 +114,11 @@ function App() {
               path="counterparties"
               element={
                 <ProtectedRoute allowedRoles={["admin", "user"]}>
-                  <CounterpartiesPage />
+                  {user?.role === "admin" ? (
+                    <Navigate to="/directories?tab=counterparties" replace />
+                  ) : (
+                    <CounterpartiesPage />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -124,7 +126,7 @@ function App() {
               path="construction-sites"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <ConstructionSitesPage />
+                  <Navigate to="/directories?tab=construction-sites" replace />
                 </ProtectedRoute>
               }
             />
@@ -132,7 +134,7 @@ function App() {
               path="contracts"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <ContractsPage />
+                  <Navigate to="/directories?tab=contracts" replace />
                 </ProtectedRoute>
               }
             />

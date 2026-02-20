@@ -9,7 +9,6 @@ import {
   BankOutlined,
   FileTextOutlined,
   ControlOutlined,
-  BookOutlined,
   SafetyCertificateOutlined,
   BarChartOutlined,
 } from "@ant-design/icons";
@@ -97,16 +96,9 @@ const Sidebar = () => {
   // Добавляем Справочники для user (не default)
   if (showCounterpartiesMenu) {
     userMenuItems.push({
-      key: "references",
-      icon: <BankOutlined />,
-      label: t("menu.references"),
-      children: [
-        {
-          key: "/counterparties",
-          icon: <ShopOutlined />,
-          label: t("menu.counterparties"),
-        },
-      ],
+      key: "/counterparties",
+      icon: <ShopOutlined />,
+      label: t("menu.counterparties"),
     });
   }
 
@@ -138,31 +130,9 @@ const Sidebar = () => {
       label: t("menu.skud"),
     },
     {
-      key: "references",
+      key: "/directories",
       icon: <BankOutlined />,
-      label: t("menu.references"),
-      children: [
-        {
-          key: "/counterparties",
-          icon: <ShopOutlined />,
-          label: t("menu.counterparties"),
-        },
-        {
-          key: "/construction-sites",
-          icon: <BankOutlined />,
-          label: t("menu.constructionSites"),
-        },
-        {
-          key: "/contracts",
-          icon: <FileTextOutlined />,
-          label: t("menu.contracts"),
-        },
-        {
-          key: "/directories",
-          icon: <BookOutlined />,
-          label: t("menu.directories"),
-        },
-      ],
+      label: "Справочники",
     },
     {
       key: "/administration",
